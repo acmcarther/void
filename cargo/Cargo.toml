@@ -1,0 +1,22 @@
+[package]
+name = "compile_with_bazel"
+version = "0.0.0"
+
+[dependencies]
+chrono = "0.4.0"
+itertools = "0.7.4"
+libc = "0.2.34"
+log = "0.3.8"
+fern = "0.4.3"
+lazy_static = "1.0.0"
+time = "0.1.38"
+rand = "0.3.18"
+zcfg = "0.2.0"
+zcfg_flag_parser = "0.2.0"
+
+[lib]
+path = "fake_lib.rs"
+
+[raze]
+workspace_path = "//cargo"
+target = "x86_64-unknown-linux-gnu"
