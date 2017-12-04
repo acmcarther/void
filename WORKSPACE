@@ -1,6 +1,6 @@
 git_repository(
     name = "io_bazel_rules_rust",
-    commit = "2be3d24",
+    commit = "8f2256b",
     remote = "https://github.com/acmcarther/rules_rust.git",
 )
 
