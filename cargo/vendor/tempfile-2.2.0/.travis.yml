@@ -1,0 +1,11 @@
+language: rust
+sudo: false
+cache: cargo
+rust:
+  - nightly
+  - beta
+  - stable
+  - 1.9.0
+os:
+  - linux
+  - osx

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="dock_manager_v1">
+    <copyright>
+	Copyright © 2016 Quentin "Sardem FF7" Glidic
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in
+	all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+    </copyright>
+
+    <interface name="zww_dock_manager_v1" version="1">
+	<description summary="singleton for dock management">
+	    The object is a singleton global.
+	</description>
+
+	<request name="destroy" type="destructor" />
+
+	<enum name="error">
+	    <description summary="ww_dock_manager error values">
+		These errors can be emitted in response to
+		ww_dock_manager requests.
+	    </description>
+	    <entry name="role" value="0" summary="given wl_surface has another role" />
+	</enum>
+
+	<enum name="position">
+	    <description summary="ww_dock_manager position values">
+		These positions refer to edges of a rectangle work area.
+
+	    </description>
+	    <entry name="default" value="0" summary="the compositor will select an appropriate position" />
+	    <entry name="top" value="1" summary="the dock will be at the top of the output" />
+	    <entry name="bottom" value="2" summary="the dock will be at the top of the output" />
+	    <entry name="left" value="3" summary="the dock will be at the top of the output" />
+	    <entry name="right" value="4" summary="the dock will be at the top of the output" />
+	</enum>
+
+	<request name="create_dock">
+	    <description summary="create a dock from a wl_surface">
+		This gives the wl_surface the role of a dock.
+		If the wl_surface already has another role, it raises
+		a protocol error (role).
+
+		If output is null, the dock will be placed on whatever output
+		is concidered as primary.
+
+		See the ww_dock interface for details.
+	    </description>
+	    <arg name="id" type="new_id" interface="zww_dock_v1" />
+	    <arg name="surface" type="object" interface="wl_surface" />
+	    <arg name="output" type="object" interface="wl_output" allow-null="true" />
+	    <arg name="position" type="uint" enum="position" />
+	</request>
+    </interface>
+
+    <interface name="zww_dock_v1" version="1">
+	<description summary="a dock">
+	    This interface represents a dock.
+	</description>
+
+	<request name="destroy" type="destructor" />
+
+	<event name="configure">
+	    <description summary="the dock has a size">
+		This event is sent when the compositor has computed a size range for the dock.
+		The client must obey this range and commit a buffer within it.
+	    </description>
+	    <arg name="min_width" type="int" />
+	    <arg name="min_height" type="int" />
+	    <arg name="max_width" type="int" />
+	    <arg name="max_height" type="int" />
+	    <arg name="position" type="uint" enum="zww_dock_manager_v1.position" />
+	</event>
+
+	<event name="visible">
+	    <description summary="the dock becomes visible">
+		This event is sent when the dock becomes visible.
+	    </description>
+	</event>
+
+	<event name="hidden">
+	    <description summary="the dock is no longer visible">
+		This event is sent when the dock is no longer visible.
+		The client should stop timer or subprocesses, or run in
+		a special mode limited to important events.
+	    </description>
+	</event>
+
+	<request name="show">
+	    <description summary="ask the compositor to show the dock">
+		If some important event (e.g. low battery) is happening,
+		dock may want to be visible in order to show it.
+		This is the purpose of this request.
+	    </description>
+	</request>
+    </interface>
+</protocol>

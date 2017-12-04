@@ -1,0 +1,5 @@
+option('enable-clients', type: 'boolean', value: true, description: 'Demo clients')
+option('enable-text', type: 'combo', choices: [ 'auto', 'true', 'false' ], description: 'Text support through Pango')
+option('enable-images', type: 'combo', choices: [ 'auto', 'true', 'false' ], description: 'Images support through GDK-PixBuf')
+option('enable-debug', type: 'boolean', value: true, description: 'debug output')
+

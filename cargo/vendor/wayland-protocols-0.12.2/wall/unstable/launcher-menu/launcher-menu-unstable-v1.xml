@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="launcher_menu_v1">
+    <copyright>
+	Copyright © 2017 Quentin "Sardem FF7" Glidic
+
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+
+	The above copyright notice and this permission notice shall be included in
+	all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+    </copyright>
+
+    <interface name="zww_launcher_menu_v1" version="1">
+	<description summary="singleton for launchers and menus">
+	    The object is a singleton global.
+
+	    This interface can only be bound once at the same time.
+	    Any binding of this interface while already bound results
+	    in a protocol error (bound).
+	</description>
+
+	<request name="destroy" type="destructor" />
+
+	<enum name="error">
+	    <description summary="ww_launcher_menu error values">
+		These errors can be emitted in response to
+		ww_launcher_menu requests.
+	    </description>
+	    <entry name="bound" value="0" summary="ww_launcher_menu is already bound"/>
+	    <entry name="role" value="1" summary="given wl_surface has another role"/>
+	    <entry name="unique" value="2" summary="another wl_surface has this role already"/>
+	    <entry name="serial" value="3" summary="given serial is no longer valid"/>
+	</enum>
+
+	<request name="show">
+	    <description summary="show the launcher/menu surface">
+		This gives the wl_surface the role of a launcher/menu.
+		If the wl_surface already has another role, it raises
+		a protocol error (role).
+		Only one surface can have this role at the same time.
+		If two surfaces try to get this role at the same, it
+		raises a protocol error (unique).
+	    </description>
+	    <arg name="surface" type="object" interface="wl_surface" />
+	</request>
+
+	<request name="show_at_pointer">
+	    <description summary="show the launcher/menu surface at the pointer position">
+		This gives the wl_surface the role of a launcher/menu.
+		If the wl_surface already has another role, it raises
+		a protocol error (role).
+
+		The serial must match the last wl_pointer event serial for
+		given wl_seat, or a protocol error (serial) is raised.
+
+		The surface will be positioned fully visible, touching
+		the pointer and the focused surface.
+	    </description>
+	    <arg name="surface" type="object" interface="wl_surface" />
+	    <arg name="seat" type="object" interface="wl_seat" />
+	    <arg name="serial" type="uint" />
+	</request>
+
+	<request name="show_at_surface">
+	    <description summary="show the launcher/menu surface at the focused surface position">
+		This gives the wl_surface the role of a launcher/menu.
+		If the wl_surface already has another role, it raises
+		a protocol error (role).
+
+		The serial must match the last wl_pointer event serial
+		for given wl_seat, or a protocol error (serial) is raised.
+
+		The surface will be positioned fully visible, touching the
+		given rectangle from the focused surface.
+		If all of x, y, width and heiht are -1, the surface will be
+		centered on the target surface.
+	    </description>
+	    <arg name="surface" type="object" interface="wl_surface" />
+	    <arg name="seat" type="object" interface="wl_seat" />
+	    <arg name="serial" type="uint" />
+	    <arg name="x" type="int" />
+	    <arg name="y" type="int" />
+	    <arg name="width" type="int" />
+	    <arg name="height" type="int" />
+	</request>
+
+	<event name="dismiss">
+	    <description summary="the surface is dismissed and must be destroyed">
+		This event will be sent whenever the implicit grab is broken.
+		When receiving this event, the client must destroy the wl_surface.
+	    </description>
+	</event>
+    </interface>
+</protocol>

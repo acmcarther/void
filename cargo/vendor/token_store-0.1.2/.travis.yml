@@ -1,0 +1,50 @@
+language: rust
+
+cache: cargo
+
+rust:
+  - 1.0.0
+  - stable
+  - beta
+  - nightly
+
+os:
+  - linux
+
+dist: trusty
+
+branches:
+  only:
+    - master
+
+before_script:
+  - export PATH=$HOME/.cargo/bin:$PATH
+  - |
+    if [ $TRAVIS_RUST_VERSION = "nightly" ]; then
+      cargo install rustfmt-nightly --force
+    fi
+  - |
+    if [ $TRAVIS_RUST_VERSION != "1.0.0" ]; then
+      which cargo-tarpaulin || cargo install cargo-tarpaulin;
+      which cargo-install-update || cargo install cargo-update;
+      cargo install-update -a;
+    fi
+
+script:
+  - cargo test
+  - if [ $TRAVIS_RUST_VERSION != "1.0.0" ]; then
+      cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID;
+    fi
+  - cargo doc --no-deps
+
+after_success:
+  - cp ./doc_index.html ./target/doc/index.html
+
+deploy:
+  provider: pages
+  skip_cleanup: true
+  github_token: $GITHUB_TOKEN
+  local_dir: "${TRAVIS_BUILD_DIR}/target/doc"
+  on:
+    branch: master
+    rust: stable

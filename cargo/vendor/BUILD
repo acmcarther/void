@@ -42,6 +42,10 @@ alias(
     actual = "//cargo/vendor/time-0.1.38:time",
 )
 alias(
+    name = "winit",
+    actual = "//cargo/vendor/winit-0.9.0:winit",
+)
+alias(
     name = "zcfg",
     actual = "//cargo/vendor/zcfg-0.2.0:zcfg",
 )
