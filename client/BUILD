@@ -10,6 +10,8 @@ rust_library(
     name = "client",
     srcs = ["client.rs"],
     deps = [
+        "//cargo/vendor:ash",
+        "//cargo/vendor:log",
     ],
 )
 
