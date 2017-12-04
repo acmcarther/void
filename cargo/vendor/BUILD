@@ -6,6 +6,10 @@ DO NOT EDIT! Replaced on runs of cargo-raze
 package(default_visibility = ["//visibility:public"])
 
 alias(
+    name = "ash",
+    actual = "//cargo/vendor/ash-0.20.2:ash",
+)
+alias(
     name = "chrono",
     actual = "//cargo/vendor/chrono-0.4.0:chrono",
 )

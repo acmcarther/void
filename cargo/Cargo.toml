@@ -3,6 +3,7 @@ name = "compile_with_bazel"
 version = "0.0.0"
 
 [dependencies]
+ash = "0.20.2"
 chrono = "0.4.0"
 itertools = "0.7.4"
 libc = "0.2.34"
