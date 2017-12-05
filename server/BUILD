@@ -8,7 +8,7 @@ load(
 
 rust_library(
     name = "server",
-    srcs = ["server.rs"],
+    srcs = glob(["src/**/*.rs"]),
     deps = [
     ],
 )
