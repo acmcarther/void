@@ -3,7 +3,6 @@ name = "compile_with_bazel"
 version = "0.0.0"
 
 [dependencies]
-ash = "0.20.2"
 chrono = "0.4.0"
 itertools = "0.7.4"
 libc = "0.2.34"
@@ -12,7 +11,9 @@ fern = "0.4.3"
 lazy_static = "0.2.11"
 time = "0.1.38"
 rand = "0.3.18"
-winit = "0.9.0"
+winit = "0.7.0"
+vulkano = "0.7.2"
+vulkano-win = "0.7.2"
 zcfg = "0.2.0"
 zcfg_flag_parser = "0.2.0"
 
@@ -26,8 +27,8 @@ target = "x86_64-unknown-linux-gnu"
 [raze.crates.x11-dl.'2.17.0']
 gen_buildrs = true
 
-[raze.crates.wayland-protocols.'0.12.2']
+[raze.crates.wayland-protocols.'0.9.10']
 gen_buildrs = true
 
-[raze.crates.wayland-client.'0.12.2']
+[raze.crates.wayland-client.'0.9.10']
 gen_buildrs = true

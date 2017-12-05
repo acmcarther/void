@@ -6,10 +6,6 @@ DO NOT EDIT! Replaced on runs of cargo-raze
 package(default_visibility = ["//visibility:public"])
 
 alias(
-    name = "ash",
-    actual = "//cargo/vendor/ash-0.20.2:ash",
-)
-alias(
     name = "chrono",
     actual = "//cargo/vendor/chrono-0.4.0:chrono",
 )
@@ -42,8 +38,16 @@ alias(
     actual = "//cargo/vendor/time-0.1.38:time",
 )
 alias(
+    name = "vulkano",
+    actual = "//cargo/vendor/vulkano-0.7.2:vulkano",
+)
+alias(
+    name = "vulkano_win",
+    actual = "//cargo/vendor/vulkano-win-0.7.2:vulkano_win",
+)
+alias(
     name = "winit",
-    actual = "//cargo/vendor/winit-0.9.0:winit",
+    actual = "//cargo/vendor/winit-0.7.6:winit",
 )
 alias(
     name = "zcfg",

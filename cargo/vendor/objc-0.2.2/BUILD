@@ -21,6 +21,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/malloc_buf-0.0.6:malloc_buf",
+        "//cargo/vendor/objc_exception-0.1.1:objc_exception",
         
     ],
     rustc_flags = [
@@ -30,6 +31,6 @@ rust_library(
     ],
     
     crate_features = [
-        
+        "objc_exception",
     ],
 )

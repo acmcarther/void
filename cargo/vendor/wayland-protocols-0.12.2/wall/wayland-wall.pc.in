@@ -1,5 +1,0 @@
-pkgdatadir=@pkgdatadir@
-
-Name: wayland-wall
-Description: Wayland Wall - A collection of Wayland protocols (bricks) to make your own desktop
-Version: @PACKAGE_VERSION@
