@@ -10,9 +10,10 @@ rust_library(
     name = "client",
     srcs = ["client.rs"],
     deps = [
-        "//cargo/vendor:ash",
         "//cargo/vendor:lazy_static",
         "//cargo/vendor:log",
+        "//cargo/vendor:vulkano",
+        "//cargo/vendor:vulkano_win",
         "//cargo/vendor:winit",
     ],
 )

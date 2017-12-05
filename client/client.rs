@@ -1,10 +1,18 @@
 #[macro_use]
 extern crate log;
 #[macro_use]
-extern crate ash;
 extern crate winit;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate vulkano;
+#[macro_use]
+extern crate vulkano_win;
+
+use std::default::Default;
+use std::ptr;
+use std::ffi::{CStr, CString};
+use std::ops::Drop;
 
 struct Sys {
   pub events_loop: winit::EventsLoop,
