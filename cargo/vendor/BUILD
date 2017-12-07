@@ -14,6 +14,14 @@ alias(
     actual = "//cargo/vendor/fern-0.4.3:fern",
 )
 alias(
+    name = "futures",
+    actual = "//cargo/vendor/futures-0.1.17:futures",
+)
+alias(
+    name = "hyper",
+    actual = "//cargo/vendor/hyper-0.11.7:hyper",
+)
+alias(
     name = "itertools",
     actual = "//cargo/vendor/itertools-0.7.4:itertools",
 )
@@ -30,8 +38,16 @@ alias(
     actual = "//cargo/vendor/log-0.3.8:log",
 )
 alias(
+    name = "radix_trie",
+    actual = "//cargo/vendor/radix_trie-0.1.2:radix_trie",
+)
+alias(
     name = "rand",
     actual = "//cargo/vendor/rand-0.3.18:rand",
+)
+alias(
+    name = "tic",
+    actual = "//cargo/vendor/tic-0.3.0:tic",
 )
 alias(
     name = "time",

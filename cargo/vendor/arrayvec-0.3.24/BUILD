@@ -1,0 +1,40 @@
+"""
+cargo-raze crate build file.
+
+DO NOT EDIT! Replaced on runs of cargo-raze
+"""
+package(default_visibility = ["//cargo:__subpackages__"])
+
+load(
+    "@io_bazel_rules_rust//rust:rust.bzl",
+    "rust_library",
+    "rust_binary",
+    "rust_test",
+    "rust_bench_test",
+)
+
+
+rust_library(
+    name = "arrayvec",
+    crate_root = "src/lib.rs",
+    srcs = glob(["**/*.rs"]),
+    deps = [
+        "//cargo/vendor/nodrop-0.1.12:nodrop",
+        "//cargo/vendor/odds-0.2.26:odds",
+        
+    ],
+    rustc_flags = [
+        "--cap-lints allow",
+        "--target=x86_64-unknown-linux-gnu",
+        
+    ],
+    
+    crate_features = [
+        "default",
+        "nodrop",
+        "odds",
+        "std",
+    ],
+)
+# Unsupported target "generic_array" with type "test" omitted
+# Unsupported target "tests" with type "test" omitted
