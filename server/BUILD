@@ -27,7 +27,7 @@ rust_library(
 
 rust_library(
     name = "server",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = ["server.rs"],
     deps = [
         ":physics",
         ":service_specification",
