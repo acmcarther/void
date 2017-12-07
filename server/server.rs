@@ -8,7 +8,6 @@ use chrono::Utc;
 use service_specification::TickContext;
 use service_specification::NodeService;
 use service_specification::RunError;
-use service_specification::NodeServiceMetadata;
 
 use std::collections::HashMap;
 
@@ -17,7 +16,7 @@ pub fn run() {
   node.init();
 
   loop {
-    node.tick()
+    node.tick().unwrap()
   }
 }
 
@@ -45,7 +44,6 @@ impl TickContext for BasicTickContext {
     self.creation_time.signed_duration_since(self.last_creation_time)
   }
 }
-
 
 /** The configuration for a single ServerNode. */
 struct NodeConfig {
@@ -106,7 +104,7 @@ impl ServerNode {
    *
    * A tick proceeds through the service lifecycle for each service.
    */
-  pub fn tick(&mut self) {
+  pub fn tick(&mut self) -> Result<(), RunError> {
     assert!(self.service_manager.is_some());
 
     self.tick_context = self.tick_context.next();
@@ -128,6 +126,8 @@ impl ServerNode {
     for service in manager.running_services.iter_mut() {
       service.run_post_tick(&self.tick_context).unwrap();
     }
+
+    Ok(())
   }
 }
 
