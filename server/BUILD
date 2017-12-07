@@ -7,9 +7,32 @@ load(
 )
 
 rust_library(
+    name = "service_specification",
+    srcs = ["service_specification.rs"],
+    deps = [
+        "//cargo/vendor:chrono",
+        "//cargo/vendor:log",
+    ],
+)
+
+rust_library(
+    name = "physics",
+    srcs = ["physics.rs"],
+    deps = [
+        ":service_specification",
+        "//cargo/vendor:chrono",
+        "//cargo/vendor:log",
+    ],
+)
+
+rust_library(
     name = "server",
     srcs = glob(["src/**/*.rs"]),
     deps = [
+        ":physics",
+        ":service_specification",
+        "//cargo/vendor:chrono",
+        "//cargo/vendor:log",
     ],
 )
 
