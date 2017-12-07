@@ -1,15 +1,14 @@
 #![feature(used)]
+#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate log;
+#[macro_use] extern crate zcfg;
 extern crate chrono;
 extern crate fern;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate zcfg;
+extern crate monitoring;
 extern crate zcfg_flag_parser;
 
 use std::env;
+use std::thread;
 
 #[derive(Clone, Debug)]
 pub struct LogLevelParsable(pub log::LogLevelFilter);
@@ -28,15 +27,20 @@ impl zcfg::ConfigParseable for LogLevelParsable {
   }
 }
 
-define_cfg!(fern_log_level,
+define_cfg!(init_log_level,
             ::LogLevelParsable,
             ::LogLevelParsable(::log::LogLevelFilter::Debug),
             "What log level to emit logs to");
 
+define_cfg!(init_start_monitoring_daemon,
+            bool,
+            true,
+            "Whether or not to start the monitor daemon");
+
 pub fn init_void() {
   zcfg_flag_parser::FlagParser::new().parse_from_args(env::args().skip(1)).unwrap();
   let LogLevelParsable(log_level) =
-    fern_log_level::CONFIG.get_value();
+    init_log_level::CONFIG.get_value();
   fern::Dispatch::new()
     // Perform allocation-free log formatting
     .format(|out, message, record| {
@@ -54,6 +58,18 @@ pub fn init_void() {
     // Apply globally
     .apply()
     .unwrap();
+  debug!("Logger initialization complete.");
+
+  monitoring::init();
+
+  if init_start_monitoring_daemon::CONFIG.get_value() {
+    debug!("Spawning monitoring daemon.");
+    thread::spawn(move || {
+      monitoring::MonitoringService::default().run_forever()
+    });
+  } else {
+    debug!("Not spawning monitoring daemon due to configuration.");
+  }
 
   info!("Init complete!");
 }
