@@ -19,6 +19,7 @@ load(
 rust_library(
     name = "mime",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/unicase-2.1.0:unicase",

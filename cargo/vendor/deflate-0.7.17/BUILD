@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "deflate",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/adler32-1.0.2:adler32",

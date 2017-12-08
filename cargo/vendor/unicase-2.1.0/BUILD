@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "unicase",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         

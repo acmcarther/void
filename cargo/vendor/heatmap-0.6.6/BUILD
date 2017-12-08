@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "heatmap",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/histogram-0.6.8:histogram",

@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "either",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         
@@ -29,6 +30,7 @@ rust_library(
     ],
     
     crate_features = [
-        
+        "default",
+        "use_std",
     ],
 )

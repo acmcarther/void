@@ -22,6 +22,7 @@ alias(
 rust_library(
     name = "kernel32",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/winapi-0.2.8:winapi",

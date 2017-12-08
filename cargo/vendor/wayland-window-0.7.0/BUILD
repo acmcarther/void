@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "wayland_window",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/byteorder-1.2.1:byteorder",

@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "encoding_index_tradchinese",
     crate_root = "lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/encoding_index_tests-0.1.4:encoding_index_tests",

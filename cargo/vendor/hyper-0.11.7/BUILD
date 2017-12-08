@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "hyper",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/base64-0.6.0:base64",

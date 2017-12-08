@@ -46,6 +46,10 @@ alias(
     actual = "//cargo/vendor/rand-0.3.18:rand",
 )
 alias(
+    name = "specs",
+    actual = "//cargo/vendor/specs-0.10.0:specs",
+)
+alias(
     name = "tic",
     actual = "//cargo/vendor/tic-0.3.0:tic",
 )

@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "rand",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/libc-0.2.34:libc",

@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "miow",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/kernel32-sys-0.2.2:kernel32_sys",

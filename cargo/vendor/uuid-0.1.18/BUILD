@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "uuid",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/rand-0.3.18:rand",

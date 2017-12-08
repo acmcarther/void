@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "siphasher",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         

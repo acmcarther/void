@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "vulkano_win",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/vulkano-0.7.2:vulkano",

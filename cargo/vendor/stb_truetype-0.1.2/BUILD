@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "stb_truetype",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/byteorder-0.4.2:byteorder",

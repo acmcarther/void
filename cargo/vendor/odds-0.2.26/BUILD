@@ -20,6 +20,7 @@ load(
 rust_library(
     name = "odds",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         

@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "url",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/matches-0.1.6:matches",

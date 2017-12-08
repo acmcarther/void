@@ -20,6 +20,7 @@ load(
 rust_library(
     name = "radix_trie",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/endian-type-0.1.2:endian_type",

@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "fnv",
     crate_root = "lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         

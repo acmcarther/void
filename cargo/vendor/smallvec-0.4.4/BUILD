@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "smallvec",
     crate_root = "lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         

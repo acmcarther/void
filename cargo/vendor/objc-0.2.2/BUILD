@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "objc",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/malloc_buf-0.0.6:malloc_buf",

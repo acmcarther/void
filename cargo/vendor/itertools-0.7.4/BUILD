@@ -19,6 +19,7 @@ load(
 rust_library(
     name = "itertools",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/either-1.4.0:either",

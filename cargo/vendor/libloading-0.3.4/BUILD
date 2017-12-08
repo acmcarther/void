@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "libloading",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/lazy_static-0.2.11:lazy_static",

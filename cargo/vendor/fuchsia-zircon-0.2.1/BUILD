@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "fuchsia_zircon",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/fuchsia-zircon-sys-0.2.0:fuchsia_zircon_sys",

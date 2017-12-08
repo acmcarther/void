@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "waterfall",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/heatmap-0.6.6:heatmap",

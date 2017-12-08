@@ -26,6 +26,7 @@ load(
 rust_library(
     name = "tiny_http",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/ascii-0.7.1:ascii",

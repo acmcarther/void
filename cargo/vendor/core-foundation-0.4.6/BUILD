@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "core_foundation",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/core-foundation-sys-0.4.6:core_foundation_sys",

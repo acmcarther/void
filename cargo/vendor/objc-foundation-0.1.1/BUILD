@@ -19,6 +19,7 @@ load(
 rust_library(
     name = "objc_foundation",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/block-0.1.6:block",

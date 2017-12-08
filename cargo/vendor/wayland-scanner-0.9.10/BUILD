@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "wayland_scanner",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/xml-rs-0.6.1:xml_rs",

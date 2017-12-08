@@ -25,6 +25,7 @@ alias(
 rust_library(
     name = "xml",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/bitflags-0.9.1:bitflags",

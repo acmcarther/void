@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "arrayvec",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/nodrop-0.1.12:nodrop",

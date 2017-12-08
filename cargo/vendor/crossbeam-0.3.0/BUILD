@@ -35,6 +35,7 @@ rust_binary(
 rust_library(
     name = "crossbeam",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         

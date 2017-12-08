@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "phf_shared",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/siphasher-0.2.2:siphasher",

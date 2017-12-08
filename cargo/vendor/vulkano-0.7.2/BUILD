@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "vulkano",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/crossbeam-0.3.0:crossbeam",

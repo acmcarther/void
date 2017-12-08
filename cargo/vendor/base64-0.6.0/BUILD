@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "base64",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/byteorder-1.2.1:byteorder",

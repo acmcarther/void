@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "memmap",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/fs2-0.2.5:fs2",

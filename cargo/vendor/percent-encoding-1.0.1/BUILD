@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "percent_encoding",
     crate_root = "lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         

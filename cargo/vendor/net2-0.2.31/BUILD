@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "net2",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/cfg-if-0.1.2:cfg_if",

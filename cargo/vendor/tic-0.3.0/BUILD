@@ -19,6 +19,7 @@ load(
 rust_library(
     name = "tic",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/allan-0.2.4:allan",

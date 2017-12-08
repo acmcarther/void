@@ -23,6 +23,7 @@ load(
 rust_library(
     name = "tokio_io",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/bytes-0.4.5:bytes",

@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "serde_json",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/dtoa-0.4.2:dtoa",

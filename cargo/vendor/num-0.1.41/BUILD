@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "num",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/num-integer-0.1.35:num_integer",

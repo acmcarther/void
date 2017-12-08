@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "chrono",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/num-0.1.41:num",

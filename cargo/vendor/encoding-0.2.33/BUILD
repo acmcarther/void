@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "encoding",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/encoding-index-japanese-1.20141219.5:encoding_index_japanese",

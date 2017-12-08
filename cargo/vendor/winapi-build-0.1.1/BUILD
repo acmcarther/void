@@ -22,6 +22,7 @@ alias(
 rust_library(
     name = "build",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         

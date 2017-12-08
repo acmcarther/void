@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "fuchsia_zircon_sys",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/bitflags-0.7.0:bitflags",

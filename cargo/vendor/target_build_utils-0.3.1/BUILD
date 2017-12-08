@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "target_build_utils",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/phf-0.7.21:phf",

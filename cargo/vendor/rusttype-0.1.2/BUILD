@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "rusttype",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/arrayvec-0.3.24:arrayvec",

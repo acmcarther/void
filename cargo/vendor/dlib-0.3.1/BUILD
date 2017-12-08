@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "dlib",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/libloading-0.3.4:libloading",

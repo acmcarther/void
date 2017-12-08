@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "gcc",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         

@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "encoding_index_tests",
     crate_root = "index_tests.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         

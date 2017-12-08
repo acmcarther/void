@@ -18,6 +18,7 @@ load(
 rust_library(
     name = "wayland_kbd",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/bitflags-0.7.0:bitflags",

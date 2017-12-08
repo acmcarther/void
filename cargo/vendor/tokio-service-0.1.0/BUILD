@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "tokio_service",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/futures-0.1.17:futures",

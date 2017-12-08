@@ -17,6 +17,7 @@ load(
 rust_library(
     name = "phf_codegen",
     crate_root = "src/lib.rs",
+    crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/phf_generator-0.7.21:phf_generator",
