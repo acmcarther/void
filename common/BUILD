@@ -18,3 +18,12 @@ rust_library(
         "//cargo/vendor:zcfg_flag_parser",
     ],
 )
+
+rust_library(
+    name = "service_spec",
+    srcs = ["service_spec.rs"],
+    deps = [
+        "//cargo/vendor:chrono",
+        "//cargo/vendor:log",
+    ],
+)

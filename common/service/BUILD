@@ -7,21 +7,12 @@ load(
 )
 
 rust_library(
-    name = "server",
-    srcs = ["server.rs"],
+    name = "srv_physics",
+    srcs = ["srv_physics.rs"],
     deps = [
         "//cargo/vendor:chrono",
         "//cargo/vendor:log",
+        "//cargo/vendor:specs",
         "//common:service_spec",
-        "//common/service:srv_physics",
-    ],
-)
-
-rust_binary(
-    name = "launcher",
-    srcs = ["launcher.rs"],
-    deps = [
-        ":server",
-        "//common:init",
     ],
 )

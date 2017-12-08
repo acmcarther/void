@@ -1,13 +1,13 @@
 extern crate chrono;
 #[macro_use] extern crate log;
-extern crate service_specification;
+extern crate service_spec;
 
 use chrono::Duration;
 use chrono::DateTime;
 use chrono::Utc;
-use service_specification::TickContext;
-use service_specification::NodeService;
-use service_specification::RunError;
+use service_spec::TickContext;
+use service_spec::NodeService;
+use service_spec::RunError;
 
 use std::collections::HashMap;
 
