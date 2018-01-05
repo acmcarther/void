@@ -33,6 +33,7 @@ rust_library(
     deps = [
         "//cargo/vendor:chrono",
         "//cargo/vendor:log",
+        "//cargo/vendor:rand",
     ],
 )
 
