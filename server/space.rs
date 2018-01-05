@@ -12,7 +12,7 @@ mod positioning_2 {
    * - 1 au: 140_000_000_000 m
    * - 1 ly: 63_241 AU
    * - 1 Galactic Diameter: 100_000 ly
-   * 
+   *
    * Mass:
    * - 1 kg (base unit)
    * - 1 earth mass: 6 * 10^24 kg
@@ -21,19 +21,19 @@ mod positioning_2 {
    * - 1 stellar black hole mass: 10 * solar mass
    * - 1 intermediate black hole mass: 50_000 solar mass
    * - 1 supermassive black hole mass: 10_000_000 solar mass
-   * 
+   *
    * Time:
    * - 1 second (base unit)
    * - 1 day: 86_400 seconds
    * - 1 year: 31_557_600 seconds
    * - 1 galactic year: 240_000_000 years
-   * 
+   *
    * Speed:
    * - 1 m/s (base unit)
    * - Earth orbital speed: 30_000 m/s
    * - Solar system speed around galaxy: 230_000 m/s
    * - Speed of Light: 300_000_000 m/s
-   * 
+   *
    * Size:
    * - 1 meter (base unit)
    * - 1 earth diameter: 13_000_000 m
@@ -45,7 +45,7 @@ mod positioning_2 {
 
   /**
    * Gameplay benchmarks
-   * 
+   *
    * Player Scale:
    * - Height: 2m
    * - Mass: 100kg
@@ -76,7 +76,7 @@ mod positioning_2 {
    *             Reach satelite in 20s
    *             Reach sun in 2m
    *             Reach near star in 5h
-   * 
+   *
    * Primitive Interstellar Vessel
    * - Size: ????
    * - Mass: ????
@@ -91,37 +91,159 @@ mod positioning_2 {
    * - Velocity: 5_475_000_000_000_000 m/s
    *             Reach near star in 8m
    *             Reach farthest star in 1w
-   * 
+   *
    * Advanced Interstellar Vessel
    * - Size: ????
    * - Mass: ????
    * - Velocity: Reach farthest star in 6h
    */
 
-  /**
-   * Derived Physical Constants
-   * - Size of galaxy: 12 light hours
-   *                   1_000_000_000_000_000_000 m
-   * - Speed of Light: 300_000_000_000_000 m/s
-   * - Number of Stars: 500_000
-   * - Gravitational Constant
-   */
+  mod real_scale {
+    /* t_l => roughly m */
+    struct BenchmarkLength {
+      c_l: u32 /* celestial_length
+                     (999_999_999): ~100 billion ly
+                     (          1): ~100ly */,
+      o_l: u32 /* orbital_length
+                     (999_999_999): ~100ly
+                     (          3): Mean Earth-Moon distance */,
+      t_l: u32 /* terrestrial_length:
+                     (700_000_000): Mean solar diameter
+                     (          1): A human step length */,
+      f_l: u32 /* fundamental_length:
+                     (999_999_999): A human step length
+                     (         40): Hydrogen radius length */,
+      n_l: u32 /* nuclear_length:
+                     (          1):  Proton radius */
+    }
 
-  /**
-   * Interesting gameplay scales (one to one with physically simulated scales):
-   *
-   * Galactic Scale:
-   * - ???
-   *
-   * Stellar Scale:
-   * - ???
-   *
-   * Planetary Scale:
-   * - ???
-   *
-   * Player Scale:
-   * - ???
-   */
+    /** t_m => roughly kg */
+    struct BenchmarkMass {
+      c_m: u32 /* celestial_mass:
+                     (999_999_999): Supermassive black hole mass
+                     ( 20_000_000): Extremely massive star mass
+                     (     10_000): Small stellar black hole mass
+                     (      2_000): Solar Mass
+                     (          2): Jupiter Mass */,
+      g_m: u32  /* geological_mass:
+                     (999_999_999): 160 Earth Mass
+                     (  3_000_000): Earth Mass
+                     (     37_000): Lunar Mass
+                     (        500): Ceres Mass
+                     (          1) ~200km asteroid mass */,
+      o_m: u32  /* orbital_mass:
+                     (999_999_999): ~200km asteroid mass
+                     ( 10_000_000): ~30km asteroid mass
+                     (     10_000): ~3km Rosetta comet mass
+                     (        400): Total human biomass,
+                     (          6): Pyramid of Giza mass */,
+      t_m: u32  /* terrestrial_mass:
+                     (700_000_000): Heaviest conventional building mass
+                     ( 50_000_000): Heavy seafaring vessel mass
+                     (  2_000_000): Launch mass of Space Shuttle
+                     (     50_000): Tank mass
+                     (         70): Human mass
+                     (         15): Dog mass */,
+      f_m: u32  /* fundamental_mass:
+                     (100_000_000): A fruit's mass
+                     (  1_000_000): Paper currency mass
+                     (     10_000): Insect mass */,
+      b_m: u32  /* biological_mass:
+                     (250_000_000): Pollen grain mass,
+                     (  1_000_000): Human cell mass,
+                     (      1_000): Bacterium mass
+                     (          1): Bacteria genome mass */,
+      n_m: u32  /* nuclear_mass:
+                     (999_999_999): Bacteria genome mass,
+                     (    500_000): Protein mass,
+                     (      1_100): Copper atom mass,
+                     (         17): Neutron mass */
+    }
+  }
+
+  mod game_scale {
+    // Speed of light         = 1_000 (c_l / s)
+    //                        = 1_000_000_000_000 (t_l / s)
+    //                        = 1_000_000_000_000_000_000_000 (f_l / s)
+    // Gravitational Constant = 1 * (t_l^3 / (f_m * s^2))
+
+    /** t_l => roughly m */
+    struct GameplayLength {
+      c_l: u32 /* celestial_length
+                     (999_999_999): ~100ly
+                     (          3): Mean Earth-Moon distance */,
+      t_l: u32 /* terrestrial_length:
+                     (700_000_000): Mean solar diameter
+                     (          1): A human step length */,
+      f_l: u32 /* fundamental_length:
+                     (999_999_999): A human step length
+                     (         40): Hydrogen radius length */,
+    }
+
+    /** 
+     * t_m => roughly kg
+     *
+     * System properties as pertaining to mass magnitudes:
+     * - ReferenceFrameSystem
+     *   - All systems must be parented to a celestial mass simulacrum, for the purpose
+     *     of macro gravity.
+     *   - All objects must be parented to a terrestrial mass simulacrum for the purpose
+     *     of local gravity.
+     *   - The natural mass simulacrum for most systems will be a StarMassSimulacrum centered on
+     *     the parent star.
+     *   - Free bodies outside stellar systems will have a PhantomMassSimulacrum for the purpose of
+     *     MacroGravity.
+     *   - The natural mass simulacrum for most objects will be a PlanetMassSimulacrum centered on
+     *     the local planet.
+     *   - Free bodies outside of planets will have a PhantomMassSimulacrum for the purpose of
+     *     local gravity.
+     * - MacroGravitySystem
+     *   - Celestial and planetary masses are the only relevant factors.
+     *   - Above masses expressed as MassSimulacrum (a "celestial reference frame") for the purpose
+     *     of simulation
+     * - LocalGravitySystem
+     *   - All masses down to terestrial masses simulated (and affected).
+     *   - Masses parented to a MassSimulacrum (a "system reference frame") for that purpose.
+     * - PhysicalitySystem
+     *   - Unrelated to simulacrums: Proximal masses should interact properly (coliding, if
+     *   appropriate).
+     *
+     * Player Scale interactions:
+     *   - Objects visible down to 1 terrestrial mass.
+     *   - Objects interactable down to 100_000_000 fundamental masses
+     *   - Objects below that scale will generally despawn
+     */
+    struct GameplayMass {
+      c_m: u32 /* celestial_mass:
+                     (  1_000_000_000): Galactic center black hole
+                     (     10_000_000): Small stellar black hole mass
+                     (      2_000_000): Solar Mass
+                     (          2_000): Jupiter Mass
+                     (              1): Earth Mass */,
+      p_m: u32 /* planetary_mass:
+                     (  1_000_000_000): Earth Mass
+                     (     37_000_000): Lunar Mass
+                     (        500_000): Ceres Mass
+                     (          1_000): ~200km asteroid mass */,
+      o_m: u32 /* orbital_mass:
+                     ( 10_000_000_000): ~30km asteroid mass
+                     (     10_000_000): ~3km Rosetta comet mass
+                     (          6_000): Pyramid of Giza mass
+                     (            700): Heaviest conventional building mass
+                     (             50): Heavy seafaring vessel mass */,
+      t_m: u32 /* terrestrial_mass:
+                     (  1_000_000_000): Small spacecraft mass
+                     (     50_000_000): Tank mass
+                     (         70_000): Human mass
+                     (         15_000): Dog mass
+                     (            100): A fruit's mass */,
+      f_m: u32 /* fundamental_mass:
+                     (  1_000_000_000): Smallest human scale mass,
+                     (        500_000): Compound mass,
+                     (          1_100): Atomic mass
+                     (             17): Fundamental particle mass */,
+    }
+  }
 }
 
 mod positioning {
