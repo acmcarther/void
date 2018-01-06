@@ -21,6 +21,7 @@ vulkano-win = "0.7.2"
 winit = "0.7.0"
 zcfg = "0.2.0"
 zcfg_flag_parser = "0.2.0"
+gnuplot = "0.0.24"
 
 [lib]
 path = "fake_lib.rs"

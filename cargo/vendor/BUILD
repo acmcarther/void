@@ -18,6 +18,10 @@ alias(
     actual = "//cargo/vendor/futures-0.1.17:futures",
 )
 alias(
+    name = "gnuplot",
+    actual = "//cargo/vendor/gnuplot-0.0.24:gnuplot",
+)
+alias(
     name = "hyper",
     actual = "//cargo/vendor/hyper-0.11.7:hyper",
 )
