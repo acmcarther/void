@@ -161,35 +161,184 @@ mod positioning_2 {
     }
   }
 
+  /** The complete cosmos, containing point masses representing system masses */
+  type SystemId: u64;
+
+  struct CosmicParams {
+    gravitational_constant: u64,
+  }
+
+  struct Cosmos {
+    system_grids: HashMap<SystemId, SystemGrid>,
+    celestial_grid: CelestialGrid,
+  }
+
+  struct CelestialGrid {
+    system_ids: Vec<SystemId>,
+    system_coordinates: HashMap<SystemId, CelestialVector>,
+    system_trajectories: HashMap<SystemId, CelestialVector>,
+    system_masses: HashMap<SystemId, CeleplanetaryMass>,
+  }
+
+  /** Apply cosmic gravity, and apply system trajectories. */
+  fn tick_celestial_grid(cosmic_params: &CosmicParams, celestial_grid: &mut CelestialGrid, dt_micros: u64) {
+    // Tick gravitational force
+    let dt_s = (dt_micros as f64 / 1000000.0);
+    {
+      let force_sets = HashMap::new();
+      for id_idx_1 : 0...self.system_ids.len() {
+        for id_idx_2 : id_idx_1...self.system_ids.len() {
+          let id_1 = self.system_ids.get(id_1);
+          let id_2 = self.system_ids.get(id_2);
+          let mass_product = {
+            self.system_masses.get(id_1) * self.system_masses.get(id_2)
+          }
+
+          if mass_produce == 0 {
+            continue
+          }
+
+          let (distance_unit_vector, distance_seconds) = {
+            let id_1_coords = self.system_coordinates.get(id_1);
+            let id_2_coords = self.system_coordinates.get(id_2);
+
+            let distance_vector = CelestialVector {
+              x: id_1_coords.x - id_2_coords.x
+              y: id_1_coords.x - id_2_coords.y
+              z: id_1_coords.x - id_2_coords.z
+            };
+
+            let distance_seconds =
+              dt_s
+                * (distance_vector.x.powi(2)
+                  + distance_vector.y.powi(2)
+                  + distance_vector.z.powi(2) as f64).sqrt()) as i64;
+
+            let distance_unit_vector = CelestialVector {
+              x: distance_vector.x / distance_seconds
+              y: distance_vector.y / distance_seconds
+              z: distance_vector.z / distance_seconds
+            };
+            (distance_unit_vector, distance_seconds)
+          };
+
+          let force_magnitude = cosmic_params.gravitational_constant
+                                * mass_product / (distance_seconds * distance_seconds);
+
+          let force_vector = {
+            let distance_unit_vector = CelestialVector {
+              x: distance_unit_vector.x * force_magnitude
+              y: distance_unit_vector.y * force_magnitude
+              z: distance_unit_vector.z * force_magnitude
+            };
+          };
+
+          if force_sets.contains(id_1) {
+            let mut last_force = force_sets.get_mut(id_1);
+            last_force.x = last_force.x + force_vector.x;
+            last_force.y = last_force.y + force_vector.y;
+            last_force.z = last_force.z + force_vector.z;
+          } else {
+            force_sets.insert(id_1, force_vector);
+          }
+
+          if force_sets.contains(id_2) {
+            let mut last_force = force_sets.get_mut(id_2);
+            last_force.x = last_force.x - force_vector.x;
+            last_force.y = last_force.y - force_vector.y;
+            last_force.z = last_force.z - force_vector.z;
+          } else {
+            force_sets.insert(id_2, force_vector);
+          }
+        }
+      }
+
+      for (id, force_vector) : force_sets.into_iter() {
+        let mass = self.system_masses.get(id);
+
+        let mut trajectory = system_trajectories.get(id);
+
+        trajectory.x = trajectory.x + (force_vector.x / mass);
+        trajectory.y = trajectory.y + (force_vector.y / mass);
+        trajectory.z = trajectory.z + (force_vector.z / mass);
+      }
+    }
+
+    // Apply velocities
+    {
+      for id_idx : 0...self.system_ids.len() {
+        let id = self.system_ids.get(id_idx);
+        let system_trajectory = self.system_trajectories.get(id);
+        let mut system_coordinates = self.system_coordinates.get(id);
+        system_coordinates.x = system_coordinates.x + (system_trajectory.x * dt_s);
+        system_coordinates.y = system_coordinates.y + (system_trajectory.y * dt_s);
+        system_coordinates.z = system_coordinates.z + (system_trajectory.z * dt_s);
+      }
+    }
+  }
+
+  struct SystemGrid {
+    system_id: SystemId,
+    system_mass: CeleplanetaryMass,
+    object_coordinates: HashMap<ObjectId, SystemVector>
+    object_trajectories: HashMap<ObjectId, SystemVector>
+    object_celeplanetary_masses: HashMap<SystemId, CeleplanetaryMass>
+  }
+
+  struct Object {
+    object_id: ObjectId,
+    parent_system: SystemId
+    mass: GameplayMass,
+  }
+
+  /** 1 -> 1_000_000_000_000_000_000 terestrial masses */
+  type CeleplanetaryMass = i64;
+
+  /** 1 -> 1 terestrial length */
+  type CeleterestrialLength = i64;
+
+  /** A spatial vector in Celestrial units. */
+  struct CelestialVector {
+    x: i64
+    y: i64
+    z: i64
+  }
+
+  /** A spatial vector in Terestrefundamental units. */
+  struct SystemVector {
+    x: f64
+    y: f64
+    z: f64
+  }
+
   mod game_scale {
     // Speed of light         = 1_000 (c_l / s)
     //                        = 1_000_000_000_000 (t_l / s)
     //                        = 1_000_000_000_000_000_000_000 (f_l / s)
     // Gravitational Constant = 1 * (t_l^3 / (f_m * s^2))
+    //
 
-    /** t_l => roughly m */
-    struct GameplayLength {
-      c_l: u32 /* celestial_length
-                     (999_999_999): ~100ly
-                     (          3): Mean Earth-Moon distance */,
-      t_l: u32 /* terrestrial_length:
-                     (700_000_000): Mean solar diameter
-                     (          1): A human step length */,
-      f_l: u32 /* fundamental_length:
-                     (999_999_999): A human step length
-                     (         40): Hydrogen radius length */,
-    }
+    /**
+     * (9_000_000_000_000_000_000): ~100ly
+     * (            1_000_000_000): One Celestial length
+     * (                        1): A standard player stride */
+    type CeleterestrialLength: i64;
 
-    /** 
+    /**
+     * (1_000_000_000.0): One Celestial length
+     * (            1.0): A standard player stride */
+    type TerestrefundamentalLength: f64;
+
+    /**
      * t_m => roughly kg
      *
      * System properties as pertaining to mass magnitudes:
      * - ReferenceFrameSystem
-     *   - All systems must be parented to a celestial mass simulacrum, for the purpose
+     *   - All systems must be parented to a celeplanetary mass simulacrum, for the purpose
      *     of macro gravity.
-     *   - All objects must be parented to a terrestrial mass simulacrum for the purpose
+     *   - All objects must be parented to a orbital mass simulacrum for the purpose
      *     of local gravity.
-     *   - The natural mass simulacrum for most systems will be a StarMassSimulacrum centered on
+     *   - The natural mass simulacrum for most systems will be a StellarMassSimulacrum centered on
      *     the parent star.
      *   - Free bodies outside stellar systems will have a PhantomMassSimulacrum for the purpose of
      *     MacroGravity.
@@ -198,50 +347,51 @@ mod positioning_2 {
      *   - Free bodies outside of planets will have a PhantomMassSimulacrum for the purpose of
      *     local gravity.
      * - MacroGravitySystem
-     *   - Celestial and planetary masses are the only relevant factors.
-     *   - Above masses expressed as MassSimulacrum (a "celestial reference frame") for the purpose
+     *   - Celeplanetary masses are the only relevant factors.
+     *   - Above masses expressed as MassSimulacrum (a "celeplanetary reference frame") for the purpose
      *     of simulation
      * - LocalGravitySystem
-     *   - All masses down to terestrial masses simulated (and affected).
-     *   - Masses parented to a MassSimulacrum (a "system reference frame") for that purpose.
+     *   - All masses down to orbitoterestrial masses simulated (and affected).
      * - PhysicalitySystem
      *   - Unrelated to simulacrums: Proximal masses should interact properly (coliding, if
      *   appropriate).
      *
      * Player Scale interactions:
-     *   - Objects visible down to 1 terrestrial mass.
-     *   - Objects interactable down to 100_000_000 fundamental masses
-     *   - Objects below that scale will generally despawn
+     *   - Objects interactable and divisible down to 1 orbitoterrestrial mass.
      */
     struct GameplayMass {
-      c_m: u32 /* celestial_mass:
-                     (  1_000_000_000): Galactic center black hole
-                     (     10_000_000): Small stellar black hole mass
-                     (      2_000_000): Solar Mass
-                     (          2_000): Jupiter Mass
-                     (              1): Earth Mass */,
-      p_m: u32 /* planetary_mass:
-                     (  1_000_000_000): Earth Mass
-                     (     37_000_000): Lunar Mass
-                     (        500_000): Ceres Mass
-                     (          1_000): ~200km asteroid mass */,
-      o_m: u32 /* orbital_mass:
-                     ( 10_000_000_000): ~30km asteroid mass
-                     (     10_000_000): ~3km Rosetta comet mass
-                     (          6_000): Pyramid of Giza mass
-                     (            700): Heaviest conventional building mass
-                     (             50): Heavy seafaring vessel mass */,
-      t_m: u32 /* terrestrial_mass:
-                     (  1_000_000_000): Small spacecraft mass
-                     (     50_000_000): Tank mass
-                     (         70_000): Human mass
-                     (         15_000): Dog mass
-                     (            100): A fruit's mass */,
-      f_m: u32 /* fundamental_mass:
+      cp_m: i64 /* celeplanetary_mass:
+                     (  1_000_000_000_000_000_000): Galactic center black hole
+                     (     10_000_000_000_000_000): Small stellar black hole mass
+                     (      2_000_000_000_000_000): Solar Mass
+                     (          2_000_000_000_000): Jupiter Mass
+                     (              1_000_000_000): Earth Mass
+                     (              1_000_000_000): Earth Mass
+                     (                 37_000_000): Lunar Mass
+                     (                    500_000): Ceres Mass
+                     (                      1_000): ~200km asteroid mass */,
+      ot_m: i64 /* orbitoterestrial_mass:
+                     ( 10_000_000_000_000_000_000): ~30km asteroid mass
+                     (     10_000_000_000_000_000): ~3km Rosetta comet mass
+                     (          6_000_000_000_000): Pyramid of Giza mass
+                     (            700_000_000_000): Heaviest conventional building mass
+                     (             50_000_000_000): Heavy seafaring vessel mass
+                     (              1_000_000_000): Small spacecraft mass
+                     (                 50_000_000): Tank mass
+                     (                     70_000): Human mass
+                     (                     15_000): Dog mass
+                     (                        100): A fruit's mass */,
+      f_m: i32 /* fundamental_mass:
                      (  1_000_000_000): Smallest human scale mass,
                      (        500_000): Compound mass,
                      (          1_100): Atomic mass
                      (             17): Fundamental particle mass */,
+    }
+
+    impl GameplayMass {
+      fn celeplanetary_mass(&self) -> {
+        return self.cp_m;
+      }
     }
   }
 }

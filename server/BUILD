@@ -43,3 +43,35 @@ rust_test(
         ":space",
     ],
 )
+
+rust_library(
+    name = "cosmic_physics",
+    srcs = ["cosmic_physics.rs"],
+    deps = [
+        "//cargo/vendor:chrono",
+        "//cargo/vendor:log",
+        "//cargo/vendor:rand",
+    ],
+)
+
+rust_library(
+    name = "space_partitioning",
+    srcs = ["space_partitioning.rs"],
+    deps = [],
+)
+
+rust_binary(
+    name = "cosmic_toy",
+    srcs = ["cosmic_toy.rs"],
+    deps = [
+        ":cosmic_physics",
+        "//cargo/vendor:gnuplot",
+    ],
+)
+
+rust_test(
+    name = "cosmic_physics_test",
+    deps = [
+        ":cosmic_physics",
+    ],
+)
