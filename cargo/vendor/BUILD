@@ -62,8 +62,20 @@ alias(
     actual = "//cargo/vendor/time-0.1.38:time",
 )
 alias(
+    name = "vk_sys",
+    actual = "//cargo/vendor/vk-sys-0.3.2:vk_sys",
+)
+alias(
     name = "vulkano",
     actual = "//cargo/vendor/vulkano-0.7.2:vulkano",
+)
+alias(
+    name = "vulkano_shader_derive",
+    actual = "//cargo/vendor/vulkano-shader-derive-0.7.2:vulkano_shader_derive",
+)
+alias(
+    name = "vulkano_shaders",
+    actual = "//cargo/vendor/vulkano-shaders-0.7.2:vulkano_shaders",
 )
 alias(
     name = "vulkano_win",
