@@ -66,6 +66,8 @@ rust_binary(
     deps = [
         ":cosmic_physics",
         "//cargo/vendor:gnuplot",
+        "//cargo/vendor:rand",
+        "//cargo/vendor:vk_sys",
     ],
 )
 

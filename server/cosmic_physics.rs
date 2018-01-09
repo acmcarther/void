@@ -57,6 +57,10 @@ impl CelestialGrid {
     }
   }
 
+  pub fn get_system_ids(&self) -> Vec<u64> {
+    self.system_ids.clone()
+  }
+
   pub fn insert_system(&mut self, coords: CelestialVector, trajectory: CelestialVector, mass: CeleplanetaryMass) -> SystemId {
     let system_id = self.next_system_id;
     self.next_system_id = self.next_system_id + 1;
@@ -67,6 +71,16 @@ impl CelestialGrid {
     self.system_masses.insert(system_id, mass);
 
     system_id
+  }
+
+  pub fn remove_system(&mut self, system_id: SystemId) {
+    if !self.system_coordinates.contains_key(&system_id) {
+      return
+    }
+
+    self.system_coordinates.remove(&system_id);
+    self.system_trajectories.remove(&system_id);
+    self.system_masses.remove(&system_id);
   }
 
   pub fn get_system_details<'a>(&'a self, system_id: SystemId) -> Option<SystemDetails<'a>> {
@@ -90,6 +104,15 @@ impl CelestialGrid {
         for id_idx_2 in (id_idx_1+1)..self.system_ids.len() {
           let id_1 = self.system_ids.get(id_idx_1).unwrap();
           let id_2 = self.system_ids.get(id_idx_2).unwrap();
+
+          if !self.system_coordinates.contains_key(id_1) {
+            break;
+          }
+
+          if !self.system_coordinates.contains_key(id_2) {
+            continue;
+          }
+
           let mass_product = {
             self.system_masses.get(id_1).unwrap()
               * self.system_masses.get(id_2).unwrap()
@@ -173,6 +196,9 @@ impl CelestialGrid {
     {
       for id_idx in 0..self.system_ids.len() {
         let id = self.system_ids.get(id_idx).unwrap();
+        if !self.system_trajectories.contains_key(id) {
+          continue;
+        }
         let system_trajectory = self.system_trajectories.get(id).unwrap();
         let mut system_coordinates = self.system_coordinates.get_mut(id).unwrap();
         system_coordinates.x = system_coordinates.x + (system_trajectory.x as f64 * dt_s) as i64;
