@@ -35,10 +35,14 @@ rust_library(
     ],
 )
 rust_binary(
-    name = "gcc_shim",
+    # Prefix bin name to disambiguate from (probable) collision with lib name
+    # N.B.: The exact form of this is subject to change.
+    name = "cargo_bin_gcc_shim",
     crate_root = "src/bin/gcc-shim.rs",
     srcs = glob(["**/*.rs"]),
     deps = [
+        # Binaries get an implicit dependency on their lib
+        ":gcc",
         
         
     ],

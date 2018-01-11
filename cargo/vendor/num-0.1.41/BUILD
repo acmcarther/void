@@ -21,8 +21,11 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "//cargo/vendor/num-bigint-0.1.41:num_bigint",
+        "//cargo/vendor/num-complex-0.1.41:num_complex",
         "//cargo/vendor/num-integer-0.1.35:num_integer",
         "//cargo/vendor/num-iter-0.1.34:num_iter",
+        "//cargo/vendor/num-rational-0.1.40:num_rational",
         "//cargo/vendor/num-traits-0.1.41:num_traits",
         
     ],
@@ -33,7 +36,14 @@ rust_library(
     ],
     
     crate_features = [
-        
+        "bigint",
+        "complex",
+        "default",
+        "num-bigint",
+        "num-complex",
+        "num-rational",
+        "rational",
+        "rustc-serialize",
     ],
 )
 # Unsupported target "shootout-pidigits" with type "bench" omitted

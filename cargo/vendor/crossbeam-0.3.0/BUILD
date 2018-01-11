@@ -15,10 +15,14 @@ load(
 
 
 rust_binary(
-    name = "bench",
+    # Prefix bin name to disambiguate from (probable) collision with lib name
+    # N.B.: The exact form of this is subject to change.
+    name = "cargo_bin_bench",
     crate_root = "src/bin/bench.rs",
     srcs = glob(["**/*.rs"]),
     deps = [
+        # Binaries get an implicit dependency on their lib
+        ":crossbeam",
         
         
     ],
@@ -52,10 +56,14 @@ rust_library(
     ],
 )
 rust_binary(
-    name = "stress_msq",
+    # Prefix bin name to disambiguate from (probable) collision with lib name
+    # N.B.: The exact form of this is subject to change.
+    name = "cargo_bin_stress_msq",
     crate_root = "src/bin/stress-msq.rs",
     srcs = glob(["**/*.rs"]),
     deps = [
+        # Binaries get an implicit dependency on their lib
+        ":crossbeam",
         
         
     ],

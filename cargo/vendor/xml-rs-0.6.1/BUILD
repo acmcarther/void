@@ -42,10 +42,14 @@ rust_library(
     ],
 )
 rust_binary(
-    name = "xml_analyze",
+    # Prefix bin name to disambiguate from (probable) collision with lib name
+    # N.B.: The exact form of this is subject to change.
+    name = "cargo_bin_xml_analyze",
     crate_root = "src/analyze.rs",
     srcs = glob(["**/*.rs"]),
     deps = [
+        # Binaries get an implicit dependency on their lib
+        ":xml_rs",
         "//cargo/vendor/bitflags-0.9.1:bitflags",
         
     ],

@@ -1,0 +1,15 @@
+[package]
+name = "cexpr"
+version = "0.2.2"
+authors = ["Jethro Beekman <jethro@jbeekman.nl>"]
+license = "Apache-2.0/MIT"
+description = "A C expression parser and evaluator"
+documentation = "https://docs.rs/cexpr/"
+repository = "https://github.com/jethrogb/rust-cexpr"
+keywords = ["C","expression","parser"]
+
+[dependencies]
+nom = {version = "^3", features = ["verbose-errors"] }
+
+[dev-dependencies]
+clang-sys = "0.11.0"
