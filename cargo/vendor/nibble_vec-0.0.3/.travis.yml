@@ -1,8 +1,0 @@
-language: rust
-os:
-  - linux
-script:
-  - cargo test --verbose
-  - cargo doc --no-deps
-after_success:
-  - test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && bash upload-docs.sh

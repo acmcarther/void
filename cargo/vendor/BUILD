@@ -61,11 +61,6 @@ alias(
 )
 
 alias(
-    name = "radix_trie",
-    actual = "//cargo/vendor/radix_trie-0.1.2:radix_trie",
-)
-
-alias(
     name = "rand",
     actual = "//cargo/vendor/rand-0.3.18:rand",
 )
@@ -93,31 +88,6 @@ alias(
 alias(
     name = "vk_sys",
     actual = "//cargo/vendor/vk-sys-0.3.2:vk_sys",
-)
-
-alias(
-    name = "vulkano",
-    actual = "//cargo/vendor/vulkano-0.7.2:vulkano",
-)
-
-alias(
-    name = "vulkano_shader_derive",
-    actual = "//cargo/vendor/vulkano-shader-derive-0.7.2:vulkano_shader_derive",
-)
-
-alias(
-    name = "vulkano_shaders",
-    actual = "//cargo/vendor/vulkano-shaders-0.7.2:vulkano_shaders",
-)
-
-alias(
-    name = "vulkano_win",
-    actual = "//cargo/vendor/vulkano-win-0.7.2:vulkano_win",
-)
-
-alias(
-    name = "winit",
-    actual = "//cargo/vendor/winit-0.7.6:winit",
 )
 
 alias(
