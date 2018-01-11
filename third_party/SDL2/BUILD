@@ -10,9 +10,13 @@ cc_library(
             "src/**/*.h",
         ],
         exclude = [
+            "src/libm/*.c",
             "src/test/*.c",
+            "src/render/direct3d*/**",
+            "src/render/SDL_d3d*",
             "src/video/qnx/*.c",
             "src/haptic/windows/**",
+            "src/thread/generic/*.c",
         ],
     ),
     hdrs = [
@@ -26,6 +30,7 @@ cc_library(
         "include/SDL_config.h",
         "include/SDL_config_android.h",
         "include/SDL_config_iphoneos.h",
+        "include/SDL_config_linux.h",
         "include/SDL_config_macosx.h",
         "include/SDL_config_minimal.h",
         "include/SDL_config_pandora.h",
@@ -85,13 +90,12 @@ cc_library(
         "include/begin_code.h",
         "include/close_code.h",
     ],
-    copts = ["-Wno-string-conversion"],
+    copts = [
+        "-Wno-string-conversion",
+    ],
     includes = ["include"],
     linkopts = [
-        "-lm",
         "-ldl",
-        "-lrt",
     ],
     linkstatic = 1,
-    deps = [],
 )
