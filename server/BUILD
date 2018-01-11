@@ -77,3 +77,11 @@ rust_test(
         ":cosmic_physics",
     ],
 )
+
+rust_binary(
+    name = "sdl2_toy",
+    srcs = ["sdl2_toy.rs"],
+    deps = [
+        "//cargo/vendor:sdl2",
+    ],
+)
