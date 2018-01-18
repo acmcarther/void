@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "num_iter",
     crate_root = "src/lib.rs",
@@ -22,15 +21,12 @@ rust_library(
     deps = [
         "//cargo/vendor/num-integer-0.1.35:num_integer",
         "//cargo/vendor/num-traits-0.1.41:num_traits",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+

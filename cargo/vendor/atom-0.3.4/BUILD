@@ -13,26 +13,21 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "atom",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "atom" with type "test" omitted
 # Unsupported target "fifo" with type "example" omitted
 # Unsupported target "simple" with type "example" omitted

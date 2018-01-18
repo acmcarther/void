@@ -13,26 +13,21 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "cc",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "cc_env" with type "test" omitted
 rust_binary(
     # Prefix bin name to disambiguate from (probable) collision with lib name
@@ -43,17 +38,13 @@ rust_binary(
     deps = [
         # Binaries get an implicit dependency on their lib
         ":cc",
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "test" with type "test" omitted

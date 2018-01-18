@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "miow",
     crate_root = "src/lib.rs",
@@ -24,15 +23,12 @@ rust_library(
         "//cargo/vendor/net2-0.2.31:net2",
         "//cargo/vendor/winapi-0.2.8:winapi",
         "//cargo/vendor/ws2_32-sys-0.2.1:ws2_32_sys",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+

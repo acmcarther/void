@@ -12,8 +12,6 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "all" with type "test" omitted
 # Unsupported target "bilock" with type "bench" omitted
 # Unsupported target "bilock" with type "test" omitted
@@ -23,27 +21,25 @@ load(
 # Unsupported target "eventual" with type "test" omitted
 # Unsupported target "fuse" with type "test" omitted
 # Unsupported target "future_flatten_stream" with type "test" omitted
+
 rust_library(
     name = "futures",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "default",
         "use_std",
         "with-deprecated",
     ],
 )
+
 # Unsupported target "futures_ordered" with type "test" omitted
 # Unsupported target "futures_unordered" with type "bench" omitted
 # Unsupported target "futures_unordered" with type "test" omitted

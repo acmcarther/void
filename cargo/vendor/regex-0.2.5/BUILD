@@ -12,8 +12,6 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "backtrack" with type "test" omitted
 # Unsupported target "backtrack-bytes" with type "test" omitted
 # Unsupported target "backtrack-utf8bytes" with type "test" omitted
@@ -22,6 +20,7 @@ load(
 # Unsupported target "nfa" with type "test" omitted
 # Unsupported target "nfa-bytes" with type "test" omitted
 # Unsupported target "nfa-utf8bytes" with type "test" omitted
+
 rust_library(
     name = "regex",
     crate_root = "src/lib.rs",
@@ -33,18 +32,15 @@ rust_library(
         "//cargo/vendor/regex-syntax-0.4.2:regex_syntax",
         "//cargo/vendor/thread_local-0.3.5:thread_local",
         "//cargo/vendor/utf8-ranges-1.0.0:utf8_ranges",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "shootout-regex-dna" with type "example" omitted
 # Unsupported target "shootout-regex-dna-bytes" with type "example" omitted
 # Unsupported target "shootout-regex-dna-cheat" with type "example" omitted

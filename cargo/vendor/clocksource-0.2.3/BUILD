@@ -12,9 +12,8 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "clock" with type "example" omitted
+
 rust_library(
     name = "clocksource",
     crate_root = "src/lib.rs",
@@ -22,15 +21,13 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/libc-0.2.34:libc",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "default",
     ],
 )
+

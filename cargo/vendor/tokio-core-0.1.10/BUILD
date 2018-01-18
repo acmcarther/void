@@ -12,8 +12,6 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "buffered" with type "test" omitted
 # Unsupported target "chain" with type "test" omitted
 # Unsupported target "chat" with type "example" omitted
@@ -39,6 +37,7 @@ load(
 # Unsupported target "timeout" with type "test" omitted
 # Unsupported target "tinydb" with type "example" omitted
 # Unsupported target "tinyhttp" with type "example" omitted
+
 rust_library(
     name = "tokio_core",
     crate_root = "src/lib.rs",
@@ -53,17 +52,14 @@ rust_library(
         "//cargo/vendor/scoped-tls-0.1.0:scoped_tls",
         "//cargo/vendor/slab-0.4.0:slab",
         "//cargo/vendor/tokio-io-0.1.4:tokio_io",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "udp" with type "test" omitted
 # Unsupported target "udp-codec" with type "example" omitted

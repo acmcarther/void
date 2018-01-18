@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "chrono",
     crate_root = "src/lib.rs",
@@ -22,15 +21,12 @@ rust_library(
     deps = [
         "//cargo/vendor/num-0.1.41:num",
         "//cargo/vendor/time-0.1.38:time",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+

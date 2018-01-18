@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "arrayvec",
     crate_root = "src/lib.rs",
@@ -22,14 +21,11 @@ rust_library(
     deps = [
         "//cargo/vendor/nodrop-0.1.12:nodrop",
         "//cargo/vendor/odds-0.2.26:odds",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "default",
         "nodrop",
@@ -37,5 +33,6 @@ rust_library(
         "std",
     ],
 )
+
 # Unsupported target "generic_array" with type "test" omitted
 # Unsupported target "tests" with type "test" omitted

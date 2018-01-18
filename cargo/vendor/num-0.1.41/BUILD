@@ -12,9 +12,8 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "bigint" with type "bench" omitted
+
 rust_library(
     name = "num",
     crate_root = "src/lib.rs",
@@ -27,14 +26,11 @@ rust_library(
         "//cargo/vendor/num-iter-0.1.34:num_iter",
         "//cargo/vendor/num-rational-0.1.40:num_rational",
         "//cargo/vendor/num-traits-0.1.41:num_traits",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "bigint",
         "complex",
@@ -46,4 +42,5 @@ rust_library(
         "rustc-serialize",
     ],
 )
+
 # Unsupported target "shootout-pidigits" with type "bench" omitted

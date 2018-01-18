@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "syn",
     crate_root = "src/lib.rs",
@@ -22,14 +21,11 @@ rust_library(
     deps = [
         "//cargo/vendor/quote-0.3.15:quote",
         "//cargo/vendor/unicode-xid-0.0.4:unicode_xid",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "aster",
         "default",
@@ -41,3 +37,4 @@ rust_library(
         "visit",
     ],
 )
+

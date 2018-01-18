@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "unreachable",
     crate_root = "src/lib.rs",
@@ -21,15 +20,12 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/void-1.0.2:void",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+

@@ -12,26 +12,22 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "readme" with type "example" omitted
+
 rust_library(
     name = "scopeguard",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "default",
         "use_std",
     ],
 )
+

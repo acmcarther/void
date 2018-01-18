@@ -11,9 +11,7 @@ load(
     "rust_binary",
     "rust_test",
     "rust_bench_test",
-)
-
-rust_binary(
+)rust_binary(
     name = "bindgen_build_script",
     srcs = glob(["**/*.rs"]),
     crate_root = "build.rs",
@@ -21,7 +19,6 @@ rust_binary(
       "*"
     ]),
     deps = [
-      
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -55,6 +52,7 @@ genrule(
         + " export OUT_TAR=$$PWD/$@;"
         + " cd $$(dirname $(location :Cargo.toml)) && $$BINARY_PATH && tar -czf $$OUT_TAR -C $$OUT_DIR .)"
 )
+
 rust_binary(
     # Prefix bin name to disambiguate from (probable) collision with lib name
     # N.B.: The exact form of this is subject to change.
@@ -75,12 +73,10 @@ rust_binary(
         "//cargo/vendor/quote-0.3.15:quote",
         "//cargo/vendor/regex-0.2.5:regex",
         "//cargo/vendor/which-1.0.3:which",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
     out_dir_tar = ":bindgen_build_script_executor",
     crate_features = [
@@ -90,6 +86,8 @@ rust_binary(
         "logging",
     ],
 )
+
+
 rust_library(
     name = "bindgen",
     crate_root = "src/lib.rs",
@@ -107,12 +105,10 @@ rust_library(
         "//cargo/vendor/quote-0.3.15:quote",
         "//cargo/vendor/regex-0.2.5:regex",
         "//cargo/vendor/which-1.0.3:which",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
     out_dir_tar = ":bindgen_build_script_executor",
     crate_features = [
@@ -122,3 +118,4 @@ rust_library(
         "logging",
     ],
 )
+

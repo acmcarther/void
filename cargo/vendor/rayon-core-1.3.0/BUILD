@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "rayon_core",
     crate_root = "src/lib.rs",
@@ -25,15 +24,12 @@ rust_library(
         "//cargo/vendor/libc-0.2.34:libc",
         "//cargo/vendor/num_cpus-1.7.0:num_cpus",
         "//cargo/vendor/rand-0.3.18:rand",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+

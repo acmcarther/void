@@ -12,8 +12,6 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "alternate_screen" with type "example" omitted
 # Unsupported target "alternate_screen_raw" with type "example" omitted
 # Unsupported target "async" with type "example" omitted
@@ -29,6 +27,7 @@ load(
 # Unsupported target "rustc_fun" with type "example" omitted
 # Unsupported target "simple" with type "example" omitted
 # Unsupported target "size" with type "example" omitted
+
 rust_library(
     name = "termion",
     crate_root = "src/lib.rs",
@@ -36,16 +35,13 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/libc-0.2.34:libc",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "truecolor" with type "example" omitted

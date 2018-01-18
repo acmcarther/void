@@ -12,8 +12,6 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "clipboard" with type "example" omitted
 # Unsupported target "cursor" with type "example" omitted
 # Unsupported target "cursor_icon" with type "example" omitted
@@ -21,6 +19,7 @@ load(
 # Unsupported target "error" with type "example" omitted
 # Unsupported target "events" with type "example" omitted
 # Unsupported target "fullscreen" with type "example" omitted
+
 rust_library(
     name = "glfw",
     crate_root = "src/lib.rs",
@@ -34,19 +33,17 @@ rust_library(
         "//cargo/vendor/log-0.3.8:log",
         "//cargo/vendor/num-0.1.41:num",
         "//cargo/vendor/semver-0.2.3:semver",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "default",
         "glfw-sys",
     ],
 )
+
 # Unsupported target "modes" with type "example" omitted
 # Unsupported target "monitors" with type "example" omitted
 # Unsupported target "multiwindow" with type "example" omitted

@@ -12,8 +12,6 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "animation" with type "example" omitted
 # Unsupported target "audio" with type "test" omitted
 # Unsupported target "audio-capture-and-replay" with type "example" omitted
@@ -40,6 +38,7 @@ load(
 # Unsupported target "renderer-texture" with type "example" omitted
 # Unsupported target "renderer-yuv" with type "example" omitted
 # Unsupported target "resource-manager" with type "example" omitted
+
 rust_library(
     name = "sdl2",
     crate_root = "src/sdl2/lib.rs",
@@ -56,13 +55,12 @@ rust_library(
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "default",
     ],
 )
+
 # Unsupported target "ttf-demo" with type "example" omitted
 # Unsupported target "video" with type "test" omitted
 # Unsupported target "window-properties" with type "example" omitted

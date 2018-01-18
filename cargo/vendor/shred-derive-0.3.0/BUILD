@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "shred_derive",
     crate_root = "src/lib.rs",
@@ -22,15 +21,12 @@ rust_library(
     deps = [
         "//cargo/vendor/quote-0.3.15:quote",
         "//cargo/vendor/syn-0.11.11:syn",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+

@@ -12,8 +12,6 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 rust_binary(
     # Prefix bin name to disambiguate from (probable) collision with lib name
     # N.B.: The exact form of this is subject to change.
@@ -23,38 +21,31 @@ rust_binary(
     deps = [
         # Binaries get an implicit dependency on their lib
         ":crossbeam",
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
+
 rust_library(
     name = "crossbeam",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 rust_binary(
     # Prefix bin name to disambiguate from (probable) collision with lib name
     # N.B.: The exact form of this is subject to change.
@@ -64,16 +55,12 @@ rust_binary(
     deps = [
         # Binaries get an implicit dependency on their lib
         ":crossbeam",
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+

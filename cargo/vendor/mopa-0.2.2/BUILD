@@ -13,26 +13,21 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "mopa",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "no_std" with type "example" omitted
 # Unsupported target "no_std_or_alloc" with type "example" omitted
 # Unsupported target "simple" with type "example" omitted

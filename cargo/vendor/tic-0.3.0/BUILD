@@ -12,10 +12,9 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "allan" with type "example" omitted
 # Unsupported target "benchmark" with type "example" omitted
+
 rust_library(
     name = "tic",
     crate_root = "src/lib.rs",
@@ -34,15 +33,13 @@ rust_library(
         "//cargo/vendor/time-0.1.38:time",
         "//cargo/vendor/tiny_http-0.5.8:tiny_http",
         "//cargo/vendor/waterfall-0.7.1:waterfall",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "default",
     ],
 )
+

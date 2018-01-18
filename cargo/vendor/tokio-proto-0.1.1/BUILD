@@ -12,8 +12,6 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "simple_client_proto" with type "test" omitted
 # Unsupported target "simple_framed" with type "test" omitted
 # Unsupported target "test_multiplex_client" with type "test" omitted
@@ -21,6 +19,7 @@ load(
 # Unsupported target "test_multiplex_server" with type "test" omitted
 # Unsupported target "test_pipeline_client" with type "test" omitted
 # Unsupported target "test_pipeline_server" with type "test" omitted
+
 rust_library(
     name = "tokio_proto",
     crate_root = "src/lib.rs",
@@ -37,15 +36,12 @@ rust_library(
         "//cargo/vendor/tokio-core-0.1.10:tokio_core",
         "//cargo/vendor/tokio-io-0.1.4:tokio_io",
         "//cargo/vendor/tokio-service-0.1.0:tokio_service",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+

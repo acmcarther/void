@@ -12,9 +12,8 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "compile-test" with type "test" omitted
+
 rust_library(
     name = "derivative",
     crate_root = "src/lib.rs",
@@ -24,18 +23,15 @@ rust_library(
         "//cargo/vendor/itertools-0.5.10:itertools",
         "//cargo/vendor/quote-0.3.15:quote",
         "//cargo/vendor/syn-0.10.8:syn",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "derive-clone" with type "test" omitted
 # Unsupported target "derive-debug" with type "test" omitted
 # Unsupported target "derive-debug-bounds" with type "test" omitted

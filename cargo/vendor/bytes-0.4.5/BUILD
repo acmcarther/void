@@ -12,9 +12,8 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "bytes" with type "bench" omitted
+
 rust_library(
     name = "bytes",
     crate_root = "src/lib.rs",
@@ -23,18 +22,15 @@ rust_library(
     deps = [
         "//cargo/vendor/byteorder-1.2.1:byteorder",
         "//cargo/vendor/iovec-0.1.1:iovec",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "test_buf" with type "test" omitted
 # Unsupported target "test_buf_mut" with type "test" omitted
 # Unsupported target "test_bytes" with type "test" omitted

@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "enum_primitive",
     crate_root = "src/lib.rs",
@@ -21,18 +20,15 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "//cargo/vendor/num-traits-0.1.41:num_traits",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "image" with type "test" omitted
 # Unsupported target "omitted-discriminants" with type "test" omitted
 # Unsupported target "tests" with type "test" omitted

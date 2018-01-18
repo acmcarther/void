@@ -12,9 +12,8 @@ load(
     "rust_test",
     "rust_bench_test",
 )
-
-
 # Unsupported target "bench" with type "bench" omitted
+
 rust_library(
     name = "coco",
     crate_root = "src/lib.rs",
@@ -23,15 +22,12 @@ rust_library(
     deps = [
         "//cargo/vendor/either-1.4.0:either",
         "//cargo/vendor/scopeguard-0.3.3:scopeguard",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+

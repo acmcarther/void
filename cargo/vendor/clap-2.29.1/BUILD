@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "clap",
     crate_root = "src/lib.rs",
@@ -27,14 +26,11 @@ rust_library(
         "//cargo/vendor/textwrap-0.9.0:textwrap",
         "//cargo/vendor/unicode-width-0.1.4:unicode_width",
         "//cargo/vendor/vec_map-0.8.0:vec_map",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "ansi_term",
         "atty",
@@ -45,3 +41,4 @@ rust_library(
         "vec_map",
     ],
 )
+

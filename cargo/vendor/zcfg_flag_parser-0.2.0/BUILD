@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "zcfg_flag_parser",
     crate_root = "src/lib.rs",
@@ -22,15 +21,12 @@ rust_library(
     deps = [
         "//cargo/vendor/itertools-0.6.5:itertools",
         "//cargo/vendor/zcfg-0.2.0:zcfg",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+

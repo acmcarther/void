@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "hyper",
     crate_root = "src/lib.rs",
@@ -36,16 +35,14 @@ rust_library(
         "//cargo/vendor/tokio-proto-0.1.1:tokio_proto",
         "//cargo/vendor/tokio-service-0.1.0:tokio_service",
         "//cargo/vendor/unicase-2.1.0:unicase",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "default",
         "server-proto",
     ],
 )
+

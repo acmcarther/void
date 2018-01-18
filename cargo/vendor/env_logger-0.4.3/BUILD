@@ -13,7 +13,6 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "env_logger",
     crate_root = "src/lib.rs",
@@ -22,17 +21,15 @@ rust_library(
     deps = [
         "//cargo/vendor/log-0.3.8:log",
         "//cargo/vendor/regex-0.2.5:regex",
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "default",
         "regex",
     ],
 )
+
 # Unsupported target "regexp_filter" with type "test" omitted

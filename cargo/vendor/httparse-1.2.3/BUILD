@@ -13,25 +13,21 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "httparse",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
         "default",
         "std",
     ],
 )
+
 # Unsupported target "parse" with type "bench" omitted

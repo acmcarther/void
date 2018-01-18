@@ -13,25 +13,20 @@ load(
     "rust_bench_test",
 )
 
-
 rust_library(
     name = "bitflags",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        
-        
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-        
     ],
-    
     crate_features = [
-        
     ],
 )
+
 # Unsupported target "external" with type "test" omitted
 # Unsupported target "external_no_std" with type "test" omitted
