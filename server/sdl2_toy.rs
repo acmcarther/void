@@ -89,6 +89,9 @@ fn vulkan() {
     vk::EntryPoints::load(|symbol_name| lib.symbol::<*const std::os::raw::c_void>(symbol_name.to_str().unwrap()).unwrap() as *const std::os::raw::c_void)
   };
 
+  let instance_pointers = unsafe {
+    vk::InstancePointers::load(|symbol_name| lib.symbol::<*const std::os::raw::c_void>(symbol_name.to_str().unwrap()).unwrap() as *const std::os::raw::c_void)
+  };
 
   let mut property_count = 20u32;
   let mut returned_extensions = Vec::with_capacity(property_count as usize);
