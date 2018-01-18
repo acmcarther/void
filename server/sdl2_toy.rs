@@ -33,33 +33,6 @@ fn main() {
       .build()
       .unwrap();
 
-  println!("3");
-
-  let mut canvas = window.into_canvas().build().unwrap();
-
-  canvas.set_draw_color(Color::RGB(0, 255, 255));
-  canvas.clear();
-  canvas.present();
-  let mut event_pump = sdl_context.event_pump().unwrap();
-  let mut i = 0;
-  'running: loop {
-      i = (i + 1) % 255;
-      canvas.set_draw_color(Color::RGB(i, 64, 255 - i));
-      canvas.clear();
-      for event in event_pump.poll_iter() {
-          match event {
-              Event::Quit {..} |
-              Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                  break 'running
-              },
-              _ => {}
-          }
-      }
-      // The rest of the game loop goes here...
-
-      canvas.present();
-      ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-  }
 }
 
 fn vulkan() {
@@ -222,7 +195,6 @@ fn vulkan() {
   println!("fetching instance pointers");
 
   // Set up the ptrs required for instance manipulation
-  // N.B.: Probably needs to be created after an instance is created.
   let instance_pointers = unsafe {
     vk::InstancePointers::load(|symbol_name| {
       static_points.GetInstanceProcAddr(instance, symbol_name.as_ptr()) as *const std::os::raw::c_void
@@ -255,7 +227,8 @@ fn vulkan() {
     debug_report_callback_ext
   };
 
-  let mut selected_device: vk::PhysicalDevice = 0;
+  let mut physical_device: vk::PhysicalDevice = 0;
+  let mut gfx_supporting_queue_family_index: u32 = 0;
   unsafe {
     let mut num_devices = 0u32;
     let result = instance_pointers.EnumeratePhysicalDevices(
@@ -285,11 +258,156 @@ fn vulkan() {
       instance_pointers.GetPhysicalDeviceFeatures(*device, &mut physical_device_features);
 
       println!("got a device {}", CStr::from_ptr(physical_device_properties.deviceName.as_ptr()).to_str().unwrap());
+
+      let mut num_queue_family_properties = 0u32;
+      let mut queue_family_properties_list: Vec<vk::QueueFamilyProperties> = std::mem::uninitialized();
+      instance_pointers.GetPhysicalDeviceQueueFamilyProperties(
+        *device, &mut num_queue_family_properties, ptr::null_mut());
+
+      println!("found {} queue family properties", num_queue_family_properties);
+
+      let mut queue_family_properties_list: Vec<vk::QueueFamilyProperties> =
+        Vec::with_capacity(num_queue_family_properties as usize);
+
+      instance_pointers.GetPhysicalDeviceQueueFamilyProperties(
+        *device, &mut num_queue_family_properties, queue_family_properties_list.as_mut_ptr());
+
+      println!("populated queue family properties list");
+
+      queue_family_properties_list.set_len(num_queue_family_properties as usize);
+
+      let gfx_supporting_queue_family_index_opt =
+        queue_family_properties_list.iter()
+          .position(|props| props.queueCount > 0 && (props.queueFlags & vk::QUEUE_GRAPHICS_BIT > 0));
+
+      if gfx_supporting_queue_family_index_opt.is_some() && physical_device == 0 {
+        println!("going with that device, as it supports a gfx queue");
+        physical_device = *device;
+        gfx_supporting_queue_family_index = gfx_supporting_queue_family_index_opt.unwrap() as u32;
+      }
     }
+  }
+
+  if physical_device == 0 {
+    panic!("there was no suitable device available!");
+  }
+
+  let queue_priorities = [1.0f32];
+  let device_queue_create_info = vk::DeviceQueueCreateInfo {
+    sType: vk::STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+    pNext: ptr::null(),
+    flags: 0,
+    queueFamilyIndex: gfx_supporting_queue_family_index,
+    queueCount: 1,
+    pQueuePriorities: queue_priorities.as_ptr(),
+  };
+
+  let physical_device_features = vk::PhysicalDeviceFeatures {
+    robustBufferAccess: vk::FALSE,
+    fullDrawIndexUint32: vk::FALSE,
+    imageCubeArray: vk::FALSE,
+    independentBlend: vk::FALSE,
+    geometryShader: vk::FALSE,
+    tessellationShader: vk::FALSE,
+    sampleRateShading: vk::FALSE,
+    dualSrcBlend: vk::FALSE,
+    logicOp: vk::FALSE,
+    multiDrawIndirect: vk::FALSE,
+    drawIndirectFirstInstance: vk::FALSE,
+    depthClamp: vk::FALSE,
+    depthBiasClamp: vk::FALSE,
+    fillModeNonSolid: vk::FALSE,
+    depthBounds: vk::FALSE,
+    wideLines: vk::FALSE,
+    largePoints: vk::FALSE,
+    alphaToOne: vk::FALSE,
+    multiViewport: vk::FALSE,
+    samplerAnisotropy: vk::FALSE,
+    textureCompressionETC2: vk::FALSE,
+    textureCompressionASTC_LDR: vk::FALSE,
+    textureCompressionBC: vk::FALSE,
+    occlusionQueryPrecise: vk::FALSE,
+    pipelineStatisticsQuery: vk::FALSE,
+    vertexPipelineStoresAndAtomics: vk::FALSE,
+    fragmentStoresAndAtomics: vk::FALSE,
+    shaderTessellationAndGeometryPointSize: vk::FALSE,
+    shaderImageGatherExtended: vk::FALSE,
+    shaderStorageImageExtendedFormats: vk::FALSE,
+    shaderStorageImageMultisample: vk::FALSE,
+    shaderStorageImageReadWithoutFormat: vk::FALSE,
+    shaderStorageImageWriteWithoutFormat: vk::FALSE,
+    shaderUniformBufferArrayDynamicIndexing: vk::FALSE,
+    shaderSampledImageArrayDynamicIndexing: vk::FALSE,
+    shaderStorageBufferArrayDynamicIndexing: vk::FALSE,
+    shaderStorageImageArrayDynamicIndexing: vk::FALSE,
+    shaderClipDistance: vk::FALSE,
+    shaderCullDistance: vk::FALSE,
+    shaderf3264: vk::FALSE,
+    shaderInt64: vk::FALSE,
+    shaderInt16: vk::FALSE,
+    shaderResourceResidency: vk::FALSE,
+    shaderResourceMinLod: vk::FALSE,
+    sparseBinding: vk::FALSE,
+    sparseResidencyBuffer: vk::FALSE,
+    sparseResidencyImage2D: vk::FALSE,
+    sparseResidencyImage3D: vk::FALSE,
+    sparseResidency2Samples: vk::FALSE,
+    sparseResidency4Samples: vk::FALSE,
+    sparseResidency8Samples: vk::FALSE,
+    sparseResidency16Samples: vk::FALSE,
+    sparseResidencyAliased: vk::FALSE,
+    variableMultisampleRate: vk::FALSE,
+    inheritedQueries: vk::FALSE,
+  };
+
+  let device_create_info = vk::DeviceCreateInfo {
+    sType: vk::STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+    pNext: ptr::null(),
+    flags: 0,
+    queueCreateInfoCount: 1,
+    pQueueCreateInfos: &device_queue_create_info as *const _,
+    enabledLayerCount: ppEnabledLayerNames.len() as u32,
+    ppEnabledLayerNames: ppEnabledLayerNames.as_ptr(),
+    enabledExtensionCount: 0,
+    ppEnabledExtensionNames: ptr::null(),
+    pEnabledFeatures: &physical_device_features as *const _,
+  };
+  println!("Constructing logical device");
+
+  let mut logical_device = 0;
+  unsafe {
+    let result = instance_pointers.CreateDevice(
+      physical_device, &device_create_info, ptr::null(), &mut logical_device);
+
+    if result != vk::SUCCESS {
+      panic!("failed to create logical device with {}", vk_result_to_human(result as i32));
+    }
+  }
+
+  println!("Loading device pointers");
+
+  // Set up the ptrs required for device manipulation
+  let device_pointers = unsafe {
+    vk::DevicePointers::load(|symbol_name| {
+      instance_pointers.GetDeviceProcAddr(logical_device, symbol_name.as_ptr()) as *const std::os::raw::c_void
+    })
+  };
+
+  println!("Retrieving gfx capable queue");
+  // Get the gfx-capable device queue
+  let mut queue: vk::Queue = unsafe {std::mem::uninitialized() } ;
+  unsafe {
+    device_pointers.GetDeviceQueue(
+      logical_device,
+      gfx_supporting_queue_family_index,
+      0,
+      &mut queue
+    );
   }
 
   // Destroy all created stuff
   unsafe {
+    device_pointers.DestroyDevice(logical_device, ptr::null());
     instance_pointers.DestroyDebugReportCallbackEXT(instance, debug_report_callback_ext, ptr::null());
     instance_pointers.DestroyInstance(instance, ptr::null());
   }
