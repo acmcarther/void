@@ -66,18 +66,14 @@ fn vulkan() {
   let lib_path = PathBuf::from("libvulkan.so.1");
   let lib = dylib::DynamicLibrary::open(Some(lib_path.as_path())).unwrap();
 
+  // Set up bootstrap vulkan ptrs
   let entry_points = unsafe {
     vk::EntryPoints::load(|symbol_name| lib.symbol::<*const std::os::raw::c_void>(symbol_name.to_str().unwrap()).unwrap() as *const std::os::raw::c_void)
   };
 
-  /*
-  let instance_pointers = unsafe {
-    vk::InstancePointers::load(|symbol_name| lib.symbol::<*const std::os::raw::c_void>(symbol_name.to_str().unwrap()).unwrap() as *const std::os::raw::c_void)
-  };*/
-
+  // Fetch supported vulkan extension information
   let mut num_extensions = 20u32;
   let mut extensions = Vec::with_capacity(num_extensions as usize);
-
   unsafe {
     let result = entry_points.EnumerateInstanceExtensionProperties(
       ptr::null(), &mut num_extensions, ptr::null::<vk::ExtensionProperties>() as *mut _);
@@ -96,14 +92,49 @@ fn vulkan() {
     extensions.set_len(num_extensions as usize);
   }
 
+  // Print extensions for debug
   for extension in extensions.iter() {
-    let extension_name = String::from_utf8(extension.extensionName.to_vec().into_iter().map(|i| i as u8).collect()).unwrap();
-    println!("got some extension {}, {}", extension_name, extension.specVersion);
+    unsafe {
+      println!("extension {} available", CStr::from_ptr(extension.extensionName.as_ptr()).to_str().unwrap())
+    }
   }
 
+  // Retain debug related extensions
+  let enabled_extensions = unsafe {
+    extensions.into_iter()
+      .filter(|e| {
+        let layer_as_str = CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap();
+        match layer_as_str {
+          "VK_EXT_acquire_xlib_display" => false,
+          "VK_EXT_debug_report" => true,
+          "VK_EXT_direct_mode_display" => false,
+          "VK_EXT_display_surface_counter" => true,
+          "VK_KHR_display" => true,
+          "VK_KHR_external_fence_capabilities" => false,
+          "VK_KHR_external_memory_capabilities" => false,
+          "VK_KHR_external_semaphore_capabilities" => false,
+          "VK_KHR_get_physical_device_properties2" => true,
+          "VK_KHR_get_surface_capabilities2" => true,
+          "VK_KHR_surface" => true,
+          "VK_KHR_xcb_surface" => true,
+          "VK_KHR_xlib_surface" => true,
+          "VK_KHX_device_group_creation" => true,
+          _ => false,
+        }
+      })
+      .map(|e| e.extensionName)
+      .collect::<Vec<_>>()
+  };
+  unsafe {
+    for extension in enabled_extensions.iter() {
+      println!("extension enabled: {}", CStr::from_ptr(extension.as_ptr()).to_str().unwrap())
+    }
+  }
+
+
+  // Fetch supported vulkan layer information
   let mut num_layers = 20u32;
   let mut layers: Vec<vk::LayerProperties> = Vec::with_capacity(num_layers as usize);
-
   unsafe {
     let result = entry_points.EnumerateInstanceLayerProperties(
       &mut num_layers, ptr::null_mut());
@@ -121,57 +152,53 @@ fn vulkan() {
     layers.set_len(num_layers as usize);
   }
 
+  // Print layers for debug
   for layer in layers.iter() {
-    let layer_name = String::from_utf8(layer.layerName.to_vec().into_iter().map(|i| i as u8).collect()).unwrap();
-    let layer_description = String::from_utf8(layer.description.to_vec().into_iter().map(|i| i as u8).collect()).unwrap();
-    println!("got some layer: {}, {}, {}, {}", layer_name, layer.specVersion, layer.implementationVersion, layer_description);
+    unsafe {
+      println!("layer {} available", CStr::from_ptr(layer.layerName.as_ptr()).to_str().unwrap())
+    }
   }
 
 
-  let vk_application_info = vk::ApplicationInfo {
-    sType: vk::STRUCTURE_TYPE_APPLICATION_INFO,
-    pNext: ptr::null(),
-    pApplicationName: CString::new("sdl2_toy").unwrap().as_ptr(),
-    applicationVersion: 1,
-    pEngineName: CString::new("No Engine").unwrap().as_ptr(),
-    engineVersion: 1,
-    apiVersion: 0
-  };
-
+  // Retain layers that are validation related
   let enabled_layers = unsafe {
     layers.into_iter()
-      .filter(|l| CStr::from_ptr(l.layerName.as_ptr()).to_str().unwrap().contains("validation"))
+      .filter(|l| CStr::from_ptr(l.layerName.as_ptr()).to_str().unwrap().contains("standard_validation"))
       .map(|l| l.layerName)
       .collect::<Vec<_>>()
   };
-  let enabled_extensions = unsafe {
-    extensions.into_iter()
-      .filter(|e| CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap().contains("debug"))
-      .map(|e| e.extensionName)
-      .collect::<Vec<_>>()
-  };
-
   unsafe {
     for layer in enabled_layers.iter() {
       println!("layer enabled: {}", CStr::from_ptr(layer.as_ptr()).to_str().unwrap())
     }
   }
 
-  unsafe {
-    for extension in enabled_extensions.iter() {
-      println!("extension enabled: {}", CStr::from_ptr(extension.as_ptr()).to_str().unwrap())
-    }
-  }
+  println!("setting up instance");
+  let pApplicationName = CString::new("sdl2_toy").unwrap();
+  let pEngineName = CString::new("No Engine").unwrap();
 
+  // Set up application
+  let vk_application_info = vk::ApplicationInfo {
+    sType: vk::STRUCTURE_TYPE_APPLICATION_INFO,
+    pNext: ptr::null(),
+    pApplicationName: pApplicationName.as_ptr(),
+    applicationVersion: 1,
+    pEngineName: pEngineName.as_ptr(),
+    engineVersion: 1,
+    apiVersion: 0 /* 1? */,
+  };
+
+  let ppEnabledLayerNames = enabled_layers.iter().map(|i| i.as_ptr()).collect::<Vec<_>>();
+  let ppEnabledExtensionNames = enabled_extensions.iter().map(|i| i.as_ptr()).collect::<Vec<_>>();
   let vk_instance_create_info = vk::InstanceCreateInfo {
     sType: vk::STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
     pApplicationInfo: &vk_application_info as *const _,
     flags: 0,
     pNext: ptr::null(),
-    enabledLayerCount: enabled_layers.len() as u32,
-    ppEnabledLayerNames: enabled_layers.iter().map(|i| i.as_ptr()).collect::<Vec<_>>().as_ptr(),
-    enabledExtensionCount: num_extensions,
-    ppEnabledExtensionNames: enabled_extensions.iter().map(|i| i.as_ptr()).collect::<Vec<_>>().as_ptr(),
+    enabledLayerCount: ppEnabledLayerNames.len() as u32,
+    ppEnabledLayerNames: ppEnabledLayerNames.as_ptr(),
+    enabledExtensionCount: ppEnabledExtensionNames.len() as u32,
+    ppEnabledExtensionNames: ppEnabledExtensionNames.as_ptr(),
   };
 
   let mut instance = 0;
@@ -184,30 +211,84 @@ fn vulkan() {
     }
   }
 
+  println!("Fetching static ptrs");
+
+  // Set up _more_ bootstrap vulkan ptrs
+  let static_points = unsafe {
+    vk::Static::load(|symbol_name| lib.symbol::<*const std::os::raw::c_void>(symbol_name.to_str().unwrap()).unwrap() as *const std::os::raw::c_void)
+  };
+
+
+  println!("fetching instance pointers");
+
+  // Set up the ptrs required for instance manipulation
+  // N.B.: Probably needs to be created after an instance is created.
   let instance_pointers = unsafe {
-    vk::InstancePointers::load(|symbol_name| lib.symbol::<*const std::os::raw::c_void>(symbol_name.to_str().unwrap()).unwrap() as *const std::os::raw::c_void)
+    vk::InstancePointers::load(|symbol_name| {
+      static_points.GetInstanceProcAddr(instance, symbol_name.as_ptr()) as *const std::os::raw::c_void
+    })
   };
 
-  let mut debug_report_callback_ext = 0;
-  let debug_report_callback_create_info_ext = vk::DebugReportCallbackCreateInfoEXT {
-    sType: vk::STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT,
-    flags: vk::DEBUG_REPORT_ERROR_BIT_EXT | vk::DEBUG_REPORT_WARNING_BIT_EXT,
-    pNext: ptr::null(),
-    pfnCallback: vk_debug_report_callback_ext,
-    pUserData: ptr::null_mut(),
+  println!("setting up debug callback");
+
+  // Configure debug callback
+  let mut debug_report_callback_ext = {
+    let mut debug_report_callback_ext = 0;
+    let debug_report_callback_create_info_ext = vk::DebugReportCallbackCreateInfoEXT {
+      sType: vk::STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT,
+      flags: vk::DEBUG_REPORT_ERROR_BIT_EXT | vk::DEBUG_REPORT_WARNING_BIT_EXT,
+      pNext: ptr::null(),
+      pfnCallback: vk_debug_report_callback_ext,
+      pUserData: ptr::null_mut(),
+    };
+    unsafe {
+      let result = instance_pointers.CreateDebugReportCallbackEXT(
+        instance,
+        &debug_report_callback_create_info_ext as *const _,
+        ptr::null(),
+        &mut debug_report_callback_ext
+      );
+      if result != vk::SUCCESS {
+        panic!("failed to create vulkan instance with {}", vk_result_to_human(result as i32));
+      }
+    };
+    debug_report_callback_ext
   };
+
+  let mut selected_device: vk::PhysicalDevice = 0;
   unsafe {
-    let result = instance_pointers.CreateDebugReportCallbackEXT(
-      instance,
-      &debug_report_callback_create_info_ext as *const _,
-      ptr::null(),
-      &mut debug_report_callback_ext
-    );
-    if result != vk::SUCCESS {
-      panic!("failed to create vulkan instance with {}", vk_result_to_human(result as i32));
-    }
-  };
+    let mut num_devices = 0u32;
+    let result = instance_pointers.EnumeratePhysicalDevices(
+      instance, &mut num_devices, ptr::null_mut());
 
+    if result != vk::SUCCESS {
+      panic!("failed to enumerate devices with {}", vk_result_to_human(result as i32));
+    }
+
+    println!("found {} devices", num_devices);
+
+    let mut devices: Vec<vk::PhysicalDevice> = Vec::with_capacity(num_devices as usize);
+
+    let result = instance_pointers.EnumeratePhysicalDevices(
+      instance, &mut num_devices, devices.as_mut_ptr());
+
+    if result != vk::SUCCESS {
+      panic!("failed to enumerate instance extension properties instance with {}", vk_result_to_human(result as i32));
+    }
+    devices.set_len(num_devices as usize);
+
+    for device in devices.iter() {
+      let mut physical_device_properties: vk::PhysicalDeviceProperties = std::mem::uninitialized();
+      instance_pointers.GetPhysicalDeviceProperties(*device, &mut physical_device_properties);
+
+      let mut physical_device_features: vk::PhysicalDeviceFeatures = std::mem::uninitialized();
+      instance_pointers.GetPhysicalDeviceFeatures(*device, &mut physical_device_features);
+
+      println!("got a device {}", CStr::from_ptr(physical_device_properties.deviceName.as_ptr()).to_str().unwrap());
+    }
+  }
+
+  // Destroy all created stuff
   unsafe {
     instance_pointers.DestroyDebugReportCallbackEXT(instance, debug_report_callback_ext, ptr::null());
     instance_pointers.DestroyInstance(instance, ptr::null());
