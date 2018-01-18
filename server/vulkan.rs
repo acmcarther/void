@@ -10,6 +10,15 @@ use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr;
 
+/** Contains static ptrs, entry ptrs, and dylib */
+pub struct VkBaseCtx;
+
+/** Contains instance, and instance ptrs */
+pub struct VkInstanceCtx;
+
+/** Contains device, and device ptrs */
+pub struct VkDeviceCtx;
+
 pub fn vulkan() {
   let lib_path = PathBuf::from("libvulkan.so.1");
   let lib = dylib::DynamicLibrary::open(Some(lib_path.as_path())).unwrap();
