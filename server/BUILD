@@ -82,6 +82,7 @@ rust_binary(
     name = "sdl2_toy",
     srcs = ["sdl2_toy.rs"],
     deps = [
+        "//cargo/vendor:dylib",
         "//cargo/vendor:sdl2",
         "//cargo/vendor:vk_sys",
     ],
