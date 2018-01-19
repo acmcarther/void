@@ -10,9 +10,9 @@ rust_library(
     name = "srv_physics",
     srcs = ["srv_physics.rs"],
     deps = [
-        "//cargo/vendor:chrono",
-        "//cargo/vendor:log",
-        "//cargo/vendor:specs",
+        "//cargo:chrono",
+        "//cargo:log",
+        "//cargo:specs",
         "//common:service_spec",
     ],
 )

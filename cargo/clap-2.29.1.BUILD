@@ -1,0 +1,45 @@
+"""
+cargo-raze crate build file.
+
+DO NOT EDIT! Replaced on runs of cargo-raze
+"""
+package(default_visibility = ["//visibility:public"])
+
+load(
+    "@io_bazel_rules_rust//rust:rust.bzl",
+    "rust_library",
+    "rust_binary",
+    "rust_test",
+    "rust_bench_test",
+)
+
+
+rust_library(
+    name = "clap",
+    crate_root = "src/lib.rs",
+    crate_type = "lib",
+    srcs = glob(["**/*.rs"]),
+    deps = [
+        "@raze__ansi_term__0_10_2//:ansi_term",
+        "@raze__atty__0_2_6//:atty",
+        "@raze__bitflags__1_0_1//:bitflags",
+        "@raze__strsim__0_6_0//:strsim",
+        "@raze__textwrap__0_9_0//:textwrap",
+        "@raze__unicode_width__0_1_4//:unicode_width",
+        "@raze__vec_map__0_8_0//:vec_map",
+    ],
+    rustc_flags = [
+        "--cap-lints allow",
+        "--target=x86_64-unknown-linux-gnu",
+    ],
+    crate_features = [
+        "ansi_term",
+        "atty",
+        "color",
+        "default",
+        "strsim",
+        "suggestions",
+        "vec_map",
+    ],
+)
+

@@ -10,6 +10,6 @@ rust_library(
     name = "com_physics",
     srcs = ["com_physics.rs"],
     deps = [
-        "//cargo/vendor:specs",
+        "//cargo:specs",
     ],
 )

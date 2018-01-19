@@ -47,3 +47,7 @@ rust_binary(
     commit = "f3af1e3",
     remote = "https://github.com/acmcarther/rust-protobuf",
 )
+
+load("//cargo:crates.bzl", "raze_fetch_remote_crates")
+
+raze_fetch_remote_crates()

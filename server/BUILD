@@ -11,8 +11,8 @@ rust_library(
     name = "server",
     srcs = ["server.rs"],
     deps = [
-        "//cargo/vendor:chrono",
-        "//cargo/vendor:log",
+        "//cargo:chrono",
+        "//cargo:log",
         "//common:service_spec",
         "//common/service:srv_physics",
     ],
@@ -31,9 +31,9 @@ rust_library(
     name = "space",
     srcs = ["space.rs"],
     deps = [
-        "//cargo/vendor:chrono",
-        "//cargo/vendor:log",
-        "//cargo/vendor:rand",
+        "//cargo:chrono",
+        "//cargo:log",
+        "//cargo:rand",
     ],
 )
 
@@ -48,9 +48,9 @@ rust_library(
     name = "cosmic_physics",
     srcs = ["cosmic_physics.rs"],
     deps = [
-        "//cargo/vendor:chrono",
-        "//cargo/vendor:log",
-        "//cargo/vendor:rand",
+        "//cargo:chrono",
+        "//cargo:log",
+        "//cargo:rand",
     ],
 )
 
@@ -65,9 +65,9 @@ rust_binary(
     srcs = ["cosmic_toy.rs"],
     deps = [
         ":cosmic_physics",
-        "//cargo/vendor:gnuplot",
-        "//cargo/vendor:rand",
-        "//cargo/vendor:vk_sys",
+        "//cargo:gnuplot",
+        "//cargo:rand",
+        "//cargo:vk_sys",
     ],
 )
 
@@ -82,6 +82,6 @@ rust_binary(
     name = "sdl2_toy",
     srcs = ["sdl2_toy.rs"],
     deps = [
-        "//cargo/vendor:sdl2",
+        "//cargo:sdl2",
     ],
 )

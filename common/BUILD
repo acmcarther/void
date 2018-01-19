@@ -10,12 +10,12 @@ rust_library(
     name = "init",
     srcs = ["init.rs"],
     deps = [
-        "//cargo/vendor:chrono",
-        "//cargo/vendor:fern",
-        "//cargo/vendor:lazy_static",
-        "//cargo/vendor:log",
-        "//cargo/vendor:zcfg",
-        "//cargo/vendor:zcfg_flag_parser",
+        "//cargo:chrono",
+        "//cargo:fern",
+        "//cargo:lazy_static",
+        "//cargo:log",
+        "//cargo:zcfg",
+        "//cargo:zcfg_flag_parser",
     ],
 )
 
@@ -23,7 +23,7 @@ rust_library(
     name = "service_spec",
     srcs = ["service_spec.rs"],
     deps = [
-        "//cargo/vendor:chrono",
-        "//cargo/vendor:log",
+        "//cargo:chrono",
+        "//cargo:log",
     ],
 )
