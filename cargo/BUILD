@@ -25,7 +25,7 @@ alias(
 )
 alias(
     name = "fern",
-    actual = "@raze__fern__0_4_3//:fern",
+    actual = "@raze__fern__0_4_4//:fern",
 )
 alias(
     name = "futures",
@@ -41,11 +41,11 @@ alias(
 )
 alias(
     name = "hyper",
-    actual = "@raze__hyper__0_11_7//:hyper",
+    actual = "@raze__hyper__0_11_14//:hyper",
 )
 alias(
     name = "itertools",
-    actual = "@raze__itertools__0_7_4//:itertools",
+    actual = "@raze__itertools__0_7_6//:itertools",
 )
 alias(
     name = "lazy_static",
@@ -53,15 +53,15 @@ alias(
 )
 alias(
     name = "libc",
-    actual = "@raze__libc__0_2_34//:libc",
+    actual = "@raze__libc__0_2_36//:libc",
 )
 alias(
     name = "log",
-    actual = "@raze__log__0_3_8//:log",
+    actual = "@raze__log__0_3_9//:log",
 )
 alias(
     name = "rand",
-    actual = "@raze__rand__0_3_18//:rand",
+    actual = "@raze__rand__0_3_20//:rand",
 )
 alias(
     name = "rustfmt_nightly",
@@ -87,7 +87,7 @@ alias(
 )
 alias(
     name = "time",
-    actual = "@raze__time__0_1_38//:time",
+    actual = "@raze__time__0_1_39//:time",
 )
 alias(
     name = "vk_sys",

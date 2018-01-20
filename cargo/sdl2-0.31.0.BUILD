@@ -48,9 +48,9 @@ rust_library(
     deps = [
         "@raze__bitflags__0_7_0//:bitflags",
         "@raze__lazy_static__0_2_11//:lazy_static",
-        "@raze__libc__0_2_34//:libc",
+        "@raze__libc__0_2_36//:libc",
         "@raze__num__0_1_41//:num",
-        "@raze__rand__0_3_18//:rand",
+        "@raze__rand__0_3_20//:rand",
         "@//third_party/SDL2:sdl2_sys",
     ],
     rustc_flags = [

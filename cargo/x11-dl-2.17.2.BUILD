@@ -56,7 +56,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__lazy_static__1_0_0//:lazy_static",
-        "@raze__libc__0_2_34//:libc",
+        "@raze__libc__0_2_36//:libc",
     ],
     rustc_flags = [
         "--cap-lints allow",

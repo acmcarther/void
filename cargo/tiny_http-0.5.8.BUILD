@@ -33,7 +33,7 @@ rust_library(
         "@raze__chrono__0_2_25//:chrono",
         "@raze__chunked_transfer__0_3_1//:chunked_transfer",
         "@raze__encoding__0_2_33//:encoding",
-        "@raze__log__0_3_8//:log",
+        "@raze__log__0_3_9//:log",
         "@raze__rustc_serialize__0_3_24//:rustc_serialize",
         "@raze__url__0_2_38//:url",
     ],

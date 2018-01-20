@@ -13,21 +13,23 @@ load(
     "rust_bench_test",
 )
 
-# Unsupported target "bench" with type "bench" omitted
 
 rust_library(
-    name = "rand",
+    name = "log",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__libc__0_2_34//:libc",
+        "@raze__log__0_4_1//:log",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
+        "default",
+        "log",
+        "use_std",
     ],
 )
 

@@ -15,12 +15,13 @@ load(
 
 
 rust_library(
-    name = "fuchsia_zircon_sys",
+    name = "base64",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__bitflags__0_7_0//:bitflags",
+        "@raze__byteorder__1_2_1//:byteorder",
+        "@raze__safemem__0_2_0//:safemem",
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -30,4 +31,9 @@ rust_library(
     ],
 )
 
-# Unsupported target "hello" with type "example" omitted
+# Unsupported target "benchmarks" with type "bench" omitted
+# Unsupported target "decode" with type "test" omitted
+# Unsupported target "encode" with type "test" omitted
+# Unsupported target "helpers" with type "test" omitted
+# Unsupported target "make_tables" with type "example" omitted
+# Unsupported target "tests" with type "test" omitted

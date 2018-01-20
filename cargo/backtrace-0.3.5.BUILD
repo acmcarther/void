@@ -23,7 +23,7 @@ rust_library(
     deps = [
         "@raze__backtrace_sys__0_1_16//:backtrace_sys",
         "@raze__cfg_if__0_1_2//:cfg_if",
-        "@raze__libc__0_2_34//:libc",
+        "@raze__libc__0_2_36//:libc",
         "@raze__rustc_demangle__0_1_5//:rustc_demangle",
     ],
     rustc_flags = [

@@ -23,7 +23,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__atom__0_3_4//:atom",
-        "@raze__time__0_1_38//:time",
+        "@raze__time__0_1_39//:time",
     ],
     rustc_flags = [
         "--cap-lints allow",

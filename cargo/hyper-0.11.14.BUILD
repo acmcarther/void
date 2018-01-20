@@ -20,18 +20,18 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__base64__0_6_0//:base64",
-        "@raze__bytes__0_4_5//:bytes",
+        "@raze__base64__0_9_0//:base64",
+        "@raze__bytes__0_4_6//:bytes",
         "@raze__futures__0_1_17//:futures",
-        "@raze__futures_cpupool__0_1_7//:futures_cpupool",
-        "@raze__httparse__1_2_3//:httparse",
+        "@raze__futures_cpupool__0_1_8//:futures_cpupool",
+        "@raze__httparse__1_2_4//:httparse",
         "@raze__language_tags__0_2_2//:language_tags",
-        "@raze__log__0_3_8//:log",
+        "@raze__log__0_4_1//:log",
         "@raze__mime__0_3_5//:mime",
         "@raze__percent_encoding__1_0_1//:percent_encoding",
         "@raze__relay__0_1_0//:relay",
-        "@raze__time__0_1_38//:time",
-        "@raze__tokio_core__0_1_10//:tokio_core",
+        "@raze__time__0_1_39//:time",
+        "@raze__tokio_core__0_1_12//:tokio_core",
         "@raze__tokio_io__0_1_4//:tokio_io",
         "@raze__tokio_proto__0_1_1//:tokio_proto",
         "@raze__tokio_service__0_1_0//:tokio_service",
@@ -44,6 +44,7 @@ rust_library(
     crate_features = [
         "default",
         "server-proto",
+        "tokio-proto",
     ],
 )
 

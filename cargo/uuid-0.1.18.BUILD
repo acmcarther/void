@@ -21,7 +21,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__rand__0_3_18//:rand",
+        "@raze__rand__0_3_20//:rand",
         "@raze__rustc_serialize__0_3_24//:rustc_serialize",
     ],
     rustc_flags = [

@@ -13,15 +13,20 @@ load(
     "rust_bench_test",
 )
 
+# Unsupported target "bench_poll" with type "bench" omitted
 
 rust_library(
-    name = "futures_cpupool",
+    name = "mio",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__futures__0_1_17//:futures",
-        "@raze__num_cpus__1_7_0//:num_cpus",
+        "@raze__iovec__0_1_1//:iovec",
+        "@raze__lazycell__0_6_0//:lazycell",
+        "@raze__libc__0_2_36//:libc",
+        "@raze__log__0_3_9//:log",
+        "@raze__net2__0_2_31//:net2",
+        "@raze__slab__0_3_0//:slab",
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -29,9 +34,8 @@ rust_library(
     ],
     crate_features = [
         "default",
-        "futures",
         "with-deprecated",
     ],
 )
 
-# Unsupported target "smoke" with type "test" omitted
+# Unsupported target "test" with type "test" omitted

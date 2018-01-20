@@ -28,6 +28,7 @@ rust_library(
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
+        "std",
     ],
 )
 

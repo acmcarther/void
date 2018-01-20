@@ -20,8 +20,8 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__libc__0_2_34//:libc",
-        "@raze__rand__0_3_18//:rand",
+        "@raze__libc__0_2_36//:libc",
+        "@raze__rand__0_3_20//:rand",
         "@raze__smallvec__0_6_0//:smallvec",
     ],
     rustc_flags = [

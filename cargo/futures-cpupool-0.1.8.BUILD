@@ -13,21 +13,25 @@ load(
     "rust_bench_test",
 )
 
-# Unsupported target "precise_time_ns" with type "bench" omitted
 
 rust_library(
-    name = "time",
+    name = "futures_cpupool",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__libc__0_2_34//:libc",
+        "@raze__futures__0_1_17//:futures",
+        "@raze__num_cpus__1_8_0//:num_cpus",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
+        "default",
+        "futures",
+        "with-deprecated",
     ],
 )
 
+# Unsupported target "smoke" with type "test" omitted

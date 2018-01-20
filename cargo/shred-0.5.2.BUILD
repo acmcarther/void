@@ -29,7 +29,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__arrayvec__0_3_24//:arrayvec",
+        "@raze__arrayvec__0_3_25//:arrayvec",
         "@raze__fnv__1_0_6//:fnv",
         "@raze__mopa__0_2_2//:mopa",
         "@raze__pulse__0_5_3//:pulse",

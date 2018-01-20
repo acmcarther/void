@@ -13,29 +13,23 @@ load(
     "rust_bench_test",
 )
 
-# Unsupported target "bench_poll" with type "bench" omitted
+# Unsupported target "cmd-program" with type "example" omitted
+# Unsupported target "colored" with type "example" omitted
 
 rust_library(
-    name = "mio",
+    name = "fern",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__iovec__0_1_1//:iovec",
-        "@raze__lazycell__0_5_1//:lazycell",
-        "@raze__libc__0_2_34//:libc",
-        "@raze__log__0_3_8//:log",
-        "@raze__net2__0_2_31//:net2",
-        "@raze__slab__0_3_0//:slab",
+        "@raze__log__0_3_9//:log",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
-        "default",
-        "with-deprecated",
     ],
 )
 
-# Unsupported target "test" with type "test" omitted
+# Unsupported target "lib" with type "test" omitted

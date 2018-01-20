@@ -69,7 +69,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__glob__0_2_11//:glob",
-        "@raze__libc__0_2_34//:libc",
+        "@raze__libc__0_2_36//:libc",
         "@raze__libloading__0_4_3//:libloading",
         "@system//:clang",
     ],

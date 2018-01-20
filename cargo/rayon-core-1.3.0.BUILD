@@ -22,9 +22,9 @@ rust_library(
     deps = [
         "@raze__coco__0_1_1//:coco",
         "@raze__lazy_static__0_2_11//:lazy_static",
-        "@raze__libc__0_2_34//:libc",
-        "@raze__num_cpus__1_7_0//:num_cpus",
-        "@raze__rand__0_3_18//:rand",
+        "@raze__libc__0_2_36//:libc",
+        "@raze__num_cpus__1_8_0//:num_cpus",
+        "@raze__rand__0_3_20//:rand",
     ],
     rustc_flags = [
         "--cap-lints allow",

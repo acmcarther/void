@@ -20,7 +20,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__log__0_3_8//:log",
+        "@raze__log__0_3_9//:log",
         "@raze__regex__0_2_5//:regex",
     ],
     rustc_flags = [

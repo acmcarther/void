@@ -21,7 +21,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__arrayvec__0_3_24//:arrayvec",
+        "@raze__arrayvec__0_3_25//:arrayvec",
         "@raze__stb_truetype__0_1_2//:stb_truetype",
     ],
     rustc_flags = [

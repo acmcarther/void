@@ -13,15 +13,15 @@ load(
     "rust_bench_test",
 )
 
-# Unsupported target "cmd-program" with type "example" omitted
 
 rust_library(
-    name = "fern",
+    name = "fuchsia_zircon",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__log__0_3_8//:log",
+        "@raze__bitflags__1_0_1//:bitflags",
+        "@raze__fuchsia_zircon_sys__0_3_3//:fuchsia_zircon_sys",
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -31,4 +31,3 @@ rust_library(
     ],
 )
 
-# Unsupported target "lib" with type "test" omitted

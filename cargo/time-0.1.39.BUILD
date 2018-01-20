@@ -13,14 +13,15 @@ load(
     "rust_bench_test",
 )
 
+# Unsupported target "precise_time_ns" with type "bench" omitted
 
 rust_library(
-    name = "fuchsia_zircon",
+    name = "time",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__fuchsia_zircon_sys__0_2_0//:fuchsia_zircon_sys",
+        "@raze__libc__0_2_36//:libc",
     ],
     rustc_flags = [
         "--cap-lints allow",

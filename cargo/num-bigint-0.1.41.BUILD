@@ -22,7 +22,7 @@ rust_library(
     deps = [
         "@raze__num_integer__0_1_35//:num_integer",
         "@raze__num_traits__0_1_41//:num_traits",
-        "@raze__rand__0_3_18//:rand",
+        "@raze__rand__0_3_20//:rand",
         "@raze__rustc_serialize__0_3_24//:rustc_serialize",
     ],
     rustc_flags = [
