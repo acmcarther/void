@@ -15,28 +15,18 @@ load(
 
 
 rust_library(
-    name = "syn",
+    name = "owning_ref",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__quote__0_3_15//:quote",
-        "@raze__synom__0_11_3//:synom",
-        "@raze__unicode_xid__0_0_4//:unicode_xid",
+        "@raze__stable_deref_trait__1_0_0//:stable_deref_trait",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
-        "default",
-        "full",
-        "parsing",
-        "printing",
-        "quote",
-        "synom",
-        "unicode-xid",
-        "visit",
     ],
 )
 

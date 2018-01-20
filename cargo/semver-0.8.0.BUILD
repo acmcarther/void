@@ -13,16 +13,17 @@ load(
     "rust_bench_test",
 )
 
+# Unsupported target "deprecation" with type "test" omitted
+# Unsupported target "regression" with type "test" omitted
 
 rust_library(
-    name = "syn",
+    name = "semver",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__quote__0_3_15//:quote",
-        "@raze__synom__0_11_3//:synom",
-        "@raze__unicode_xid__0_0_4//:unicode_xid",
+        "@raze__semver_parser__0_7_0//:semver_parser",
+        "@raze__serde__1_0_27//:serde",
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -30,13 +31,8 @@ rust_library(
     ],
     crate_features = [
         "default",
-        "full",
-        "parsing",
-        "printing",
-        "quote",
-        "synom",
-        "unicode-xid",
-        "visit",
+        "serde",
     ],
 )
 
+# Unsupported target "serde" with type "test" omitted

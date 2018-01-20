@@ -13,30 +13,25 @@ load(
     "rust_bench_test",
 )
 
+alias(
+  name = "rustc_ap_rustc_cratesio_shim",
+  actual = ":rustc_cratesio_shim",
+)
 
 rust_library(
-    name = "syn",
+    name = "rustc_cratesio_shim",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__quote__0_3_15//:quote",
-        "@raze__synom__0_11_3//:synom",
-        "@raze__unicode_xid__0_0_4//:unicode_xid",
+        "@raze__bitflags__1_0_1//:bitflags",
+        "@raze__term__0_4_6//:term",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
-        "default",
-        "full",
-        "parsing",
-        "printing",
-        "quote",
-        "synom",
-        "unicode-xid",
-        "visit",
     ],
 )
 

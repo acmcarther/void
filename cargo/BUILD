@@ -54,6 +54,16 @@ alias(
     actual = "@raze__rand__0_3_18//:rand",
 )
 alias(
+    name = "rustfmt_nightly",
+    actual = "@raze__rustfmt_nightly__0_3_6//:rustfmt_nightly",
+)
+alias(
+    # Extra aliased target, from raze configuration
+    # N.B.: The exact form of this is subject to change.
+    name = "cargo_bin_rustfmt",
+    actual = "@raze__rustfmt_nightly__0_3_6//:cargo_bin_rustfmt",
+)
+alias(
     name = "sdl2",
     actual = "@raze__sdl2__0_31_0//:sdl2",
 )

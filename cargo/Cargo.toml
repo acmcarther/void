@@ -22,6 +22,7 @@ zcfg_flag_parser = "0.2.0"
 gnuplot = "0.0.24"
 sdl2 = "0.31.0"
 bindgen = "0.32.1"
+rustfmt-nightly = "0.3.6"
 
 [lib]
 path = "fake_lib.rs"
@@ -30,6 +31,13 @@ path = "fake_lib.rs"
 workspace_path = "//cargo"
 target = "x86_64-unknown-linux-gnu"
 genmode = "Remote"
+
+
+[raze.crates.rustfmt-nightly.'0.3.6']
+extra_aliased_targets = [
+  "cargo_bin_rustfmt"
+]
+gen_buildrs = true
 
 [raze.crates.sdl2.'0.31.0']
 skipped_deps = [

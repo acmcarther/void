@@ -13,16 +13,14 @@ load(
     "rust_bench_test",
 )
 
+# Unsupported target "bench" with type "bench" omitted
 
 rust_library(
-    name = "syn",
-    crate_root = "src/lib.rs",
+    name = "smallvec",
+    crate_root = "lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__quote__0_3_15//:quote",
-        "@raze__synom__0_11_3//:synom",
-        "@raze__unicode_xid__0_0_4//:unicode_xid",
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -30,13 +28,7 @@ rust_library(
     ],
     crate_features = [
         "default",
-        "full",
-        "parsing",
-        "printing",
-        "quote",
-        "synom",
-        "unicode-xid",
-        "visit",
+        "std",
     ],
 )
 

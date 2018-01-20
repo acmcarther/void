@@ -13,30 +13,23 @@ load(
     "rust_bench_test",
 )
 
+# Unsupported target "compile-test" with type "test" omitted
 
 rust_library(
-    name = "syn",
+    name = "derive_new",
     crate_root = "src/lib.rs",
-    crate_type = "lib",
+    crate_type = "proc-macro",
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__quote__0_3_15//:quote",
-        "@raze__synom__0_11_3//:synom",
-        "@raze__unicode_xid__0_0_4//:unicode_xid",
+        "@raze__syn__0_11_11//:syn",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
-        "default",
-        "full",
-        "parsing",
-        "printing",
-        "quote",
-        "synom",
-        "unicode-xid",
-        "visit",
     ],
 )
 
+# Unsupported target "test" with type "test" omitted

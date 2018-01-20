@@ -15,14 +15,13 @@ load(
 
 
 rust_library(
-    name = "syn",
+    name = "parking_lot",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__quote__0_3_15//:quote",
-        "@raze__synom__0_11_3//:synom",
-        "@raze__unicode_xid__0_0_4//:unicode_xid",
+        "@raze__owning_ref__0_3_3//:owning_ref",
+        "@raze__parking_lot_core__0_2_10//:parking_lot_core",
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -30,13 +29,9 @@ rust_library(
     ],
     crate_features = [
         "default",
-        "full",
-        "parsing",
-        "printing",
-        "quote",
-        "synom",
-        "unicode-xid",
-        "visit",
+        "nightly",
+        "owning_ref",
+        "parking_lot_core",
     ],
 )
 

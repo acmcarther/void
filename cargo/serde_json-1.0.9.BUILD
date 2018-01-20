@@ -15,14 +15,15 @@ load(
 
 
 rust_library(
-    name = "syn",
+    name = "serde_json",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__quote__0_3_15//:quote",
-        "@raze__synom__0_11_3//:synom",
-        "@raze__unicode_xid__0_0_4//:unicode_xid",
+        "@raze__dtoa__0_4_2//:dtoa",
+        "@raze__itoa__0_3_4//:itoa",
+        "@raze__num_traits__0_1_41//:num_traits",
+        "@raze__serde__1_0_27//:serde",
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -30,13 +31,6 @@ rust_library(
     ],
     crate_features = [
         "default",
-        "full",
-        "parsing",
-        "printing",
-        "quote",
-        "synom",
-        "unicode-xid",
-        "visit",
     ],
 )
 

@@ -13,30 +13,28 @@ load(
     "rust_bench_test",
 )
 
+alias(
+  name = "rustc_ap_rustc_errors",
+  actual = ":rustc_errors",
+)
 
 rust_library(
-    name = "syn",
-    crate_root = "src/lib.rs",
+    name = "rustc_errors",
+    crate_root = "lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__quote__0_3_15//:quote",
-        "@raze__synom__0_11_3//:synom",
-        "@raze__unicode_xid__0_0_4//:unicode_xid",
+        "@raze__rustc_ap_rustc_data_structures__12_0_0//:rustc_ap_rustc_data_structures",
+        "@raze__rustc_ap_serialize__12_0_0//:rustc_ap_serialize",
+        "@raze__rustc_ap_syntax_pos__12_0_0//:rustc_ap_syntax_pos",
+        "@raze__term__0_4_6//:term",
+        "@raze__unicode_width__0_1_4//:unicode_width",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
-        "default",
-        "full",
-        "parsing",
-        "printing",
-        "quote",
-        "synom",
-        "unicode-xid",
-        "visit",
     ],
 )
 
