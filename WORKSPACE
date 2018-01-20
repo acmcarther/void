@@ -1,7 +1,7 @@
 git_repository(
     name = "io_bazel_rules_rust",
-    commit = "0d0693267ba3d338230bae204bbdbfd20da0366e",
-    remote = "https://github.com/mfarrugi/rules_rust.git",
+    commit = "5bc46ddca8817072cdae1961b3f9830a2bc3afa7",
+    remote = "https://github.com/acmcarther/rules_rust.git",
 )
 
 load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repositories")
@@ -51,3 +51,9 @@ rust_binary(
 load("//cargo:crates.bzl", "raze_fetch_remote_crates")
 
 raze_fetch_remote_crates()
+
+new_local_repository(
+    name = "system",
+    path = "/usr/lib",
+    build_file = "system.BUILD",
+)

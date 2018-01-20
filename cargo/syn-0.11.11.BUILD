@@ -30,11 +30,13 @@ rust_library(
     ],
     crate_features = [
         "default",
+        "full",
         "parsing",
         "printing",
         "quote",
         "synom",
         "unicode-xid",
+        "visit",
     ],
 )
 

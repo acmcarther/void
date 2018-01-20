@@ -27,10 +27,19 @@ rust_library(
     ],
     crate_features = [
         "consoleapi",
+        "dbghelp",
+        "errhandlingapi",
+        "handleapi",
         "minwinbase",
         "minwindef",
+        "ntstatus",
         "processenv",
+        "processthreadsapi",
+        "std",
+        "synchapi",
         "winbase",
+        "winerror",
+        "winnt",
     ],
 )
 

@@ -10,8 +10,18 @@ alias(
     actual = "@raze__bindgen__0_32_1//:bindgen",
 )
 alias(
+    # Extra aliased target, from raze configuration
+    # N.B.: The exact form of this is subject to change.
+    name = "cargo_bin_bindgen",
+    actual = "@raze__bindgen__0_32_1//:cargo_bin_bindgen",
+)
+alias(
     name = "chrono",
     actual = "@raze__chrono__0_4_0//:chrono",
+)
+alias(
+    name = "dylib",
+    actual = "@raze__dylib__0_0_3//:dylib",
 )
 alias(
     name = "fern",
@@ -54,6 +64,16 @@ alias(
     actual = "@raze__rand__0_3_18//:rand",
 )
 alias(
+    name = "rustfmt_nightly",
+    actual = "@raze__rustfmt_nightly__0_3_6//:rustfmt_nightly",
+)
+alias(
+    # Extra aliased target, from raze configuration
+    # N.B.: The exact form of this is subject to change.
+    name = "cargo_bin_rustfmt",
+    actual = "@raze__rustfmt_nightly__0_3_6//:cargo_bin_rustfmt",
+)
+alias(
     name = "sdl2",
     actual = "@raze__sdl2__0_31_0//:sdl2",
 )
@@ -72,6 +92,10 @@ alias(
 alias(
     name = "vk_sys",
     actual = "@raze__vk_sys__0_3_2//:vk_sys",
+)
+alias(
+    name = "x11_dl",
+    actual = "@raze__x11_dl__2_17_2//:x11_dl",
 )
 alias(
     name = "zcfg",
