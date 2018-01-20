@@ -479,7 +479,7 @@ pub struct CapablePhysicalDevice {
   gfx_supporting_queue_family_index: u32,
 }
 
-pub fn vulkan() {
+pub fn vulkan<F: FnMut(vk::Instance, &vk::InstancePointers) -> vk::SurfaceKHR>(mut surface_create_fn: F) -> VkCtx {
   let dylib_path = PathBuf::from("libvulkan.so.1");
   let dylib = dylib::DynamicLibrary::open(Some(dylib_path.as_path())).unwrap();
 
@@ -524,6 +524,7 @@ pub fn vulkan() {
 
   let logical_device = vk_ctx.make_logical_device(&capable_physical_device, &enabled_layers);
 
+  /*
   println!("Retrieving gfx capable queue");
   // Get the gfx-capable device queue
   let mut queue: vk::Queue = unsafe {std::mem::uninitialized() } ;
@@ -535,6 +536,11 @@ pub fn vulkan() {
       &mut queue
     );
   }
+  */
+
+  let surface_khr = surface_create_fn(instance, vk_ctx.instance_ptrs(instance));
+
+  vk_ctx
 }
 
 extern "system" fn vk_debug_report_callback_ext(

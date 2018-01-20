@@ -22,18 +22,16 @@ rust_library(
     deps = [
         "//third_party/SDL2:sdl2_sys",
         "//cargo:sdl2",
-        "//cargo:x11_dl",
+        "//cargo:vk_sys",
     ],
 )
 
 
 rust_binary(
-    name = "presentation_toy",
-    srcs = ["presentation_toy.rs"],
+    name = "toy",
+    srcs = ["toy.rs"],
     deps = [
         ":vulkan",
         ":sdl2_window",
     ],
 )
-
-alias(name = "toy", actual = ":presentation_toy")
