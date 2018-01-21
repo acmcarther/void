@@ -20,6 +20,22 @@ fn main() {
     vulkan::vulkan(&mut sdl_window_system_plugin, vert_shader_bytes, frag_shader_bytes)
   };
 
-  loop {
+  let mut event_pump = sdl_context.event_pump().unwrap();
+
+  'running: loop {
+    for event in event_pump.poll_iter() {
+      match event {
+        sdl2::event::Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+          break 'running
+        },
+        _ = {}
+      }
+    }
+
+    draw_frame(&mut vk_ctx);
   }
+}
+
+fn draw_frame(vk_ctx: &mut vulkan::VkCtx) {
+
 }
