@@ -27,6 +27,7 @@ pub struct VkCtx {
   swapchain_params_map: HashMap<vk::SwapchainKHR, SwapchainParams>,
   swapchain_images_map: HashMap<vk::SwapchainKHR, Vec<vk::Image>>,
   swapchain_image_views_map: HashMap<vk::SwapchainKHR, Vec<vk::ImageView>>,
+  device_shader_modules_map: HashMap<vk::Device, Vec<vk::ShaderModule>>,
 }
 
 struct SwapchainParams {
@@ -71,6 +72,17 @@ impl Drop for VkCtx {
         self.device_ptrs(logical_device).DestroySwapchainKHR(logical_device, swapchain_khr, ptr::null());
       }
     }
+
+    let mut device_shader_modules_map: HashMap<vk::Device, Vec<vk::ShaderModule>> = HashMap::new();
+    std::mem::swap(&mut self.device_shader_modules_map, &mut device_shader_modules_map);
+    for (logical_device, shader_modules) in device_shader_modules_map.into_iter() {
+      for shader_module in shader_modules.iter() {
+        unsafe {
+          self.device_ptrs(logical_device).DestroyShaderModule(logical_device, *shader_module, ptr::null());
+        }
+      }
+    }
+
 
     let mut device_pointers_map: HashMap<vk::Device, vk::DevicePointers> = HashMap::new();
     std::mem::swap(&mut self.device_pointers_map, &mut device_pointers_map);
@@ -119,6 +131,7 @@ impl VkCtx {
       swapchain_params_map: HashMap::new(),
       swapchain_images_map: HashMap::new(),
       swapchain_image_views_map: HashMap::new(),
+      device_shader_modules_map: HashMap::new(),
       dylib: dylib
     }
   }
@@ -842,7 +855,67 @@ impl VkCtx {
     self.swapchain_image_views_map.insert(swapchain, image_views);
   }
 
-  pub fn init_graphics_pipeline(&mut self) {
+  pub fn init_graphics_pipeline(&mut self, logical_device: vk::Device, vert_shader_bytes: &[u8], frag_shader_bytes: &[u8]) {
+    // TODO(acmcarther): This section needs a large overhaul, as it bakes in the assumption of a
+    // single vert shader, and a single frag shader.
+
+    let vert_shader_module = self.create_shader_module(logical_device, vert_shader_bytes);
+    let frag_shader_module = self.create_shader_module(logical_device, frag_shader_bytes);
+
+    let common_shader_pipeline_name = CString::new("main").unwrap();
+    let pName = common_shader_pipeline_name.as_c_str().as_ptr();
+    let vert_pipeline_shader_stage_create_info = vk::PipelineShaderStageCreateInfo {
+      sType: vk::STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      pNext: ptr::null(),
+      flags: 0,
+      stage: vk::SHADER_STAGE_VERTEX_BIT,
+      module: vert_shader_module,
+      pName: pName,
+      pSpecializationInfo: ptr::null(),
+    };
+
+    let frag_pipeline_shader_stage_create_info = vk::PipelineShaderStageCreateInfo {
+      sType: vk::STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      pNext: ptr::null(),
+      flags: 0,
+      stage: vk::SHADER_STAGE_FRAGMENT_BIT,
+      module: frag_shader_module,
+      pName: pName,
+      pSpecializationInfo: ptr::null(),
+    };
+
+    let pipeline_shader_stage_infos = vec![
+      vert_pipeline_shader_stage_create_info,
+      frag_pipeline_shader_stage_create_info
+    ];
+  }
+
+  fn create_shader_module(&mut self, logical_device: vk::Device, shader_contents: &[u8]) -> vk::ShaderModule {
+    let shader_module_create_info = vk::ShaderModuleCreateInfo {
+      sType: vk::STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+      pNext: ptr::null(),
+      flags: 0,
+      codeSize: shader_contents.len(),
+      pCode: shader_contents.as_ptr() as *const u32,
+    };
+    let shader_module = unsafe {
+      let mut shader_module: vk::ShaderModule = std::mem::uninitialized();
+      let result = self.device_ptrs(logical_device)
+        .CreateShaderModule(logical_device, &shader_module_create_info, ptr::null(), &mut shader_module);
+
+      if result != vk::SUCCESS {
+        panic!("failed create shader module with {}", vk_result_to_human(result as i32));
+      }
+      shader_module
+    };
+
+    if self.device_shader_modules_map.contains_key(&logical_device) {
+      self.device_shader_modules_map.get_mut(&logical_device).unwrap().push(shader_module);
+    } else {
+      self.device_shader_modules_map.insert(logical_device, vec![shader_module]);
+    }
+
+    shader_module
   }
 }
 
@@ -875,7 +948,7 @@ pub struct CapablePhysicalDevice {
   swapchain_present_modes: Vec<vk::PresentModeKHR>,
 }
 
-pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W) -> VkCtx {
+pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W, vert_shader_bytes: &[u8], frag_shader_bytes: &[u8]) -> VkCtx {
   let dylib_path = PathBuf::from("libvulkan.so.1");
   let dylib = dylib::DynamicLibrary::open(Some(dylib_path.as_path())).unwrap();
 
@@ -931,7 +1004,7 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W) -> VkCtx {
 
   vk_ctx.init_image_views(logical_device, swapchain_khr);
 
-  vk_ctx.init_graphics_pipeline();
+  vk_ctx.init_graphics_pipeline(logical_device, vert_shader_bytes, frag_shader_bytes);
 
   vk_ctx
 }

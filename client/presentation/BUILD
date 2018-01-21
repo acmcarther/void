@@ -31,6 +31,10 @@ rust_library(
 rust_binary(
     name = "toy",
     srcs = ["toy.rs"],
+    data = [
+        ":toy_vert_shader",
+        ":toy_frag_shader",
+    ],
     deps = [
         ":vulkan",
         "//cargo:sdl2",
@@ -43,4 +47,9 @@ load("//tools:glslang.bzl", "compile_spirv_shader")
 compile_spirv_shader(
     name = "toy_vert_shader",
     src = ":toy.vert",
+)
+
+compile_spirv_shader(
+    name = "toy_frag_shader",
+    src = ":toy.frag",
 )
