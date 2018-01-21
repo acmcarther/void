@@ -22,6 +22,15 @@ pub struct VkCtx {
   surfaces_map: HashMap<vk::Instance, Vec<vk::SurfaceKHR>>,
   instance_pointers_map: HashMap<vk::Instance, vk::InstancePointers>,
   device_pointers_map: HashMap<vk::Device, vk::DevicePointers>,
+  queues_map: HashMap<vk::Device, vk::Queue>,
+  swapchains_map: HashMap<vk::Device, vk::SwapchainKHR>,
+  swapchain_params_map: HashMap<vk::SwapchainKHR, SwapchainParams>,
+  swapchain_images_map: HashMap<vk::SwapchainKHR, Vec<vk::Image>>,
+}
+
+struct SwapchainParams {
+  format: vk::Format,
+  extent: vk::Extent2D,
 }
 
 impl Drop for VkCtx {
@@ -34,6 +43,14 @@ impl Drop for VkCtx {
           self.instance_pointers_map.get(&instance).unwrap()
             .DestroyDebugReportCallbackEXT(instance, debug_report_callback_ext, ptr::null());
         }
+      }
+    }
+
+    let mut swapchains_map: HashMap<vk::Device, vk::SwapchainKHR> = HashMap::new();
+    std::mem::swap(&mut self.swapchains_map, &mut swapchains_map);
+    for (logical_device, swapchain_khr) in swapchains_map.into_iter() {
+      unsafe {
+        self.device_ptrs(logical_device).DestroySwapchainKHR(logical_device, swapchain_khr, ptr::null());
       }
     }
 
@@ -79,6 +96,10 @@ impl VkCtx {
       instance_pointers_map: HashMap::new(),
       device_pointers_map: HashMap::new(),
       surfaces_map: HashMap::new(),
+      queues_map: HashMap::new(),
+      swapchains_map: HashMap::new(),
+      swapchain_params_map: HashMap::new(),
+      swapchain_images_map: HashMap::new(),
       dylib: dylib
     }
   }
@@ -252,13 +273,13 @@ impl VkCtx {
   }
 
   pub fn configure_default_callback(&mut self, instance: vk::Instance, cb: vk::PFN_vkDebugReportCallbackEXT) {
-    let mut debug_report_callback_ext = {
+    let debug_report_callback_ext = {
       let mut debug_report_callback_ext = 0;
       let debug_report_callback_create_info_ext = vk::DebugReportCallbackCreateInfoEXT {
         sType: vk::STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
         flags: vk::DEBUG_REPORT_ERROR_BIT_EXT | vk::DEBUG_REPORT_WARNING_BIT_EXT,
         pNext: ptr::null(),
-        pfnCallback: vk_debug_report_callback_ext,
+        pfnCallback: cb,
         pUserData: ptr::null_mut(),
       };
       unsafe {
@@ -282,63 +303,176 @@ impl VkCtx {
     }
   }
 
-  pub fn find_capable_gfx_device(&self, instance: vk::Instance) -> Option<CapablePhysicalDevice> {
+  pub fn find_capable_gfx_device(&self, instance: vk::Instance, surface: &mut vk::SurfaceKHR) -> Option<CapablePhysicalDevice> {
     let mut physical_device: vk::PhysicalDevice = 0;
+    let mut swapchain_capabilities: vk::SurfaceCapabilitiesKHR = unsafe { std::mem::uninitialized() };
+    let mut swapchain_formats: Vec<vk::SurfaceFormatKHR> = Vec::new();
+    let mut swapchain_present_modes: Vec<vk::PresentModeKHR> = Vec::new();
     let mut gfx_supporting_queue_family_index: u32 = 0;
     unsafe {
-      let mut num_devices = 0u32;
+      let mut num_physical_devices = 0u32;
       let result = self.instance_ptrs(instance).EnumeratePhysicalDevices(
-        instance, &mut num_devices, ptr::null_mut());
+        instance, &mut num_physical_devices, ptr::null_mut());
 
       if result != vk::SUCCESS {
-        panic!("failed to enumerate devices with {}", vk_result_to_human(result as i32));
+        panic!("failed to enumerate physical devices with {}", vk_result_to_human(result as i32));
       }
 
-      println!("found {} devices", num_devices);
+      println!("found {} physical devices", num_physical_devices);
 
-      let mut devices: Vec<vk::PhysicalDevice> = Vec::with_capacity(num_devices as usize);
+      let mut physical_devices: Vec<vk::PhysicalDevice> = Vec::with_capacity(num_physical_devices as usize);
 
       let result = self.instance_ptrs(instance).EnumeratePhysicalDevices(
-        instance, &mut num_devices, devices.as_mut_ptr());
+        instance, &mut num_physical_devices, physical_devices.as_mut_ptr());
 
       if result != vk::SUCCESS {
         panic!("failed to enumerate instance extension properties instance with {}", vk_result_to_human(result as i32));
       }
-      devices.set_len(num_devices as usize);
+      physical_devices.set_len(num_physical_devices as usize);
 
-      for device in devices.iter() {
+      for _physical_device in physical_devices.iter() {
         let mut physical_device_properties: vk::PhysicalDeviceProperties = std::mem::uninitialized();
-        self.instance_ptrs(instance).GetPhysicalDeviceProperties(*device, &mut physical_device_properties);
+        self.instance_ptrs(instance).GetPhysicalDeviceProperties(*_physical_device, &mut physical_device_properties);
 
         let mut physical_device_features: vk::PhysicalDeviceFeatures = std::mem::uninitialized();
-        self.instance_ptrs(instance).GetPhysicalDeviceFeatures(*device, &mut physical_device_features);
+        self.instance_ptrs(instance).GetPhysicalDeviceFeatures(*_physical_device, &mut physical_device_features);
 
-        println!("got a device {}", CStr::from_ptr(physical_device_properties.deviceName.as_ptr()).to_str().unwrap());
+        println!("Vulkan Physical Device found: {}", CStr::from_ptr(physical_device_properties.deviceName.as_ptr()).to_str().unwrap());
 
         let mut num_queue_family_properties = 0u32;
-        let mut queue_family_properties_list: Vec<vk::QueueFamilyProperties> = std::mem::uninitialized();
         self.instance_ptrs(instance).GetPhysicalDeviceQueueFamilyProperties(
-          *device, &mut num_queue_family_properties, ptr::null_mut());
+          *_physical_device, &mut num_queue_family_properties, ptr::null_mut());
 
-        println!("found {} queue family properties", num_queue_family_properties);
+        println!("Vulkan Physical Queue Family Properties: {} found", num_queue_family_properties);
 
         let mut queue_family_properties_list: Vec<vk::QueueFamilyProperties> =
           Vec::with_capacity(num_queue_family_properties as usize);
 
         self.instance_ptrs(instance).GetPhysicalDeviceQueueFamilyProperties(
-          *device, &mut num_queue_family_properties, queue_family_properties_list.as_mut_ptr());
+          *_physical_device, &mut num_queue_family_properties, queue_family_properties_list.as_mut_ptr());
 
         println!("populated queue family properties list");
 
         queue_family_properties_list.set_len(num_queue_family_properties as usize);
 
-        let gfx_supporting_queue_family_index_opt =
-          queue_family_properties_list.iter()
-            .position(|props| props.queueCount > 0 && (props.queueFlags & vk::QUEUE_GRAPHICS_BIT > 0));
+        let gfx_supporting_queue_family_index_opt = {
+          let surface_is_supported_for_queue_idx_fn = |queue_family_idx| {
+            let mut support_is_present = 0 /* false */;
+            let result = self.instance_ptrs(instance)
+              .GetPhysicalDeviceSurfaceSupportKHR(*_physical_device, queue_family_idx, *surface, &mut support_is_present);
 
-        if gfx_supporting_queue_family_index_opt.is_some() && physical_device == 0 {
-          println!("going with that device, as it supports a gfx queue");
-          physical_device = *device;
+            if result != vk::SUCCESS {
+              panic!("failed to determine surface-device suitability with {}", vk_result_to_human(result as i32));
+            }
+
+            println!("support present in device: {}", support_is_present);
+
+            // N.B.: Output is a vulkan-style 32 bit bool
+            support_is_present > 0
+          };
+
+          // TODO(acmcarther): Support independent GRAPHICS and PRESENT queues.
+          // The current implementation expects to find a single queue for both, but it isn't
+          // unreasonable to have these live in separate queues.
+          queue_family_properties_list.iter()
+            .enumerate()
+            .filter(|&(idx, props)|
+                      props.queueCount > 0
+                      && (props.queueFlags & vk::QUEUE_GRAPHICS_BIT) > 0
+                      && surface_is_supported_for_queue_idx_fn(idx as u32))
+            .map(|(idx, props)| idx)
+            .next() /* get first */
+        };
+
+        // TODO(acmcarther): This is duplicated in logical device instantiation
+        let required_extension_names = vec![
+          "VK_KHR_swapchain",
+        ];
+
+        let required_extensions_supported = {
+          let mut num_extensions = 0;
+          self.instance_ptrs(instance).EnumerateDeviceExtensionProperties(*_physical_device, ptr::null(), &mut num_extensions, ptr::null_mut());
+          let mut available_extensions: Vec<vk::ExtensionProperties> =
+            Vec::with_capacity(num_extensions as usize);
+          self.instance_ptrs(instance).EnumerateDeviceExtensionProperties(*_physical_device, ptr::null(), &mut num_extensions, available_extensions.as_mut_ptr());
+          available_extensions.set_len(num_extensions as usize);
+
+          let available_extension_names = available_extensions.iter().map(|e| CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap()).collect::<Vec<_>>();
+          for available_extension_name in available_extension_names.iter() {
+            println!("Vulkan Device Extension found: {}", available_extension_name);
+          }
+          required_extension_names
+            .iter()
+            .map(|e| available_extension_names.contains(e))
+            .all(|is_contained| is_contained)
+        };
+
+        let _swapchain_capabilities = {
+          let mut swapchain_capabilities: vk::SurfaceCapabilitiesKHR = std::mem::uninitialized();
+          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceCapabilitiesKHR(*_physical_device, *surface, &mut swapchain_capabilities);
+
+          if result != vk::SUCCESS {
+            panic!("failed to extract physical device surface capabilities with {}", vk_result_to_human(result as i32));
+          }
+
+          swapchain_capabilities
+        };
+
+        let _swapchain_formats = {
+          let mut num_formats = 0;
+          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceFormatsKHR(
+            *_physical_device, *surface, &mut num_formats, ptr::null_mut());
+
+          if result != vk::SUCCESS {
+            panic!("failed to enumerate surface formats for device with {}", vk_result_to_human(result as i32));
+          }
+
+          let mut swapchain_formats = Vec::with_capacity(num_formats as usize);
+
+          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceFormatsKHR(
+            *_physical_device, *surface, &mut num_formats, swapchain_formats.as_mut_ptr());
+
+          if result != vk::SUCCESS {
+            panic!("failed to list surface formats for device with {}", vk_result_to_human(result as i32));
+          }
+          swapchain_formats.set_len(num_formats as usize);
+          swapchain_formats
+        };
+
+        let _swapchain_present_modes = {
+          let mut num_present_modes = 0;
+          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfacePresentModesKHR(
+            *_physical_device, *surface, &mut num_present_modes, ptr::null_mut());
+
+          if result != vk::SUCCESS {
+            panic!("failed to enumerate surface present modes for device with {}", vk_result_to_human(result as i32));
+          }
+
+          let mut swapchain_present_modes = Vec::with_capacity(num_present_modes as usize);
+
+          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfacePresentModesKHR(
+            *_physical_device, *surface, &mut num_present_modes, swapchain_present_modes.as_mut_ptr());
+
+          if result != vk::SUCCESS {
+            panic!("failed to list surface present modes for device with {}", vk_result_to_human(result as i32));
+          }
+          swapchain_present_modes.set_len(num_present_modes as usize);
+          swapchain_present_modes
+        };
+
+        let required_swapchain_support_present = {
+          !_swapchain_formats.is_empty() && !_swapchain_present_modes.is_empty()
+        };
+
+        if physical_device == 0
+          && gfx_supporting_queue_family_index_opt.is_some()
+          && required_extensions_supported
+          && required_swapchain_support_present {
+          println!("going with that physical_device, as it supports a gfx and present queue");
+          physical_device = *_physical_device;
+          swapchain_capabilities = _swapchain_capabilities;
+          swapchain_formats = _swapchain_formats;
+          swapchain_present_modes = _swapchain_present_modes;
           gfx_supporting_queue_family_index = gfx_supporting_queue_family_index_opt.unwrap() as u32;
         }
       }
@@ -350,12 +484,15 @@ impl VkCtx {
       Some(CapablePhysicalDevice {
         instance: instance,
         device: physical_device,
-        gfx_supporting_queue_family_index: gfx_supporting_queue_family_index
+        gfx_supporting_queue_family_index: gfx_supporting_queue_family_index,
+        swapchain_capabilities: swapchain_capabilities,
+        swapchain_formats: swapchain_formats,
+        swapchain_present_modes: swapchain_present_modes,
       })
     }
   }
 
-  pub fn make_logical_device(&mut self, capable_physical_device: &CapablePhysicalDevice, enabled_layers: &Vec<[i8; 256]>) -> vk::Device {
+  pub fn init_logical_device(&mut self, capable_physical_device: &CapablePhysicalDevice, enabled_layers: &Vec<[i8; 256]>) -> vk::Device {
     let queue_priorities = [1.0f32];
     let device_queue_create_info = vk::DeviceQueueCreateInfo {
       sType: vk::STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -425,6 +562,8 @@ impl VkCtx {
     };
 
     let ppEnabledLayerNames = enabled_layers.iter().map(|i| i.as_ptr()).collect::<Vec<_>>();
+    let enabled_extension_names = vec![CString::new("VK_KHR_swapchain").unwrap()];
+    let ppEnabledExtensionNames = enabled_extension_names.iter().map(|i| i.as_c_str().as_ptr()).collect::<Vec<_>>();
     let device_create_info = vk::DeviceCreateInfo {
       sType: vk::STRUCTURE_TYPE_DEVICE_CREATE_INFO,
       pNext: ptr::null(),
@@ -433,8 +572,8 @@ impl VkCtx {
       pQueueCreateInfos: &device_queue_create_info as *const _,
       enabledLayerCount: ppEnabledLayerNames.len() as u32,
       ppEnabledLayerNames: ppEnabledLayerNames.as_ptr(),
-      enabledExtensionCount: 0,
-      ppEnabledExtensionNames: ptr::null(),
+      enabledExtensionCount: ppEnabledExtensionNames.len() as u32,
+      ppEnabledExtensionNames: ppEnabledExtensionNames.as_ptr(),
       pEnabledFeatures: &physical_device_features as *const _,
     };
     println!("Constructing logical device");
@@ -460,11 +599,184 @@ impl VkCtx {
 
     self.device_pointers_map.insert(logical_device, device_pointers);
 
+    let mut queue: vk::Queue = unsafe {std::mem::uninitialized() } ;
+    unsafe {
+      self.device_ptrs(logical_device).GetDeviceQueue(
+        logical_device,
+        capable_physical_device.gfx_supporting_queue_family_index,
+        0,
+        &mut queue
+      );
+    }
+    self.queues_map.insert(logical_device, queue);
+
     logical_device
   }
 
-  pub fn device_ptrs(&self, device: vk::Device) -> &vk::DevicePointers {
-    self.device_pointers_map.get(&device).unwrap()
+  pub fn device_ptrs(&self, logical_device: vk::Device) -> &vk::DevicePointers {
+    self.device_pointers_map.get(&logical_device).unwrap()
+  }
+
+  pub fn init_swap_chain(&mut self, instance: vk::Instance, logical_device: vk::Device, capable_physical_device: &CapablePhysicalDevice, surface: &mut vk::SurfaceKHR) -> vk::SwapchainKHR {
+    let swapchain_best_format = {
+      let swapchain_formats = &capable_physical_device.swapchain_formats;
+
+      // Device has no preference at all
+      if swapchain_formats.len() == 1 && swapchain_formats.get(0).unwrap().format == vk::FORMAT_UNDEFINED {
+        vk::SurfaceFormatKHR {
+          format: vk::FORMAT_B8G8R8A8_UNORM,
+          colorSpace: vk::COLOR_SPACE_SRGB_NONLINEAR_KHR,
+        }
+      } else {
+        // Try to find our favorite format
+        let ideal_format_opt = swapchain_formats
+          .iter()
+          .find(|f| f.format == vk::FORMAT_B8G8R8A8_UNORM && f.colorSpace == vk::COLOR_SPACE_SRGB_NONLINEAR_KHR);
+        if ideal_format_opt.is_some() {
+          vk::SurfaceFormatKHR {
+            format: vk::FORMAT_B8G8R8A8_UNORM,
+            colorSpace: vk::COLOR_SPACE_SRGB_NONLINEAR_KHR,
+          }
+        } else {
+          println!("Using a sub-optimal swapchain format");
+          // Just use the first available
+          let first_available_format = swapchain_formats.get(0).unwrap();
+          vk::SurfaceFormatKHR {
+            format: first_available_format.format,
+            colorSpace: first_available_format.colorSpace,
+          }
+        }
+      }
+    };
+    println!("Vulkan configuring swapchain format");
+
+    // Choose MAILBOX, IMMEDIATE, FIFO
+    let swapchain_best_present_mode /* : vk::"Present Mode", u32 */  = {
+      let swapchain_present_modes = &capable_physical_device.swapchain_present_modes;
+      let mut mode = vk::PRESENT_MODE_FIFO_KHR /* default */;
+
+      if swapchain_present_modes.contains(&vk::PRESENT_MODE_MAILBOX_KHR) {
+        mode = vk::PRESENT_MODE_MAILBOX_KHR
+      } else if swapchain_present_modes.contains(&vk::PRESENT_MODE_IMMEDIATE_KHR) {
+        mode = vk::PRESENT_MODE_IMMEDIATE_KHR
+      }
+
+      mode
+    };
+    println!("Vulkan configuring swapchain present mode");
+
+    let swapchain_extent: vk::Extent2D = {
+      let swapchain_capabilities = &capable_physical_device.swapchain_capabilities;
+      let must_use_provided_values = swapchain_capabilities.currentExtent.width != u32::max_value();
+      let DEFAULT_SWAP_WIDTH: u32 = 800 /* px */;
+      let DEFAULT_SWAP_HEIGHT: u32 = 600 /* px */;
+      if must_use_provided_values {
+        vk::Extent2D {
+          width: swapchain_capabilities.currentExtent.width,
+          height: swapchain_capabilities.currentExtent.height,
+        }
+      } else {
+        vk::Extent2D {
+          width: swapchain_capabilities.minImageExtent.width
+            .max(swapchain_capabilities.maxImageExtent.width
+                 .min(DEFAULT_SWAP_WIDTH)),
+          height: swapchain_capabilities.minImageExtent.height
+            .max(swapchain_capabilities.maxImageExtent.height
+                 .min(DEFAULT_SWAP_HEIGHT)),
+        }
+      }
+    };
+    println!("Vulkan configuring swapchain extents");
+
+    let swapchain_image_count: u32 = {
+      let swapchain_capabilities = &capable_physical_device.swapchain_capabilities;
+      let desired_image_count = swapchain_capabilities.minImageCount + 1;
+
+      // Max images may be bounded, use that if its lower than our desired image count
+      if swapchain_capabilities.maxImageCount != 0
+        && swapchain_capabilities.maxImageCount < desired_image_count {
+        swapchain_capabilities.maxImageCount
+      } else {
+        desired_image_count
+      }
+    };
+
+    // TODO(acmcarther): Support multiple queues (ex: separate gfx queue from present queue)
+    // This will involve changing imageSharingMode to vk::SHARING_MODE_CONCURRENT, setting
+    // queueFamilyIndexCount, and populating the pQueueFamilyIndices
+    let swapchain_create_info_khr = {
+      let swapchain_capabilities = &capable_physical_device.swapchain_capabilities;
+      vk::SwapchainCreateInfoKHR {
+        sType: vk::STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        pNext: ptr::null(),
+        flags: 0,
+        minImageCount: swapchain_image_count,
+        imageFormat: swapchain_best_format.format,
+        imageColorSpace: swapchain_best_format.colorSpace,
+        imageExtent: vk::Extent2D {
+          width: swapchain_extent.width,
+          height: swapchain_extent.height,
+        },
+        imageArrayLayers: 1,
+        imageUsage: vk::IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        imageSharingMode: vk::SHARING_MODE_EXCLUSIVE,
+        queueFamilyIndexCount: 0 /* omitted under SHARING_MODE_EXCLUSIVE */,
+        pQueueFamilyIndices: ptr::null() /* omitted under SHARING_MODE_EXCLUSIVE */,
+        preTransform: swapchain_capabilities.currentTransform,
+        compositeAlpha: vk::COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        presentMode: swapchain_best_present_mode,
+        clipped: vk::TRUE,
+        oldSwapchain: 0 /* null handle */,
+        surface: *surface,
+      }
+    };
+    println!("Vulkan creating swap chain");
+
+    let swapchain = {
+      let mut swapchain = 0u64;
+      unsafe {
+        let result = self.device_ptrs(logical_device)
+          .CreateSwapchainKHR(logical_device, &swapchain_create_info_khr, ptr::null(), &mut swapchain);
+
+        if result != vk::SUCCESS {
+          panic!("failed to create swapchain with {}", vk_result_to_human(result as i32));
+        }
+        swapchain
+      }
+    };
+
+    let swapchain_images = {
+      let mut num_images = 0;
+
+      unsafe {
+        let result = self.device_ptrs(logical_device)
+          .GetSwapchainImagesKHR(logical_device, swapchain, &mut num_images, ptr::null_mut());
+
+        if result != vk::SUCCESS {
+          panic!("failed to enumerate swapchain images with {}", vk_result_to_human(result as i32));
+        }
+
+        let mut swapchain_images = Vec::with_capacity(num_images as usize);
+
+        let result = self.device_ptrs(logical_device).GetSwapchainImagesKHR(
+          logical_device, swapchain, &mut num_images, swapchain_images.as_mut_ptr());
+
+        if result != vk::SUCCESS {
+          panic!("failed to fetch swapchain images with {}", vk_result_to_human(result as i32));
+        }
+        swapchain_images.set_len(num_images as usize);
+        swapchain_images
+      }
+    };
+
+    self.swapchains_map.insert(logical_device, swapchain);
+    self.swapchain_params_map.insert(swapchain, SwapchainParams {
+      format: swapchain_best_format.format,
+      extent: swapchain_extent,
+    });
+    self.swapchain_images_map.insert(swapchain, swapchain_images);
+
+    swapchain
   }
 }
 
@@ -492,6 +804,9 @@ pub struct CapablePhysicalDevice {
   instance: vk::Instance,
   device: vk::PhysicalDevice,
   gfx_supporting_queue_family_index: u32,
+  swapchain_capabilities: vk::SurfaceCapabilitiesKHR,
+  swapchain_formats: Vec<vk::SurfaceFormatKHR>,
+  swapchain_present_modes: Vec<vk::PresentModeKHR>,
 }
 
 pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W) -> VkCtx {
@@ -534,30 +849,19 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W) -> VkCtx {
   println!("setting up debug callback");
   vk_ctx.configure_default_callback(instance, vk_debug_report_callback_ext);
 
-  let capable_physical_device = vk_ctx.find_capable_gfx_device(instance)
-    .expect("there was no suitable physical device!");
-
-  let logical_device = vk_ctx.make_logical_device(&capable_physical_device, &enabled_layers);
-
-  println!("Retrieving gfx capable queue");
-  // Get the gfx-capable device queue
-  let mut queue: vk::Queue = unsafe {std::mem::uninitialized() } ;
-  unsafe {
-    vk_ctx.device_ptrs(logical_device).GetDeviceQueue(
-      logical_device,
-      capable_physical_device.gfx_supporting_queue_family_index,
-      0,
-      &mut queue
-    );
-  }
-
-  let surface_khr = window_system_plugin.create_surface(instance, vk_ctx.instance_ptrs(instance));
-
+  let mut surface_khr = window_system_plugin.create_surface(instance, vk_ctx.instance_ptrs(instance));
   if vk_ctx.surfaces_map.contains_key(&instance) {
     vk_ctx.surfaces_map.get_mut(&instance).unwrap().push(surface_khr);
   } else {
     vk_ctx.surfaces_map.insert(instance, vec![surface_khr]);
   }
+
+  let capable_physical_device = vk_ctx.find_capable_gfx_device(instance, &mut surface_khr)
+    .expect("there was no suitable physical device!");
+
+  let device = vk_ctx.init_logical_device(&capable_physical_device, &enabled_layers);
+
+  let swapchain_khr = vk_ctx.init_swap_chain(instance, device, &capable_physical_device, &mut surface_khr);
 
   vk_ctx
 }
