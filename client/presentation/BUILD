@@ -37,3 +37,10 @@ rust_binary(
         ":sdl2_vulkan_interop",
     ],
 )
+
+load("//tools:glslang.bzl", "compile_spirv_shader")
+
+compile_spirv_shader(
+    name = "toy_vert_shader",
+    src = ":toy.vert",
+)

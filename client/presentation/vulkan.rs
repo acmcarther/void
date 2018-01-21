@@ -841,6 +841,9 @@ impl VkCtx {
 
     self.swapchain_image_views_map.insert(swapchain, image_views);
   }
+
+  pub fn init_graphics_pipeline(&mut self) {
+  }
 }
 
 /** Contains instance, and instance ptrs */
@@ -927,6 +930,8 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W) -> VkCtx {
   let swapchain_khr = vk_ctx.init_swap_chain(instance, logical_device, &capable_physical_device, &mut surface_khr);
 
   vk_ctx.init_image_views(logical_device, swapchain_khr);
+
+  vk_ctx.init_graphics_pipeline();
 
   vk_ctx
 }
