@@ -26,6 +26,7 @@ pub struct VkCtx {
   swapchains_map: HashMap<vk::Device, vk::SwapchainKHR>,
   swapchain_params_map: HashMap<vk::SwapchainKHR, SwapchainParams>,
   swapchain_images_map: HashMap<vk::SwapchainKHR, Vec<vk::Image>>,
+  swapchain_image_views_map: HashMap<vk::SwapchainKHR, Vec<vk::ImageView>>,
 }
 
 struct SwapchainParams {
@@ -45,6 +46,23 @@ impl Drop for VkCtx {
         }
       }
     }
+
+    let mut swapchain_image_views_map: HashMap<vk::SwapchainKHR, Vec<vk::ImageView>> = HashMap::new();
+    std::mem::swap(&mut self.swapchain_image_views_map, &mut swapchain_image_views_map);
+    for (_swapchain_khr, image_views) in swapchain_image_views_map.into_iter() {
+      // Find the device that this swapchain belongs to
+      let logical_device =
+        *self.swapchains_map.iter()
+            .find(|&(logical_device, swapchain_khr)| *swapchain_khr == _swapchain_khr)
+            .map(|(logical_device, _)| logical_device)
+            .unwrap();
+      unsafe {
+        for image_view in image_views.iter() {
+          self.device_ptrs(logical_device).DestroyImageView(logical_device, *image_view, ptr::null());
+        }
+      }
+    }
+
 
     let mut swapchains_map: HashMap<vk::Device, vk::SwapchainKHR> = HashMap::new();
     std::mem::swap(&mut self.swapchains_map, &mut swapchains_map);
@@ -100,6 +118,7 @@ impl VkCtx {
       swapchains_map: HashMap::new(),
       swapchain_params_map: HashMap::new(),
       swapchain_images_map: HashMap::new(),
+      swapchain_image_views_map: HashMap::new(),
       dylib: dylib
     }
   }
@@ -778,6 +797,50 @@ impl VkCtx {
 
     swapchain
   }
+
+  pub fn init_image_views(&mut self, logical_device: vk::Device, swapchain: vk::SwapchainKHR) {
+    let swapchain_images = self.swapchain_images_map.get(&swapchain).unwrap();
+    let swapchain_params = self.swapchain_params_map.get(&swapchain).unwrap();
+    let mut image_views = Vec::with_capacity(swapchain_images.len());
+    println!("Vulkan creating image view for each image.");
+    for swapchain_image in swapchain_images.iter() {
+      let image_view_create_info = vk::ImageViewCreateInfo {
+        sType: vk::STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        pNext: ptr::null(),
+        flags: 0,
+        image: *swapchain_image,
+        format: swapchain_params.format,
+        viewType: vk::IMAGE_VIEW_TYPE_2D,
+        components: vk::ComponentMapping {
+          r: vk::COMPONENT_SWIZZLE_IDENTITY,
+          g: vk::COMPONENT_SWIZZLE_IDENTITY,
+          b: vk::COMPONENT_SWIZZLE_IDENTITY,
+          a: vk::COMPONENT_SWIZZLE_IDENTITY,
+        },
+        // N.B.: Under a sterographic 3d application situation, create a swapchain containing
+        // multiple layers -- one per view
+        subresourceRange: vk::ImageSubresourceRange {
+          aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
+          baseMipLevel: 0,
+          levelCount: 1,
+          baseArrayLayer: 0,
+          layerCount: 1,
+        },
+      };
+
+      unsafe {
+        let mut image_view = std::mem::uninitialized();
+        let result = self.device_ptrs(logical_device).CreateImageView(logical_device, &image_view_create_info, ptr::null(), &mut image_view);
+        if result != vk::SUCCESS {
+          panic!("failed to fetch swapchain image view with {}", vk_result_to_human(result as i32));
+        }
+
+        image_views.push(image_view);
+      }
+    }
+
+    self.swapchain_image_views_map.insert(swapchain, image_views);
+  }
 }
 
 /** Contains instance, and instance ptrs */
@@ -859,9 +922,11 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W) -> VkCtx {
   let capable_physical_device = vk_ctx.find_capable_gfx_device(instance, &mut surface_khr)
     .expect("there was no suitable physical device!");
 
-  let device = vk_ctx.init_logical_device(&capable_physical_device, &enabled_layers);
+  let logical_device = vk_ctx.init_logical_device(&capable_physical_device, &enabled_layers);
 
-  let swapchain_khr = vk_ctx.init_swap_chain(instance, device, &capable_physical_device, &mut surface_khr);
+  let swapchain_khr = vk_ctx.init_swap_chain(instance, logical_device, &capable_physical_device, &mut surface_khr);
+
+  vk_ctx.init_image_views(logical_device, swapchain_khr);
 
   vk_ctx
 }
