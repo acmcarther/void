@@ -2,14 +2,16 @@ extern crate dylib;
 extern crate vk_sys as vk;
 
 use std::collections::HashMap;
-use std::time::Duration;
 use std::ffi::CString;
 use std::ffi::CStr;
-use std::path::Path;
 use std::path::PathBuf;
 use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr;
+
+pub trait WindowSystemPlugin {
+  fn create_surface(&mut self, instance: vk::Instance, instance_ptrs: &vk::InstancePointers) -> vk::SurfaceKHR;
+}
 
 /** Contains static ptrs, entry ptrs, and dylib */
 pub struct VkCtx {
@@ -17,6 +19,7 @@ pub struct VkCtx {
   pub entry_points: vk::EntryPoints,
   pub static_points: vk::Static,
   debug_report_callbacks: HashMap<vk::Instance, Vec<vk::DebugReportCallbackEXT>>,
+  surfaces_map: HashMap<vk::Instance, Vec<vk::SurfaceKHR>>,
   instance_pointers_map: HashMap<vk::Instance, vk::InstancePointers>,
   device_pointers_map: HashMap<vk::Device, vk::DevicePointers>,
 }
@@ -42,6 +45,17 @@ impl Drop for VkCtx {
       }
     }
 
+    let mut surfaces_map: HashMap<vk::Instance, Vec<vk::SurfaceKHR>> = HashMap::new();
+    std::mem::swap(&mut self.surfaces_map, &mut surfaces_map);
+    for (instance, surfaces) in surfaces_map.into_iter() {
+      for surface in surfaces.iter() {
+        unsafe {
+          self.instance_pointers_map.get(&instance).unwrap()
+            .DestroySurfaceKHR(instance, *surface, ptr::null());
+        }
+      }
+    }
+
     let mut instance_pointers_map: HashMap<vk::Instance, vk::InstancePointers> = HashMap::new();
     std::mem::swap(&mut self.instance_pointers_map, &mut instance_pointers_map);
     for (instance, instance_pointers) in instance_pointers_map.into_iter() {
@@ -64,6 +78,7 @@ impl VkCtx {
       debug_report_callbacks: HashMap::new(),
       instance_pointers_map: HashMap::new(),
       device_pointers_map: HashMap::new(),
+      surfaces_map: HashMap::new(),
       dylib: dylib
     }
   }
@@ -240,7 +255,7 @@ impl VkCtx {
     let mut debug_report_callback_ext = {
       let mut debug_report_callback_ext = 0;
       let debug_report_callback_create_info_ext = vk::DebugReportCallbackCreateInfoEXT {
-        sType: vk::STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT,
+        sType: vk::STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
         flags: vk::DEBUG_REPORT_ERROR_BIT_EXT | vk::DEBUG_REPORT_WARNING_BIT_EXT,
         pNext: ptr::null(),
         pfnCallback: vk_debug_report_callback_ext,
@@ -479,7 +494,7 @@ pub struct CapablePhysicalDevice {
   gfx_supporting_queue_family_index: u32,
 }
 
-pub fn vulkan<F: FnMut(vk::Instance, &vk::InstancePointers) -> vk::SurfaceKHR>(mut surface_create_fn: F) -> VkCtx {
+pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W) -> VkCtx {
   let dylib_path = PathBuf::from("libvulkan.so.1");
   let dylib = dylib::DynamicLibrary::open(Some(dylib_path.as_path())).unwrap();
 
@@ -524,7 +539,6 @@ pub fn vulkan<F: FnMut(vk::Instance, &vk::InstancePointers) -> vk::SurfaceKHR>(m
 
   let logical_device = vk_ctx.make_logical_device(&capable_physical_device, &enabled_layers);
 
-  /*
   println!("Retrieving gfx capable queue");
   // Get the gfx-capable device queue
   let mut queue: vk::Queue = unsafe {std::mem::uninitialized() } ;
@@ -536,9 +550,14 @@ pub fn vulkan<F: FnMut(vk::Instance, &vk::InstancePointers) -> vk::SurfaceKHR>(m
       &mut queue
     );
   }
-  */
 
-  let surface_khr = surface_create_fn(instance, vk_ctx.instance_ptrs(instance));
+  let surface_khr = window_system_plugin.create_surface(instance, vk_ctx.instance_ptrs(instance));
+
+  if vk_ctx.surfaces_map.contains_key(&instance) {
+    vk_ctx.surfaces_map.get_mut(&instance).unwrap().push(surface_khr);
+  } else {
+    vk_ctx.surfaces_map.insert(instance, vec![surface_khr]);
+  }
 
   vk_ctx
 }

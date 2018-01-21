@@ -17,9 +17,10 @@ rust_library(
 )
 
 rust_library(
-    name = "sdl2_window",
-    srcs = ["sdl2_window.rs"],
+    name = "sdl2_vulkan_interop",
+    srcs = ["sdl2_vulkan_interop.rs"],
     deps = [
+        ":vulkan",
         "//third_party/SDL2:sdl2_sys",
         "//cargo:sdl2",
         "//cargo:vk_sys",
@@ -32,6 +33,7 @@ rust_binary(
     srcs = ["toy.rs"],
     deps = [
         ":vulkan",
-        ":sdl2_window",
+        "//cargo:sdl2",
+        ":sdl2_vulkan_interop",
     ],
 )
