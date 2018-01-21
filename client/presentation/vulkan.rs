@@ -722,6 +722,8 @@ impl VkCtx {
 
     self.device_pointers_map.insert(logical_device, device_pointers);
 
+    println!("Loading common queue");
+
     let mut queue: vk::Queue = unsafe {std::mem::uninitialized() } ;
     unsafe {
       self.device_ptrs(logical_device).GetDeviceQueue(
@@ -824,6 +826,8 @@ impl VkCtx {
       }
     };
 
+    println!("Vulkan preparing swapchain");
+
     // TODO(acmcarther): Support multiple queues (ex: separate gfx queue from present queue)
     // This will involve changing imageSharingMode to vk::SHARING_MODE_CONCURRENT, setting
     // queueFamilyIndexCount, and populating the pQueueFamilyIndices
@@ -867,6 +871,8 @@ impl VkCtx {
         swapchain
       }
     };
+
+    println!("Vulkan creating swapchain images");
 
     let swapchain_images = {
       let mut num_images = 0;
@@ -988,6 +994,8 @@ impl VkCtx {
       dependencyFlags: 0,
     };
 
+    println!("Vulkan creating render pass");
+
     let render_pass = {
       let render_pass_create_info = vk::RenderPassCreateInfo {
         sType: vk::STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -1025,7 +1033,9 @@ impl VkCtx {
     // TODO(acmcarther): This section needs a large overhaul, as it bakes in the assumption of a
     // single vert shader, and a single frag shader.
 
+    println!("Vulkan creating vertex shader module");
     let vert_shader_module = self.create_shader_module(logical_device, vert_shader_bytes);
+    println!("Vulkan creating fragment shader module");
     let frag_shader_module = self.create_shader_module(logical_device, frag_shader_bytes);
 
     let common_shader_pipeline_name = CString::new("main").unwrap();
@@ -1074,6 +1084,9 @@ impl VkCtx {
     };
 
     let swapchain_params = self.swapchain_params_map.get(&swapchain_khr).unwrap();
+    println!("Vulkan creating viewport with dimensions: {}, {}",
+       swapchain_params.extent.width as f32,
+       swapchain_params.extent.height as f32);
     let viewport = vk::Viewport {
        x: 0.0f32,
        y: 0.0f32,
@@ -1142,13 +1155,13 @@ impl VkCtx {
     // TODO(acmcarther): Examine these options
     let pipeline_color_blend_attachment_state = vk::PipelineColorBlendAttachmentState {
       blendEnable: vk::FALSE,
-      colorWriteMask: 0,
+      colorWriteMask: vk::COLOR_COMPONENT_R_BIT | vk::COLOR_COMPONENT_G_BIT | vk::COLOR_COMPONENT_B_BIT | vk::COLOR_COMPONENT_A_BIT,
       srcColorBlendFactor: vk::BLEND_FACTOR_ONE,
       dstColorBlendFactor: vk::BLEND_FACTOR_ZERO,
       colorBlendOp: vk::BLEND_OP_ADD,
       srcAlphaBlendFactor: vk::BLEND_FACTOR_ONE,
       dstAlphaBlendFactor: vk::BLEND_FACTOR_ZERO,
-      alphaBlendOp: vk::BLEND_FACTOR_ZERO,
+      alphaBlendOp: vk::BLEND_OP_ADD,
     };
 
     let pipeline_color_blend_state_create_info = vk::PipelineColorBlendStateCreateInfo {
@@ -1534,12 +1547,12 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W, vert_shader_b
   let extension_spec = ExtensionSpec {
     wanted: vec! [
       "VK_EXT_acquire_xlib_display",
-      "VK_EXT_display_surface_counter",
+      //"VK_EXT_display_surface_counter",
       "VK_KHR_display",
       "VK_KHR_get_physical_device_properties2",
       "VK_KHR_get_surface_capabilities2",
       "VK_KHR_surface",
-      "VK_KHR_xcb_surface",
+      //"VK_KHR_xcb_surface",
       "VK_KHR_xlib_surface",
       "VK_KHX_device_group_creation",
     ],
@@ -1550,7 +1563,10 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W, vert_shader_b
   let enabled_extensions = vk_ctx.select_extensions(extension_spec);
 
   let layer_spec = LayerSpec {
-    wanted: Vec::new(),
+    wanted: vec![
+      "VK_LAYER_LUNARG_core_validation",
+      "VK_LAYER_LUNARG_parameter_validation",
+    ],
     required: vec! [
       "VK_LAYER_LUNARG_standard_validation",
     ],
