@@ -35,6 +35,13 @@ pub struct VkCtx {
   device_command_pool_map: HashMap<vk::Device, vk::CommandPool>,
   // Do not need to be destroyed (cleaned up when parent pool is killed)
   device_command_buffers_map: HashMap<vk::Device, Vec<vk::CommandBuffer>>,
+  device_render_finished_semaphore_map: HashMap<vk::Device, vk::Semaphore>,
+  device_image_available_semaphore_map: HashMap<vk::Device, vk::Semaphore>,
+}
+
+pub struct VkRenderSession {
+  logical_device: vk::Device,
+  swapchain_khr: vk::SwapchainKHR
 }
 
 struct SwapchainParams {
@@ -65,6 +72,24 @@ impl Drop for VkCtx {
         self.device_ptrs(logical_device).DestroyCommandPool(logical_device, command_pool, ptr::null());
       }
     }
+
+
+    let mut device_render_finished_semaphore_map: HashMap<vk::Device, vk::Semaphore> = HashMap::new();
+    std::mem::swap(&mut self.device_render_finished_semaphore_map, &mut device_render_finished_semaphore_map);
+    for (logical_device, semaphore) in device_render_finished_semaphore_map.into_iter() {
+      unsafe {
+        self.device_ptrs(logical_device).DestroySemaphore(logical_device, semaphore, ptr::null());
+      }
+    }
+
+    let mut device_image_available_semaphore_map: HashMap<vk::Device, vk::Semaphore> = HashMap::new();
+    std::mem::swap(&mut self.device_image_available_semaphore_map, &mut device_image_available_semaphore_map);
+    for (logical_device, semaphore) in device_image_available_semaphore_map.into_iter() {
+      unsafe {
+        self.device_ptrs(logical_device).DestroySemaphore(logical_device, semaphore, ptr::null());
+      }
+    }
+
 
     let mut device_framebuffers_map: HashMap<vk::Device, Vec<vk::Framebuffer>> = HashMap::new();
     std::mem::swap(&mut self.device_framebuffers_map, &mut device_framebuffers_map);
@@ -196,6 +221,8 @@ impl VkCtx {
       device_framebuffers_map: HashMap::new(),
       device_command_pool_map: HashMap::new(),
       device_command_buffers_map: HashMap::new(),
+      device_render_finished_semaphore_map: HashMap::new(),
+      device_image_available_semaphore_map: HashMap::new(),
       dylib: dylib
     }
   }
@@ -928,7 +955,7 @@ impl VkCtx {
       loadOp: vk::ATTACHMENT_LOAD_OP_CLEAR,
       storeOp: vk::ATTACHMENT_STORE_OP_STORE,
       stencilLoadOp: vk::ATTACHMENT_LOAD_OP_DONT_CARE,
-      stencilStoreOp: vk::ATTACHMENT_LOAD_OP_DONT_CARE,
+      stencilStoreOp: vk::ATTACHMENT_STORE_OP_DONT_CARE,
       initialLayout: vk::IMAGE_LAYOUT_UNDEFINED,
       finalLayout: vk::IMAGE_LAYOUT_PRESENT_SRC_KHR,
     };
@@ -951,6 +978,16 @@ impl VkCtx {
       pPreserveAttachments: ptr::null(),
     };
 
+    let dependency = vk::SubpassDependency {
+      srcSubpass: vk::SUBPASS_EXTERNAL,
+      dstSubpass: 0,
+      srcStageMask: vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      dstStageMask: vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      srcAccessMask: 0,
+      dstAccessMask: vk::ACCESS_COLOR_ATTACHMENT_READ_BIT | vk::ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      dependencyFlags: 0,
+    };
+
     let render_pass = {
       let render_pass_create_info = vk::RenderPassCreateInfo {
         sType: vk::STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -960,8 +997,8 @@ impl VkCtx {
         pAttachments: &color_attachment_description,
         subpassCount: 1,
         pSubpasses: &subpass_description,
-        dependencyCount: 0,
-        pDependencies: ptr::null(),
+        dependencyCount: 1,
+        pDependencies: &dependency,
       };
 
       unsafe {
@@ -1029,7 +1066,7 @@ impl VkCtx {
     };
 
     let pipeline_input_assembly_state_create_info = vk::PipelineInputAssemblyStateCreateInfo {
-      sType: vk::STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+      sType: vk::STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
       pNext: ptr::null(),
       flags: 0,
       topology: vk::PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -1371,6 +1408,92 @@ impl VkCtx {
 
     command_buffers
   }
+
+  pub fn init_semaphores(&mut self, logical_device: vk::Device) {
+    let semaphore_create_info = vk::SemaphoreCreateInfo {
+      sType: vk::STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+      pNext: ptr::null(),
+      flags: 0,
+    };
+
+    unsafe {
+      let mut image_available_semaphore = std::mem::uninitialized();
+      let mut render_finished_semaphore = std::mem::uninitialized();
+
+      let result = self.device_ptrs(logical_device)
+        .CreateSemaphore(logical_device, &semaphore_create_info, ptr::null(), &mut image_available_semaphore);
+      if result != vk::SUCCESS {
+        panic!("failed during creaing image_available_semaphore {}", vk_result_to_human(result as i32));
+      }
+      let result = self.device_ptrs(logical_device)
+        .CreateSemaphore(logical_device, &semaphore_create_info, ptr::null(), &mut render_finished_semaphore);
+      if result != vk::SUCCESS {
+        panic!("failed during creaing render_finished_semaphore {}", vk_result_to_human(result as i32));
+      }
+
+      self.device_image_available_semaphore_map.insert(logical_device, image_available_semaphore);
+      self.device_render_finished_semaphore_map.insert(logical_device, render_finished_semaphore);
+    }
+  }
+
+  pub fn draw_demo_frame(&mut self, vk_render_session: &VkRenderSession) {
+    let &VkRenderSession {logical_device, swapchain_khr} = vk_render_session;
+    let mut image_index = 0;
+    unsafe {
+      let result = self.device_ptrs(logical_device).AcquireNextImageKHR(
+        logical_device,
+        swapchain_khr,
+        u64::max_value(),
+        *self.device_image_available_semaphore_map.get(&logical_device).unwrap(),
+        0 /* vk_null_handle */,
+        &mut image_index);
+
+      if result != vk::SUCCESS {
+        panic!("failed to acquire next image with {}", vk_result_to_human(result as i32));
+      }
+
+      let wait_semaphores = [*self.device_image_available_semaphore_map.get(&logical_device).unwrap()];
+      let wait_stages = [vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
+      let signal_semaphores = [*self.device_render_finished_semaphore_map.get(&logical_device).unwrap()];
+      let submit_info = vk::SubmitInfo {
+        sType: vk::STRUCTURE_TYPE_SUBMIT_INFO,
+        pNext: ptr::null(),
+        waitSemaphoreCount: 1,
+        pWaitSemaphores: wait_semaphores.as_ptr(),
+        pWaitDstStageMask: wait_stages.as_ptr(),
+        commandBufferCount: 1,
+        pCommandBuffers: self.device_command_buffers_map.get(&logical_device).unwrap().get(image_index as usize).unwrap(),
+        signalSemaphoreCount: 1,
+        pSignalSemaphores: signal_semaphores.as_ptr(),
+      };
+
+      let result = self.device_ptrs(logical_device)
+        .QueueSubmit(*self.queues_map.get(&logical_device).unwrap(), 1, &submit_info, 0 /* vk_null_handle */);
+      if result != vk::SUCCESS {
+        panic!("failed to submit draw command buffer with {}", vk_result_to_human(result as i32));
+      }
+
+      let swapchains = [swapchain_khr];
+      let present_info_khr = vk::PresentInfoKHR {
+        sType: vk::STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        pNext: ptr::null(),
+        waitSemaphoreCount: 1,
+        pWaitSemaphores: signal_semaphores.as_ptr(),
+        swapchainCount: 1,
+        pSwapchains: swapchains.as_ptr(),
+        pImageIndices: &image_index,
+        pResults: ptr::null_mut(),
+      };
+
+      let result = self.device_ptrs(logical_device).QueuePresentKHR(
+        *self.queues_map.get(&logical_device).unwrap(),
+        &present_info_khr);
+
+      if result != vk::SUCCESS {
+        panic!("failed to submit draw command buffer with {}", vk_result_to_human(result as i32));
+      }
+    }
+  }
 }
 
 /** Contains instance, and instance ptrs */
@@ -1402,7 +1525,7 @@ pub struct CapablePhysicalDevice {
   swapchain_present_modes: Vec<vk::PresentModeKHR>,
 }
 
-pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W, vert_shader_bytes: &[u8], frag_shader_bytes: &[u8]) -> VkCtx {
+pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W, vert_shader_bytes: &[u8], frag_shader_bytes: &[u8]) -> (VkCtx, VkRenderSession) {
   let dylib_path = PathBuf::from("libvulkan.so.1");
   let dylib = dylib::DynamicLibrary::open(Some(dylib_path.as_path())).unwrap();
 
@@ -1468,7 +1591,12 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W, vert_shader_b
 
   vk_ctx.init_command_buffers(logical_device, swapchain_khr, &framebuffers, command_pool, render_pass, graphics_pipeline);
 
-  vk_ctx
+  vk_ctx.init_semaphores(logical_device);
+
+  (vk_ctx, VkRenderSession {
+    logical_device: logical_device,
+    swapchain_khr: swapchain_khr,
+  })
 }
 
 extern "system" fn vk_debug_report_callback_ext(

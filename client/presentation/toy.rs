@@ -15,7 +15,7 @@ fn main() {
   // TODO(acmcarther): This seems unpleasant and brittle-ish.
   let vert_shader_bytes = include_bytes!("../../bazel-genfiles/client/presentation/toy_vert_shader.spv");
   let frag_shader_bytes = include_bytes!("../../bazel-genfiles/client/presentation/toy_frag_shader.spv");
-  let mut vk_ctx = {
+  let (mut vk_ctx, vk_render_session) = {
     let mut sdl_window_system_plugin = sdl2_vulkan_interop::SdlWindowSystemPlugin::new(&mut window);
     vulkan::vulkan(&mut sdl_window_system_plugin, vert_shader_bytes, frag_shader_bytes)
   };
@@ -25,17 +25,17 @@ fn main() {
   'running: loop {
     for event in event_pump.poll_iter() {
       match event {
-        sdl2::event::Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+        sdl2::event::Event::Quit {..} | sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::Escape), .. } => {
           break 'running
         },
-        _ = {}
+        _ => {},
       }
     }
 
-    draw_frame(&mut vk_ctx);
+    draw_demo_frame(&mut vk_ctx, &vk_render_session);
   }
 }
 
-fn draw_frame(vk_ctx: &mut vulkan::VkCtx) {
-
+fn draw_demo_frame(vk_ctx: &mut vulkan::VkCtx, vk_render_session: &vulkan::VkRenderSession) {
+  vk_ctx.draw_demo_frame(vk_render_session)
 }
