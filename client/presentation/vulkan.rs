@@ -51,6 +51,12 @@ struct SwapchainParams {
 
 impl Drop for VkCtx {
   fn drop(&mut self) {
+    for (logical_device, device_ptrs) in self.device_pointers_map.iter() {
+      unsafe {
+        device_ptrs.DeviceWaitIdle(*logical_device);
+      }
+    }
+
     let mut debug_report_callbacks: HashMap<vk::Instance, Vec<vk::DebugReportCallbackEXT>> = HashMap::new();
     std::mem::swap(&mut self.debug_report_callbacks, &mut debug_report_callbacks);
     for (instance, debug_report_callback_ext_list) in debug_report_callbacks.into_iter() {
@@ -61,18 +67,6 @@ impl Drop for VkCtx {
         }
       }
     }
-
-    // TODO(acmcarther): Decide how to handle CommandBuffers, which don't need to be destroyed, but
-    // probably should be removed from the map
-
-    let mut device_command_pool_map: HashMap<vk::Device, vk::CommandPool> = HashMap::new();
-    std::mem::swap(&mut self.device_command_pool_map, &mut device_command_pool_map);
-    for (logical_device, command_pool) in device_command_pool_map.into_iter() {
-      unsafe {
-        self.device_ptrs(logical_device).DestroyCommandPool(logical_device, command_pool, ptr::null());
-      }
-    }
-
 
     let mut device_render_finished_semaphore_map: HashMap<vk::Device, vk::Semaphore> = HashMap::new();
     std::mem::swap(&mut self.device_render_finished_semaphore_map, &mut device_render_finished_semaphore_map);
@@ -87,6 +81,17 @@ impl Drop for VkCtx {
     for (logical_device, semaphore) in device_image_available_semaphore_map.into_iter() {
       unsafe {
         self.device_ptrs(logical_device).DestroySemaphore(logical_device, semaphore, ptr::null());
+      }
+    }
+
+    // TODO(acmcarther): Decide how to handle CommandBuffers, which don't need to be destroyed, but
+    // probably should be removed from the map
+
+    let mut device_command_pool_map: HashMap<vk::Device, vk::CommandPool> = HashMap::new();
+    std::mem::swap(&mut self.device_command_pool_map, &mut device_command_pool_map);
+    for (logical_device, command_pool) in device_command_pool_map.into_iter() {
+      unsafe {
+        self.device_ptrs(logical_device).DestroyCommandPool(logical_device, command_pool, ptr::null());
       }
     }
 
@@ -1339,6 +1344,8 @@ impl VkCtx {
       if result != vk::SUCCESS {
         panic!("failed create command pool with {}", vk_result_to_human(result as i32));
       }
+
+      self.device_command_pool_map.insert(logical_device, command_pool);
       command_pool
     }
   }
