@@ -1,4 +1,4 @@
-def bindgen(name, hdr, includes=[], formatted=True, blacklist_types=[], flags = []):
+def bindgen(name, hdr, includes=[], formatted=True, blacklist_types=[], flags = [], clang_args = []):
   bindgen_out_name = name
   if formatted:
     bindgen_out_name = name + "_unformatted"
@@ -11,13 +11,15 @@ def bindgen(name, hdr, includes=[], formatted=True, blacklist_types=[], flags = 
 
   flags = ' '.join(flags)
 
+  clang_args = ' '.join(clang_args)
+
   native.genrule(
       name = bindgen_out_name,
       srcs = includes + [
           hdr,
       ],
       outs = [bindgen_out_name + ".rs"],
-      cmd = "CLANG_PATH=$(location @llvm//:clang-bin) $(location //cargo:cargo_bin_bindgen) " + flags + " $(location " + hdr + ") > $(location " + bindgen_out_name + ".rs)",
+      cmd = "RUST_BACKTRACE=1 CLANG_PATH=$(location @llvm//:clang-bin) $(location //cargo:cargo_bin_bindgen) " + flags + " $(location " + hdr + ") > $(location " + bindgen_out_name + ".rs) -- " + clang_args,
       tools = [
           "//cargo:cargo_bin_bindgen",
           "@llvm//:clang-bin",
