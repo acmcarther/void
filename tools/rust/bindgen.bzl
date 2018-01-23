@@ -17,8 +17,11 @@ def bindgen(name, hdr, includes=[], formatted=True, blacklist_types=[], flags = 
           hdr,
       ],
       outs = [bindgen_out_name + ".rs"],
-      cmd = "$(location //cargo/overrides/bindgen-0.32.1:cargo_bin_bindgen) " + flags + " $(location " + hdr + ") > $(location " + bindgen_out_name + ".rs)",
-      tools = ["//cargo/overrides/bindgen-0.32.1:cargo_bin_bindgen"])
+      cmd = "CLANG_PATH=$(location @llvm//:clang-bin) $(location //cargo:cargo_bin_bindgen) " + flags + " $(location " + hdr + ") > $(location " + bindgen_out_name + ".rs)",
+      tools = [
+          "//cargo:cargo_bin_bindgen",
+          "@llvm//:clang-bin",
+      ])
 
   if formatted:
     native.genrule(

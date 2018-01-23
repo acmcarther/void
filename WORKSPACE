@@ -52,15 +52,16 @@ load("//cargo:crates.bzl", "raze_fetch_remote_crates")
 
 raze_fetch_remote_crates()
 
+# TODO(acmcarther): Bring into repo
 new_local_repository(
-    name = "system",
-    path = "/usr/lib",
-    build_file = "system.BUILD",
+    name = "llvm",
+    build_file = "llvm.BUILD",
+    path = "/usr/lib/llvm-3.9",
 )
 
 new_http_archive(
     name = "glslang",
-    url = "https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip",
-    type = "zip",
     build_file = "//third_party:glslang.BUILD",
+    type = "zip",
+    url = "https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip",
 )
