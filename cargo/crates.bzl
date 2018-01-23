@@ -95,11 +95,11 @@ def raze_fetch_remote_crates():
     )
 
     native.new_http_archive(
-        name = "raze__bindgen__0_32_1",
-        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/bindgen/bindgen-0.32.1.crate",
+        name = "raze__bindgen__0_32_2",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/bindgen/bindgen-0.32.2.crate",
         type = "tar.gz",
-        strip_prefix = "bindgen-0.32.1",
-        build_file = "//cargo:bindgen-0.32.1.BUILD"
+        strip_prefix = "bindgen-0.32.2",
+        build_file = "//cargo:bindgen-0.32.2.BUILD"
     )
 
     native.new_http_archive(

@@ -7,13 +7,13 @@ package(default_visibility = ["//visibility:public"])
 
 alias(
     name = "bindgen",
-    actual = "@raze__bindgen__0_32_1//:bindgen",
+    actual = "@raze__bindgen__0_32_2//:bindgen",
 )
 alias(
     # Extra aliased target, from raze configuration
     # N.B.: The exact form of this is subject to change.
     name = "cargo_bin_bindgen",
-    actual = "@raze__bindgen__0_32_1//:cargo_bin_bindgen",
+    actual = "@raze__bindgen__0_32_2//:cargo_bin_bindgen",
 )
 alias(
     name = "chrono",
