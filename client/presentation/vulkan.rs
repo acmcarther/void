@@ -13,6 +13,9 @@ pub trait WindowSystemPlugin {
   fn create_surface(&mut self, instance: vk::Instance, instance_ptrs: &vk::InstancePointers) -> vk::SurfaceKHR;
 }
 
+/** The wrapped vulkan return code, plus call context */
+struct VkRawReturnCode(u32, String);
+
 /** Contains static ptrs, entry ptrs, and dylib */
 pub struct VkCtx {
   dylib: dylib::DynamicLibrary,
@@ -235,29 +238,55 @@ impl VkCtx {
     }
   }
 
+  fn list_instance_extensions(entry_points: &vk::EntryPoints) -> Result<Vec<vk::ExtensionProperties>, VkRawReturnCode>  {
+    let result = entry_points.EnumerateInstanceExtensionProperties(
+      ptr::null(), &mut num_extensions, ptr::null::<vk::ExtensionProperties>() as *mut _);
+
+    if result != vk::SUCCESS {
+      return Err(VkRawReturnCode(result, "while enumerating instance extensions"))
+    }
+
+    let mut extensions = Vec::with_capacity(num_extensions as usize);
+
+    let result = self.entry_points.EnumerateInstanceExtensionProperties(
+      ptr::null(), &mut num_extensions, extensions.as_mut_ptr());
+
+    if result != vk::SUCCESS {
+      return Err(VkRawReturnCode(result, "while fetching list of instance extensions"));
+    }
+
+    extensions.set_len(num_extensions as usize);
+    extensions
+  }
+
+  fn list_instance_layers() {
+  }
+  fn list_instance_extensions() {}
+  fn list_instance_layers() {}
+  fn list_physical_devices() {}
+  fn list_physical_device_queue_family_properties() {}
+  fn list_physical_device_extensions() {}
+  fn list_physical_device_layers() {}
+  fn list_logical_device_surface_present_modes() {}
+  fn list_logical_device_swapchain_formats() {}
+  fn list_logical_device_swapchain_images() {}
+
+  macro_rules! do_or_die {
+    (res) => {
+      match res {
+        Err(VkRawReturnCode(code, ctx)) => {
+          panic!("Low level " // TODO(acmcarther); continue
+        }
+      }
+    }
+  }
+
   /** visible for refactoring */
   pub fn select_extensions(&self, spec: ExtensionSpec) -> Vec<[i8; 256]> {
     let mut num_extensions = 0;
+    let extensions_res = VkCtx::list_instance_extensions(&self.entry_points);
     let mut extensions = unsafe {std::mem::uninitialized() };
     unsafe {
-      let result = self.entry_points.EnumerateInstanceExtensionProperties(
-        ptr::null(), &mut num_extensions, ptr::null::<vk::ExtensionProperties>() as *mut _);
-
-      if result != vk::SUCCESS {
-        panic!("failed to enumerate instance extension properties instance with {}", vk_result_to_human(result as i32));
-      }
-
-      extensions = Vec::with_capacity(num_extensions as usize);
-
-      let result = self.entry_points.EnumerateInstanceExtensionProperties(
-        ptr::null(), &mut num_extensions, extensions.as_mut_ptr());
-
-      if result != vk::SUCCESS {
-        panic!("failed to enumerate instance extension properties instance with {}", vk_result_to_human(result as i32));
-      }
-
-      extensions.set_len(num_extensions as usize);
-
       let enabled_extensions = extensions.into_iter()
         .filter(|e| {
           let extension_as_str = CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap();

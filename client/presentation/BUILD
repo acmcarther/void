@@ -21,24 +21,23 @@ rust_library(
     srcs = ["sdl2_vulkan_interop.rs"],
     deps = [
         ":vulkan",
-        "//third_party/SDL2:sdl2_sys",
         "//cargo:sdl2",
         "//cargo:vk_sys",
+        "//cargo/overrides/sdl2-sys:sdl2_sys",
     ],
 )
-
 
 rust_binary(
     name = "toy",
     srcs = ["toy.rs"],
     data = [
-        ":toy_vert_shader",
         ":toy_frag_shader",
+        ":toy_vert_shader",
     ],
     deps = [
+        ":sdl2_vulkan_interop",
         ":vulkan",
         "//cargo:sdl2",
-        ":sdl2_vulkan_interop",
     ],
 )
 
