@@ -14,7 +14,8 @@ pub trait WindowSystemPlugin {
 }
 
 /** The wrapped vulkan return code, plus call context */
-struct VkRawReturnCode(u32, String);
+#[derive(Debug)]
+pub struct VkRawReturnCode(i32, String);
 
 /** Contains static ptrs, entry ptrs, and dylib */
 pub struct VkCtx {
@@ -50,6 +51,15 @@ pub struct VkRenderSession {
 struct SwapchainParams {
   format: vk::Format,
   extent: vk::Extent2D,
+}
+
+macro_rules! do_or_die {
+  ($res:expr) => {
+    match $res {
+      Err(VkRawReturnCode(code, ctx_string)) => panic!("Low level error {} with context: {}", vk_result_to_human(code), ctx_string),
+      v => v.unwrap(),
+    }
+  };
 }
 
 impl Drop for VkCtx {
@@ -120,7 +130,6 @@ impl Drop for VkCtx {
       }
     }
 
-
     let mut device_shader_modules_map: HashMap<vk::Device, Vec<vk::ShaderModule>> = HashMap::new();
     std::mem::swap(&mut self.device_shader_modules_map, &mut device_shader_modules_map);
     for (logical_device, shader_modules) in device_shader_modules_map.into_iter() {
@@ -168,7 +177,6 @@ impl Drop for VkCtx {
         self.device_ptrs(logical_device).DestroySwapchainKHR(logical_device, swapchain_khr, ptr::null());
       }
     }
-
 
     let mut device_pointers_map: HashMap<vk::Device, vk::DevicePointers> = HashMap::new();
     std::mem::swap(&mut self.device_pointers_map, &mut device_pointers_map);
@@ -238,54 +246,190 @@ impl VkCtx {
     }
   }
 
-  fn list_instance_extensions(entry_points: &vk::EntryPoints) -> Result<Vec<vk::ExtensionProperties>, VkRawReturnCode>  {
-    let result = entry_points.EnumerateInstanceExtensionProperties(
-      ptr::null(), &mut num_extensions, ptr::null::<vk::ExtensionProperties>() as *mut _);
+  pub fn list_instance_extensions(&self) -> Result<Vec<vk::ExtensionProperties>, VkRawReturnCode>  {
+    let mut num_extensions = 0;
+    let result = unsafe {
+      self.entry_points.EnumerateInstanceExtensionProperties(
+        ptr::null(), &mut num_extensions, ptr::null::<vk::ExtensionProperties>() as *mut _)
+    };
 
     if result != vk::SUCCESS {
-      return Err(VkRawReturnCode(result, "while enumerating instance extensions"))
+      return Err(VkRawReturnCode(result as i32, "while enumerating instance extensions".to_owned()));
     }
 
     let mut extensions = Vec::with_capacity(num_extensions as usize);
 
-    let result = self.entry_points.EnumerateInstanceExtensionProperties(
-      ptr::null(), &mut num_extensions, extensions.as_mut_ptr());
+    let result = unsafe {
+      self.entry_points.EnumerateInstanceExtensionProperties(
+        ptr::null(), &mut num_extensions, extensions.as_mut_ptr())
+    };
 
     if result != vk::SUCCESS {
-      return Err(VkRawReturnCode(result, "while fetching list of instance extensions"));
+      return Err(VkRawReturnCode(result as i32, "while fetching list of instance extensions".to_owned()));
     }
 
-    extensions.set_len(num_extensions as usize);
-    extensions
+    unsafe {
+      extensions.set_len(num_extensions as usize);
+    }
+    Ok(extensions)
   }
 
-  fn list_instance_layers() {
-  }
-  fn list_instance_extensions() {}
-  fn list_instance_layers() {}
-  fn list_physical_devices() {}
-  fn list_physical_device_queue_family_properties() {}
-  fn list_physical_device_extensions() {}
-  fn list_physical_device_layers() {}
-  fn list_logical_device_surface_present_modes() {}
-  fn list_logical_device_swapchain_formats() {}
-  fn list_logical_device_swapchain_images() {}
+  pub fn list_instance_layers(&self) -> Result<Vec<vk::LayerProperties>, VkRawReturnCode> {
+    let mut num_layers = 0;
+    let mut layers = unsafe { std::mem::uninitialized() };
+    unsafe {
+      let result = self.entry_points.EnumerateInstanceLayerProperties(
+        &mut num_layers, ptr::null::<vk::LayerProperties>() as *mut _);
 
-  macro_rules! do_or_die {
-    (res) => {
-      match res {
-        Err(VkRawReturnCode(code, ctx)) => {
-          panic!("Low level " // TODO(acmcarther); continue
-        }
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while enumerating instance layers".to_owned()));
       }
+
+      layers = Vec::with_capacity(num_layers as usize);
+
+      let result = self.entry_points.EnumerateInstanceLayerProperties(
+        &mut num_layers, layers.as_mut_ptr());
+
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while fetching list of instance layers".to_owned()));
+      }
+
+      layers.set_len(num_layers as usize);
+    }
+    Ok(layers)
+  }
+
+  pub fn list_physical_devices(&self, instance: vk::Instance) -> Result<Vec<usize>, VkRawReturnCode> {
+    let mut num_physical_devices = 0u32;
+    unsafe {
+      let result = self.instance_ptrs(instance).EnumeratePhysicalDevices(
+        instance, &mut num_physical_devices, ptr::null_mut());
+
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while enumerating physical devices".to_owned()));
+      }
+
+      println!("found {} physical devices", num_physical_devices);
+
+      let mut physical_devices: Vec<vk::PhysicalDevice> = Vec::with_capacity(num_physical_devices as usize);
+
+      let result = self.instance_ptrs(instance).EnumeratePhysicalDevices(
+        instance, &mut num_physical_devices, physical_devices.as_mut_ptr());
+
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while fetching list of physical devices".to_owned()));
+      }
+      physical_devices.set_len(num_physical_devices as usize);
+
+      Ok(physical_devices)
+    }
+  }
+
+  pub fn list_queue_family_properties(&self, instance: vk::Instance, physical_device: usize) -> Vec<vk::QueueFamilyProperties> {
+    unsafe {
+      let mut num_queue_family_properties = 0u32;
+      self.instance_ptrs(instance).GetPhysicalDeviceQueueFamilyProperties(
+        physical_device, &mut num_queue_family_properties, ptr::null_mut());
+
+      println!("Vulkan Physical Queue Family Properties: {} found", num_queue_family_properties);
+
+      let mut queue_family_properties_list: Vec<vk::QueueFamilyProperties> =
+        Vec::with_capacity(num_queue_family_properties as usize);
+
+      self.instance_ptrs(instance).GetPhysicalDeviceQueueFamilyProperties(
+        physical_device, &mut num_queue_family_properties, queue_family_properties_list.as_mut_ptr());
+
+      println!("populated queue family properties list");
+
+      queue_family_properties_list.set_len(num_queue_family_properties as usize);
+
+      queue_family_properties_list
+    }
+  }
+
+  pub fn list_device_extension_properties(&self, instance: vk::Instance, _physical_device: usize) -> Result<Vec<vk::ExtensionProperties>, VkRawReturnCode> {
+    unsafe {
+      let mut num_extensions = 0;
+      let result = self.instance_ptrs(instance)
+        .EnumerateDeviceExtensionProperties(_physical_device, ptr::null(), &mut num_extensions, ptr::null_mut());
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while enumerating physical device extension properties".to_owned()));
+      }
+
+      let mut available_extensions: Vec<vk::ExtensionProperties> = Vec::with_capacity(num_extensions as usize);
+      let result = self.instance_ptrs(instance)
+        .EnumerateDeviceExtensionProperties(_physical_device, ptr::null(), &mut num_extensions, available_extensions.as_mut_ptr());
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while fetching list of physical device extension properties".to_owned()));
+      }
+      available_extensions.set_len(num_extensions as usize);
+      Ok(available_extensions)
+    }
+  }
+
+  pub fn get_physical_device_surface_capabilities(&self, instance: vk::Instance, _physical_device: usize, surface: &mut vk::SurfaceKHR) -> Result<vk::SurfaceCapabilitiesKHR, VkRawReturnCode> {
+    unsafe {
+      let mut swapchain_capabilities: vk::SurfaceCapabilitiesKHR = std::mem::uninitialized();
+      let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceCapabilitiesKHR(_physical_device, *surface, &mut swapchain_capabilities);
+
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while getting physical device surface properties".to_owned()));
+      }
+
+      Ok(swapchain_capabilities)
+    }
+  }
+
+
+  pub fn list_physical_device_surface_format(&self, instance: vk::Instance, _physical_device: usize, surface: &mut vk::SurfaceKHR) -> Result<Vec<vk::SurfaceFormatKHR>, VkRawReturnCode> {
+    unsafe {
+      let mut num_formats = 0;
+      let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceFormatsKHR(
+        _physical_device, *surface, &mut num_formats, ptr::null_mut());
+
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while enumerating physical device surface formats".to_owned()));
+      }
+
+      let mut swapchain_formats = Vec::with_capacity(num_formats as usize);
+
+      let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceFormatsKHR(
+        _physical_device, *surface, &mut num_formats, swapchain_formats.as_mut_ptr());
+
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while fetching list of physical device surface formats".to_owned()));
+      }
+      swapchain_formats.set_len(num_formats as usize);
+      Ok(swapchain_formats)
+    }
+  }
+
+  pub fn list_swapchain_present_modes(&self, instance: vk::Instance, physical_device: usize, surface: &mut vk::SurfaceKHR) -> Result<Vec<vk::PresentModeKHR>, VkRawReturnCode> {
+    unsafe {
+      let mut num_present_modes = 0;
+      let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfacePresentModesKHR(
+        physical_device, *surface, &mut num_present_modes, ptr::null_mut());
+
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while enumerating physical device present modes".to_owned()));
+      }
+
+      let mut swapchain_present_modes = Vec::with_capacity(num_present_modes as usize);
+
+      let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfacePresentModesKHR(
+        physical_device, *surface, &mut num_present_modes, swapchain_present_modes.as_mut_ptr());
+
+      if result != vk::SUCCESS {
+        return Err(VkRawReturnCode(result as i32, "while fetching list of physical device present modes".to_owned()));
+      }
+      swapchain_present_modes.set_len(num_present_modes as usize);
+      Ok(swapchain_present_modes)
     }
   }
 
   /** visible for refactoring */
   pub fn select_extensions(&self, spec: ExtensionSpec) -> Vec<[i8; 256]> {
-    let mut num_extensions = 0;
-    let extensions_res = VkCtx::list_instance_extensions(&self.entry_points);
-    let mut extensions = unsafe {std::mem::uninitialized() };
+    let extensions = do_or_die!(self.list_instance_extensions());
     unsafe {
       let enabled_extensions = extensions.into_iter()
         .filter(|e| {
@@ -322,27 +466,8 @@ impl VkCtx {
 
   /** visible for refactoring */
   pub fn select_layers(&self, spec: LayerSpec) -> Vec<[i8; 256]> {
-    let mut num_layers = 0;
-    let mut layers = unsafe { std::mem::uninitialized() };
+    let layers = do_or_die!(self.list_instance_layers());
     unsafe {
-      let result = self.entry_points.EnumerateInstanceLayerProperties(
-        &mut num_layers, ptr::null::<vk::LayerProperties>() as *mut _);
-
-      if result != vk::SUCCESS {
-        panic!("failed to enumerate instance layer properties instance with {}", vk_result_to_human(result as i32));
-      }
-
-      layers = Vec::with_capacity(num_layers as usize);
-
-      let result = self.entry_points.EnumerateInstanceLayerProperties(
-        &mut num_layers, layers.as_mut_ptr());
-
-      if result != vk::SUCCESS {
-        panic!("failed to enumerate instance layer properties instance with {}", vk_result_to_human(result as i32));
-      }
-
-      layers.set_len(num_layers as usize);
-
       let enabled_layers = layers.into_iter()
         .filter(|l| {
           let layer_as_str = CStr::from_ptr(l.layerName.as_ptr()).to_str().unwrap();
@@ -461,27 +586,8 @@ impl VkCtx {
     let mut swapchain_formats: Vec<vk::SurfaceFormatKHR> = Vec::new();
     let mut swapchain_present_modes: Vec<vk::PresentModeKHR> = Vec::new();
     let mut gfx_supporting_queue_family_index: u32 = 0;
+    let physical_devices = do_or_die!(self.list_physical_devices(instance));
     unsafe {
-      let mut num_physical_devices = 0u32;
-      let result = self.instance_ptrs(instance).EnumeratePhysicalDevices(
-        instance, &mut num_physical_devices, ptr::null_mut());
-
-      if result != vk::SUCCESS {
-        panic!("failed to enumerate physical devices with {}", vk_result_to_human(result as i32));
-      }
-
-      println!("found {} physical devices", num_physical_devices);
-
-      let mut physical_devices: Vec<vk::PhysicalDevice> = Vec::with_capacity(num_physical_devices as usize);
-
-      let result = self.instance_ptrs(instance).EnumeratePhysicalDevices(
-        instance, &mut num_physical_devices, physical_devices.as_mut_ptr());
-
-      if result != vk::SUCCESS {
-        panic!("failed to enumerate instance extension properties instance with {}", vk_result_to_human(result as i32));
-      }
-      physical_devices.set_len(num_physical_devices as usize);
-
       for _physical_device in physical_devices.iter() {
         let mut physical_device_properties: vk::PhysicalDeviceProperties = std::mem::uninitialized();
         self.instance_ptrs(instance).GetPhysicalDeviceProperties(*_physical_device, &mut physical_device_properties);
@@ -490,22 +596,6 @@ impl VkCtx {
         self.instance_ptrs(instance).GetPhysicalDeviceFeatures(*_physical_device, &mut physical_device_features);
 
         println!("Vulkan Physical Device found: {}", CStr::from_ptr(physical_device_properties.deviceName.as_ptr()).to_str().unwrap());
-
-        let mut num_queue_family_properties = 0u32;
-        self.instance_ptrs(instance).GetPhysicalDeviceQueueFamilyProperties(
-          *_physical_device, &mut num_queue_family_properties, ptr::null_mut());
-
-        println!("Vulkan Physical Queue Family Properties: {} found", num_queue_family_properties);
-
-        let mut queue_family_properties_list: Vec<vk::QueueFamilyProperties> =
-          Vec::with_capacity(num_queue_family_properties as usize);
-
-        self.instance_ptrs(instance).GetPhysicalDeviceQueueFamilyProperties(
-          *_physical_device, &mut num_queue_family_properties, queue_family_properties_list.as_mut_ptr());
-
-        println!("populated queue family properties list");
-
-        queue_family_properties_list.set_len(num_queue_family_properties as usize);
 
         let gfx_supporting_queue_family_index_opt = {
           let surface_is_supported_for_queue_idx_fn = |queue_family_idx| {
@@ -523,6 +613,7 @@ impl VkCtx {
             support_is_present > 0
           };
 
+          let queue_family_properties_list = self.list_queue_family_properties(instance, *_physical_device);
           // TODO(acmcarther): Support independent GRAPHICS and PRESENT queues.
           // The current implementation expects to find a single queue for both, but it isn't
           // unreasonable to have these live in separate queues.
@@ -542,13 +633,7 @@ impl VkCtx {
         ];
 
         let required_extensions_supported = {
-          let mut num_extensions = 0;
-          self.instance_ptrs(instance).EnumerateDeviceExtensionProperties(*_physical_device, ptr::null(), &mut num_extensions, ptr::null_mut());
-          let mut available_extensions: Vec<vk::ExtensionProperties> =
-            Vec::with_capacity(num_extensions as usize);
-          self.instance_ptrs(instance).EnumerateDeviceExtensionProperties(*_physical_device, ptr::null(), &mut num_extensions, available_extensions.as_mut_ptr());
-          available_extensions.set_len(num_extensions as usize);
-
+          let available_extensions = do_or_die!(self.list_device_extension_properties(instance, *_physical_device));
           let available_extension_names = available_extensions.iter().map(|e| CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap()).collect::<Vec<_>>();
           for available_extension_name in available_extension_names.iter() {
             println!("Vulkan Device Extension found: {}", available_extension_name);
@@ -559,58 +644,11 @@ impl VkCtx {
             .all(|is_contained| is_contained)
         };
 
-        let _swapchain_capabilities = {
-          let mut swapchain_capabilities: vk::SurfaceCapabilitiesKHR = std::mem::uninitialized();
-          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceCapabilitiesKHR(*_physical_device, *surface, &mut swapchain_capabilities);
+        let _swapchain_capabilities = do_or_die!(self.get_physical_device_surface_capabilities(instance, *_physical_device, surface));
 
-          if result != vk::SUCCESS {
-            panic!("failed to extract physical device surface capabilities with {}", vk_result_to_human(result as i32));
-          }
+        let _swapchain_formats = do_or_die!(self.list_physical_device_surface_format(instance, *_physical_device, surface));
 
-          swapchain_capabilities
-        };
-
-        let _swapchain_formats = {
-          let mut num_formats = 0;
-          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceFormatsKHR(
-            *_physical_device, *surface, &mut num_formats, ptr::null_mut());
-
-          if result != vk::SUCCESS {
-            panic!("failed to enumerate surface formats for device with {}", vk_result_to_human(result as i32));
-          }
-
-          let mut swapchain_formats = Vec::with_capacity(num_formats as usize);
-
-          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceFormatsKHR(
-            *_physical_device, *surface, &mut num_formats, swapchain_formats.as_mut_ptr());
-
-          if result != vk::SUCCESS {
-            panic!("failed to list surface formats for device with {}", vk_result_to_human(result as i32));
-          }
-          swapchain_formats.set_len(num_formats as usize);
-          swapchain_formats
-        };
-
-        let _swapchain_present_modes = {
-          let mut num_present_modes = 0;
-          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfacePresentModesKHR(
-            *_physical_device, *surface, &mut num_present_modes, ptr::null_mut());
-
-          if result != vk::SUCCESS {
-            panic!("failed to enumerate surface present modes for device with {}", vk_result_to_human(result as i32));
-          }
-
-          let mut swapchain_present_modes = Vec::with_capacity(num_present_modes as usize);
-
-          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfacePresentModesKHR(
-            *_physical_device, *surface, &mut num_present_modes, swapchain_present_modes.as_mut_ptr());
-
-          if result != vk::SUCCESS {
-            panic!("failed to list surface present modes for device with {}", vk_result_to_human(result as i32));
-          }
-          swapchain_present_modes.set_len(num_present_modes as usize);
-          swapchain_present_modes
-        };
+        let _swapchain_present_modes = do_or_die!(self.list_swapchain_present_modes(instance, *_physical_device, surface));
 
         let required_swapchain_support_present = {
           !_swapchain_formats.is_empty() && !_swapchain_present_modes.is_empty()
