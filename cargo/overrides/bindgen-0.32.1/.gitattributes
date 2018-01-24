@@ -1,3 +1,0 @@
-tests/stylo.hpp -diff
-tests/headers/* eol=lf
-tests/expectations/tests/* eol=lf

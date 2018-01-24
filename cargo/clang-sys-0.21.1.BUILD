@@ -71,7 +71,7 @@ rust_library(
         "@raze__glob__0_2_11//:glob",
         "@raze__libc__0_2_36//:libc",
         "@raze__libloading__0_4_3//:libloading",
-        "@system//:clang",
+        "@llvm//:clang",
     ],
     rustc_flags = [
         "--cap-lints allow",
