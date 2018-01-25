@@ -22,8 +22,10 @@ impl <'a> vulkan::WindowSystemPlugin for SdlWindowSystemPlugin<'a> {
    * Creates a crossplat vulkan surface object by extracting the underlying X11 display.
    *
    * This method will fail if the underlying window is not X11-backed.
+   * This method disregards the lifetime of the SDL2 window.
+   * TODO(acmcarther): fix ^
    */
-  fn create_surface(&mut self, instance: vk::Instance, instance_ptrs: &vk::InstancePointers) -> vk::SurfaceKHR {
+  fn create_surface(&mut self, instance: &'b VkInstance) -> VkRawResult<VkSurface<'b>> {
     unsafe {
       let mut sys_wm_info = sdl2_sys::SDL_SysWMinfo {
         version: sdl2_sys::SDL_version {
@@ -47,19 +49,7 @@ impl <'a> vulkan::WindowSystemPlugin for SdlWindowSystemPlugin<'a> {
         window: sys_wm_info.info.x11.window,
       };
 
-      let mut surface_khr = std::mem::uninitialized();
-      let result = instance_ptrs.CreateXlibSurfaceKHR(
-        instance,
-        &xlib_surface_create_info_khr,
-        std::ptr::null(),
-        &mut surface_khr
-      );
-
-      if result != vk::SUCCESS {
-        panic!("failed to create surface with raw {}", result as i32);
-      }
-
-      surface_khr
+      instance.create_xlib_surface_khr(&xlib_surface_create_info_khr)
     }
   }
 }

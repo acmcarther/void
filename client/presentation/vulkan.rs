@@ -9,6 +9,53 @@ use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr;
 
+/** Performs a no-result Vulkan action, yielding a Rust-idiomatic result type. */
+fn dooy(msg: &str, f: &Fn() -> u32) -> Result<(), VkRawReturnCode> {
+  let result = f();
+
+  if result != vk::SUCCESS {
+    return Err(VkRawReturnCode(result as i32, format!("while doing {}", msg)));
+  }
+
+  Ok(())
+}
+
+/** Loads a Vulkan value, yielding a Rust-idiomatic result type. */
+fn loady<T>(msg: &str, f: &Fn(*mut T) -> u32) -> Result<T, VkRawReturnCode> {
+  unsafe {
+    let mut item = std::mem::uninitialized();
+    let result = f(&mut item);
+
+    if result != vk::SUCCESS {
+      return Err(VkRawReturnCode(result as i32, format!("while getting {}", msg)));
+    }
+
+    Ok(item)
+  }
+}
+
+/** Fetches a list of vulkan values, yielding a Rust-idiomatic result type. */
+fn loady_listy<T>(msg: &str, f: &Fn(&mut u32, *mut T) -> u32) -> Result<Vec<T>, VkRawReturnCode> {
+  unsafe {
+    let mut num_items = 0;
+    let result = unsafe { f(&mut num_items, ptr::null::<T>() as *mut _) };
+    if result != vk::SUCCESS {
+      return Err(VkRawReturnCode(result as i32, format!("while enumerating {}", msg)))
+    }
+
+    let mut items = Vec::with_capacity(num_items as usize);
+
+    let result = unsafe { f(&mut num_items, items.as_mut_ptr()) };
+    if result != vk::SUCCESS {
+      return Err(VkRawReturnCode(result as i32, format!("while fetching list of {}", msg)))
+    }
+
+    unsafe { items.set_len(num_items as usize); }
+
+    Ok(items)
+  }
+}
+
 pub trait WindowSystemPlugin {
   fn create_surface(&mut self, instance: vk::Instance, instance_ptrs: &vk::InstancePointers) -> vk::SurfaceKHR;
 }
@@ -205,53 +252,6 @@ impl Drop for VkCtx {
         instance_pointers.DestroyInstance(instance, ptr::null());
       }
     }
-  }
-}
-
-/** Performs a no-result Vulkan action, yielding a Rust-idiomatic result type. */
-fn dooy(msg: &str, f: &Fn() -> u32) -> Result<(), VkRawReturnCode> {
-  let result = f();
-
-  if result != vk::SUCCESS {
-    return Err(VkRawReturnCode(result as i32, format!("while doing {}", msg)));
-  }
-
-  Ok(())
-}
-
-/** Loads a Vulkan value, yielding a Rust-idiomatic result type. */
-fn loady<T>(msg: &str, f: &Fn(*mut T) -> u32) -> Result<T, VkRawReturnCode> {
-  unsafe {
-    let mut item = std::mem::uninitialized();
-    let result = f(&mut item);
-
-    if result != vk::SUCCESS {
-      return Err(VkRawReturnCode(result as i32, format!("while getting {}", msg)));
-    }
-
-    Ok(item)
-  }
-}
-
-/** Fetches a list of vulkan values, yielding a Rust-idiomatic result type. */
-fn loady_listy<T>(msg: &str, f: &Fn(&mut u32, *mut T) -> u32) -> Result<Vec<T>, VkRawReturnCode> {
-  unsafe {
-    let mut num_items = 0;
-    let result = unsafe { f(&mut num_items, ptr::null::<T>() as *mut _) };
-    if result != vk::SUCCESS {
-      return Err(VkRawReturnCode(result as i32, format!("while enumerating {}", msg)))
-    }
-
-    let mut items = Vec::with_capacity(num_items as usize);
-
-    let result = unsafe { f(&mut num_items, items.as_mut_ptr()) };
-    if result != vk::SUCCESS {
-      return Err(VkRawReturnCode(result as i32, format!("while fetching list of {}", msg)))
-    }
-
-    unsafe { items.set_len(num_items as usize); }
-
-    Ok(items)
   }
 }
 
@@ -471,7 +471,7 @@ impl VkCtx {
   }
 
   /** visible for refactoring */
-  pub fn select_extensions(&self, spec: ExtensionSpec) -> Vec<[i8; 256]> {
+  pub fn select_extensions(&self, spec: FeatureSpec) -> Vec<[i8; 256]> {
     let extensions = do_or_die!(self.list_instance_extensions());
     unsafe {
       let enabled_extensions = extensions.into_iter()
@@ -508,7 +508,7 @@ impl VkCtx {
   }
 
   /** visible for refactoring */
-  pub fn select_layers(&self, spec: LayerSpec) -> Vec<[i8; 256]> {
+  pub fn select_layers(&self, spec: FeatureSpec) -> Vec<[i8; 256]> {
     let layers = do_or_die!(self.list_instance_layers());
     unsafe {
       let enabled_layers = layers.into_iter()
@@ -1485,12 +1485,7 @@ pub struct VkDeviceCtx<'a> {
   pub device_pointers: &'a vk::DevicePointers,
 }
 
-pub struct ExtensionSpec {
-  pub wanted: Vec<&'static str>,
-  pub required: Vec<&'static str>
-}
-
-pub struct LayerSpec {
+pub struct FeatureSpec {
   pub wanted: Vec<&'static str>,
   pub required: Vec<&'static str>
 }
@@ -1510,7 +1505,7 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W, vert_shader_b
 
   let mut vk_ctx = VkCtx::from_dylib(dylib);
 
-  let extension_spec = ExtensionSpec {
+  let extension_spec = FeatureSpec {
     wanted: vec! [
       "VK_EXT_acquire_xlib_display",
       //"VK_EXT_display_surface_counter",
@@ -1528,7 +1523,7 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W, vert_shader_b
   };
   let enabled_extensions = vk_ctx.select_extensions(extension_spec);
 
-  let layer_spec = LayerSpec {
+  let layer_spec = FeatureSpec {
     wanted: vec![
       "VK_LAYER_LUNARG_core_validation",
       "VK_LAYER_LUNARG_parameter_validation",
