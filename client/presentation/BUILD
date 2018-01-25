@@ -17,10 +17,29 @@ rust_library(
 )
 
 rust_library(
+    name = "vk_lite",
+    srcs = ["vk_lite.rs"],
+    deps = [
+        "//cargo:dylib",
+        "//cargo:vk_sys",
+    ],
+)
+
+rust_library(
+    name = "vk_triangle",
+    srcs = ["vk_triangle.rs"],
+    deps = [
+        "//cargo:vk_sys",
+        ":vk_lite",
+    ],
+)
+
+
+rust_library(
     name = "sdl2_vulkan_interop",
     srcs = ["sdl2_vulkan_interop.rs"],
     deps = [
-        ":vulkan",
+        ":vk_lite",
         "//cargo:sdl2",
         "//cargo:vk_sys",
         "//cargo/overrides/sdl2-sys:sdl2_sys",
@@ -36,7 +55,8 @@ rust_binary(
     ],
     deps = [
         ":sdl2_vulkan_interop",
-        ":vulkan",
+        ":vk_lite",
+        ":vk_triangle",
         "//cargo:sdl2",
     ],
 )

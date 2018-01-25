@@ -1,7 +1,7 @@
 extern crate sdl2;
 extern crate sdl2_sys;
 extern crate vk_sys as vk;
-extern crate vulkan;
+extern crate vk_lite as vkl;
 
 use std::ffi::CStr;
 
@@ -17,7 +17,7 @@ impl <'a> SdlWindowSystemPlugin<'a> {
   }
 }
 
-impl <'a> vulkan::WindowSystemPlugin for SdlWindowSystemPlugin<'a> {
+impl <'a> vkl::WindowSystemPlugin for SdlWindowSystemPlugin<'a> {
   /**
    * Creates a crossplat vulkan surface object by extracting the underlying X11 display.
    *
@@ -25,7 +25,7 @@ impl <'a> vulkan::WindowSystemPlugin for SdlWindowSystemPlugin<'a> {
    * This method disregards the lifetime of the SDL2 window.
    * TODO(acmcarther): fix ^
    */
-  fn create_surface(&mut self, instance: &'b VkInstance) -> VkRawResult<VkSurface<'b>> {
+  fn create_surface(&mut self, instance: &vkl::LInstance) -> vkl::RawResult<vk::SurfaceKHR> {
     unsafe {
       let mut sys_wm_info = sdl2_sys::SDL_SysWMinfo {
         version: sdl2_sys::SDL_version {
