@@ -1,4 +1,5 @@
-extern crate vulkan;
+extern crate vk_lite as vkl;
+extern crate vk_triangle as vkt;
 extern crate sdl2;
 extern crate sdl2_vulkan_interop;
 
@@ -13,12 +14,9 @@ fn main() {
       .build()
       .unwrap();
   // TODO(acmcarther): This seems unpleasant and brittle-ish.
-  let vert_shader_bytes = include_bytes!("../../bazel-genfiles/client/presentation/toy_vert_shader.spv");
-  let frag_shader_bytes = include_bytes!("../../bazel-genfiles/client/presentation/toy_frag_shader.spv");
-  let (mut vk_ctx, vk_render_session) = {
-    let mut sdl_window_system_plugin = sdl2_vulkan_interop::SdlWindowSystemPlugin::new(&mut window);
-    vulkan::vulkan(&mut sdl_window_system_plugin, vert_shader_bytes, frag_shader_bytes)
-  };
+  let mut sdl_window_system_plugin = sdl2_vulkan_interop::SdlWindowSystemPlugin::new(&mut window);
+  let vulkan = vkl::Vulkan::new("libvulkan.so.1");
+  let vulkan_triangle = vkt::vulkan_triangle(&vulkan, &mut sdl_window_system_plugin);
 
   let mut event_pump = sdl_context.event_pump().unwrap();
 
@@ -31,11 +29,6 @@ fn main() {
         _ => {},
       }
     }
-
-    draw_demo_frame(&mut vk_ctx, &vk_render_session);
+    vkt::draw_demo_frame(&vulkan_triangle)
   }
-}
-
-fn draw_demo_frame(vk_ctx: &mut vulkan::VkCtx, vk_render_session: &vulkan::VkRenderSession) {
-  vk_ctx.draw_demo_frame(vk_render_session)
 }

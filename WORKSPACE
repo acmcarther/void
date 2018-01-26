@@ -56,8 +56,16 @@ raze_fetch_remote_crates()
 new_local_repository(
     name = "llvm",
     build_file = "llvm.BUILD",
-    path = "/usr/lib/llvm-3.9",
+    path = "/usr/lib",
 )
+
+# TODO(acmcarther): Bring into repo
+new_local_repository(
+    name = "clang",
+    build_file = "clang.BUILD",
+    path = "/usr/lib",
+)
+
 
 new_http_archive(
     name = "glslang",

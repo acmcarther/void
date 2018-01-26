@@ -19,10 +19,9 @@ def bindgen(name, hdr, includes=[], formatted=True, blacklist_types=[], flags = 
           hdr,
       ],
       outs = [bindgen_out_name + ".rs"],
-      cmd = "RUST_BACKTRACE=1 CLANG_PATH=$(location @llvm//:clang-bin) $(location //cargo:cargo_bin_bindgen) " + flags + " $(location " + hdr + ") > $(location " + bindgen_out_name + ".rs) -- " + clang_args,
+      cmd = "RUST_BACKTRACE=1 $(location //cargo:cargo_bin_bindgen) " + flags + " $(location " + hdr + ") > $(location " + bindgen_out_name + ".rs) -- " + clang_args,
       tools = [
           "//cargo:cargo_bin_bindgen",
-          "@llvm//:clang-bin",
       ])
 
   if formatted:

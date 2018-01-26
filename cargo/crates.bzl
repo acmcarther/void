@@ -663,6 +663,14 @@ def raze_fetch_remote_crates():
     )
 
     native.new_http_archive(
+        name = "raze__memoffset__0_2_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/memoffset/memoffset-0.2.1.crate",
+        type = "tar.gz",
+        strip_prefix = "memoffset-0.2.1",
+        build_file = "//cargo:memoffset-0.2.1.BUILD"
+    )
+
+    native.new_http_archive(
         name = "raze__mime__0_3_5",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/mime/mime-0.3.5.crate",
         type = "tar.gz",

@@ -9,9 +9,60 @@ use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr;
 
+/** Performs a no-result Vulkan action, yielding a Rust-idiomatic result type. */
+fn dooy(msg: &str, f: &Fn() -> u32) -> Result<(), VkRawReturnCode> {
+  let result = f();
+
+  if result != vk::SUCCESS {
+    return Err(VkRawReturnCode(result as i32, format!("while doing {}", msg)));
+  }
+
+  Ok(())
+}
+
+/** Loads a Vulkan value, yielding a Rust-idiomatic result type. */
+fn loady<T>(msg: &str, f: &Fn(*mut T) -> u32) -> Result<T, VkRawReturnCode> {
+  unsafe {
+    let mut item = std::mem::uninitialized();
+    let result = f(&mut item);
+
+    if result != vk::SUCCESS {
+      return Err(VkRawReturnCode(result as i32, format!("while getting {}", msg)));
+    }
+
+    Ok(item)
+  }
+}
+
+/** Fetches a list of vulkan values, yielding a Rust-idiomatic result type. */
+fn loady_listy<T>(msg: &str, f: &Fn(&mut u32, *mut T) -> u32) -> Result<Vec<T>, VkRawReturnCode> {
+  unsafe {
+    let mut num_items = 0;
+    let result = unsafe { f(&mut num_items, ptr::null::<T>() as *mut _) };
+    if result != vk::SUCCESS {
+      return Err(VkRawReturnCode(result as i32, format!("while enumerating {}", msg)))
+    }
+
+    let mut items = Vec::with_capacity(num_items as usize);
+
+    let result = unsafe { f(&mut num_items, items.as_mut_ptr()) };
+    if result != vk::SUCCESS {
+      return Err(VkRawReturnCode(result as i32, format!("while fetching list of {}", msg)))
+    }
+
+    unsafe { items.set_len(num_items as usize); }
+
+    Ok(items)
+  }
+}
+
 pub trait WindowSystemPlugin {
   fn create_surface(&mut self, instance: vk::Instance, instance_ptrs: &vk::InstancePointers) -> vk::SurfaceKHR;
 }
+
+/** The wrapped vulkan return code, plus call context */
+#[derive(Debug)]
+pub struct VkRawReturnCode(i32, String);
 
 /** Contains static ptrs, entry ptrs, and dylib */
 pub struct VkCtx {
@@ -47,6 +98,16 @@ pub struct VkRenderSession {
 struct SwapchainParams {
   format: vk::Format,
   extent: vk::Extent2D,
+}
+
+/** Essentially "try!", but for Vulkan Error Types. Prints things nicely. */
+macro_rules! do_or_die {
+  ($res:expr) => {
+    match $res {
+      Err(VkRawReturnCode(code, ctx_string)) => panic!("Low level Vulkan error {} with context: {}", vk_result_to_human(code), ctx_string),
+      v => v.unwrap(),
+    }
+  };
 }
 
 impl Drop for VkCtx {
@@ -122,7 +183,6 @@ impl Drop for VkCtx {
       }
     }
 
-
     let mut device_shader_modules_map: HashMap<vk::Device, Vec<vk::ShaderModule>> = HashMap::new();
     std::mem::swap(&mut self.device_shader_modules_map, &mut device_shader_modules_map);
     for (logical_device, shader_modules) in device_shader_modules_map.into_iter() {
@@ -170,7 +230,6 @@ impl Drop for VkCtx {
         self.device_ptrs(logical_device).DestroySwapchainKHR(logical_device, swapchain_khr, ptr::null());
       }
     }
-
 
     let mut device_pointers_map: HashMap<vk::Device, vk::DevicePointers> = HashMap::new();
     std::mem::swap(&mut self.device_pointers_map, &mut device_pointers_map);
@@ -240,29 +299,186 @@ impl VkCtx {
     }
   }
 
-  /** visible for refactoring */
-  pub fn select_extensions(&self, spec: ExtensionSpec) -> Vec<[i8; 256]> {
-    let mut num_extensions = 0;
-    let mut extensions = unsafe {std::mem::uninitialized() };
+
+  pub fn create_instance(&self, instance_create_info: &vk::InstanceCreateInfo) -> Result<vk::Instance, VkRawReturnCode> {
+    loady("instance", &|a| unsafe {
+      self.entry_points.CreateInstance(instance_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn create_debug_callback(&self, instance: vk::Instance, debug_report_callback_create_info_ext: &vk::DebugReportCallbackCreateInfoEXT) -> Result<vk::DebugReportCallbackEXT, VkRawReturnCode> {
+    loady("register debug callback", &|a| unsafe {
+      self.instance_ptrs(instance)
+        .CreateDebugReportCallbackEXT(instance, debug_report_callback_create_info_ext, ptr::null(), a)
+    })
+  }
+
+  pub fn list_instance_extensions(&self) -> Result<Vec<vk::ExtensionProperties>, VkRawReturnCode>  {
+    loady_listy("instance extensions", &|a, b| unsafe {
+      self.entry_points.EnumerateInstanceExtensionProperties(ptr::null() /* pLayerName */, a, b)
+    })
+  }
+
+  pub fn list_instance_layers(&self) -> Result<Vec<vk::LayerProperties>, VkRawReturnCode> {
+    loady_listy("instance layers", &|a, b| unsafe {
+      self.entry_points.EnumerateInstanceLayerProperties(a, b)
+    })
+  }
+
+  pub fn list_physical_devices(&self, instance: vk::Instance) -> Result<Vec<usize>, VkRawReturnCode> {
+    loady_listy("physical devices", &|a, b| unsafe {
+      self.instance_ptrs(instance).EnumeratePhysicalDevices(instance, a, b)
+    })
+  }
+
+  pub fn list_queue_family_properties(&self, instance: vk::Instance, physical_device: usize) -> Vec<vk::QueueFamilyProperties> {
+    // N.B.: Not generic because FFI method does not return a VkResult
     unsafe {
-      let result = self.entry_points.EnumerateInstanceExtensionProperties(
-        ptr::null(), &mut num_extensions, ptr::null::<vk::ExtensionProperties>() as *mut _);
+      let mut num_queue_family_properties = 0u32;
+      self.instance_ptrs(instance).GetPhysicalDeviceQueueFamilyProperties(
+        physical_device, &mut num_queue_family_properties, ptr::null_mut());
+
+      println!("Vulkan Physical Queue Family Properties: {} found", num_queue_family_properties);
+
+      let mut queue_family_properties_list: Vec<vk::QueueFamilyProperties> =
+        Vec::with_capacity(num_queue_family_properties as usize);
+
+      self.instance_ptrs(instance).GetPhysicalDeviceQueueFamilyProperties(
+        physical_device, &mut num_queue_family_properties, queue_family_properties_list.as_mut_ptr());
+
+      println!("populated queue family properties list");
+
+      queue_family_properties_list.set_len(num_queue_family_properties as usize);
+
+      queue_family_properties_list
+    }
+  }
+
+  pub fn list_device_extension_properties(&self, instance: vk::Instance, physical_device: usize) -> Result<Vec<vk::ExtensionProperties>, VkRawReturnCode> {
+    loady_listy("physical device extension properties", &|a, b| unsafe {
+      self.instance_ptrs(instance).EnumerateDeviceExtensionProperties(physical_device, ptr::null() /* pLayerName */, a, b)
+    })
+  }
+
+  pub fn get_physical_device_surface_capabilities(&self, instance: vk::Instance, physical_device: usize, surface: &mut vk::SurfaceKHR) -> Result<vk::SurfaceCapabilitiesKHR, VkRawReturnCode> {
+    loady("physical device surface properties", &|a| unsafe {
+      self.instance_ptrs(instance).GetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, *surface, a)
+    })
+  }
+
+  pub fn list_physical_device_surface_formats(&self, instance: vk::Instance, physical_device: usize, surface: &mut vk::SurfaceKHR) -> Result<Vec<vk::SurfaceFormatKHR>, VkRawReturnCode> {
+    loady_listy("physical device surface formats", &|a, b| unsafe {
+      self.instance_ptrs(instance).GetPhysicalDeviceSurfaceFormatsKHR(physical_device, *surface, a, b)
+    })
+  }
+
+  pub fn list_physical_device_present_modes(&self, instance: vk::Instance, physical_device: usize, surface: &mut vk::SurfaceKHR) -> Result<Vec<vk::PresentModeKHR>, VkRawReturnCode> {
+    loady_listy("physical device present modes", &|a, b| unsafe {
+      self.instance_ptrs(instance).GetPhysicalDeviceSurfacePresentModesKHR(physical_device, *surface, a, b)
+    })
+  }
+
+  pub fn create_logical_device(&self, instance: vk::Instance, physical_device: usize, device_create_info: &vk::DeviceCreateInfo) -> Result<vk::Device, VkRawReturnCode> {
+    loady("logical device", &|a| unsafe {
+      self.instance_ptrs(instance).CreateDevice(physical_device, device_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn create_swapchain(&self, logical_device: vk::Device, swapchain_create_info_khr: &vk::SwapchainCreateInfoKHR) -> Result<vk::SwapchainKHR, VkRawReturnCode> {
+    loady("swapchain", &|a| unsafe {
+      self.device_ptrs(logical_device).CreateSwapchainKHR(logical_device, swapchain_create_info_khr, ptr::null(), a)
+    })
+  }
+
+  pub fn get_swapchain_images(&self, logical_device: vk::Device, swapchain: vk::SwapchainKHR) -> Result<Vec<vk::Image>, VkRawReturnCode> {
+    loady_listy("swapchain images", &|a, b| unsafe {
+      self.device_ptrs(logical_device).GetSwapchainImagesKHR(logical_device, swapchain, a, b)
+    })
+  }
+
+  pub fn create_image_view(&self, logical_device: vk::Device, image_view_create_info: &vk::ImageViewCreateInfo) -> Result<vk::ImageView, VkRawReturnCode> {
+    loady("swapchain image view", &|a| unsafe {
+      self.device_ptrs(logical_device).CreateImageView(logical_device, image_view_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn create_render_pass(&self, logical_device: vk::Device, render_pass_create_info: &vk::RenderPassCreateInfo) -> Result<vk::RenderPass, VkRawReturnCode> {
+    loady("render pass", &|a| unsafe {
+      self.device_ptrs(logical_device).CreateRenderPass(logical_device, render_pass_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn create_pipeline_layout(&self, logical_device: vk::Device, pipeline_layout_create_info: &vk::PipelineLayoutCreateInfo) -> Result<vk::PipelineLayout, VkRawReturnCode> {
+    loady("pipeline layout", &|a| unsafe {
+      self.device_ptrs(logical_device).CreatePipelineLayout(logical_device, pipeline_layout_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn create_graphics_pipelines(&self, logical_device: vk::Device, graphics_pipeline_layout_create_infos: &[vk::GraphicsPipelineCreateInfo]) -> Result<Vec<vk::Pipeline>, VkRawReturnCode> {
+    // N.B.: Not generic because the number of pipelines is known in advance
+    unsafe {
+      let num_items = graphics_pipeline_layout_create_infos.len();
+      let mut graphics_pipelines = Vec::with_capacity(num_items);
+      let result = self.device_ptrs(logical_device).CreateGraphicsPipelines(
+        logical_device,
+        0 /* pipelineCache */,
+        num_items as u32,
+        graphics_pipeline_layout_create_infos.as_ptr(),
+        ptr::null(),
+        graphics_pipelines.as_mut_ptr());
 
       if result != vk::SUCCESS {
-        panic!("failed to enumerate instance extension properties instance with {}", vk_result_to_human(result as i32));
+        return Err(VkRawReturnCode(result as i32, format!("while fetching list of graphics pipelines")))
       }
+      graphics_pipelines.set_len(num_items);
+      Ok(graphics_pipelines)
+    }
+  }
 
-      extensions = Vec::with_capacity(num_extensions as usize);
+  pub fn create_shader_module(&self, logical_device: vk::Device, shader_module_create_info: &vk::ShaderModuleCreateInfo) -> Result<vk::ShaderModule, VkRawReturnCode> {
+    loady("shader module", &|a| unsafe {
+      self.device_ptrs(logical_device).CreateShaderModule(logical_device, shader_module_create_info, ptr::null(), a)
+    })
+  }
 
-      let result = self.entry_points.EnumerateInstanceExtensionProperties(
-        ptr::null(), &mut num_extensions, extensions.as_mut_ptr());
+  pub fn create_framebuffer(&self, logical_device: vk::Device, framebuffer_create_info: &vk::FramebufferCreateInfo) -> Result<vk::Framebuffer, VkRawReturnCode> {
+    loady("framebuffer", &|a| unsafe {
+      self.device_ptrs(logical_device).CreateFramebuffer(logical_device, framebuffer_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn create_command_pool(&self, logical_device: vk::Device, command_pool_create_info: &vk::CommandPoolCreateInfo) -> Result<vk::CommandPool, VkRawReturnCode> {
+    loady("command pool", &|a| unsafe {
+      self.device_ptrs(logical_device).CreateCommandPool(logical_device, command_pool_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn allocate_command_buffers(&self, logical_device: vk::Device, command_buffer_allocate_info: &vk::CommandBufferAllocateInfo, framebuffers: &[vk::Framebuffer]) -> Result<Vec<vk::CommandBuffer>, VkRawReturnCode> {
+    // N.B.: Not generic because the number of command buffers is known in advance
+    unsafe {
+      let mut command_buffers = Vec::with_capacity(framebuffers.len());
+      let result = self.device_ptrs(logical_device).AllocateCommandBuffers(
+        logical_device, command_buffer_allocate_info, command_buffers.as_mut_ptr());
 
       if result != vk::SUCCESS {
-        panic!("failed to enumerate instance extension properties instance with {}", vk_result_to_human(result as i32));
+        return Err(VkRawReturnCode(result as i32, format!("while allocating list of command buffers")))
       }
 
-      extensions.set_len(num_extensions as usize);
+      command_buffers.set_len(framebuffers.len() as usize);
+      Ok(command_buffers)
+    }
+  }
 
+  pub fn create_semaphore(&self, logical_device: vk::Device, semaphore_create_info: &vk::SemaphoreCreateInfo) -> Result<vk::Semaphore, VkRawReturnCode> {
+    loady("semaphore", &|a| unsafe {
+      self.device_ptrs(logical_device).CreateSemaphore(logical_device, semaphore_create_info, ptr::null(), a)
+    })
+  }
+
+  /** visible for refactoring */
+  pub fn select_extensions(&self, spec: FeatureSpec) -> Vec<[i8; 256]> {
+    let extensions = do_or_die!(self.list_instance_extensions());
+    unsafe {
       let enabled_extensions = extensions.into_iter()
         .filter(|e| {
           let extension_as_str = CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap();
@@ -297,28 +513,9 @@ impl VkCtx {
   }
 
   /** visible for refactoring */
-  pub fn select_layers(&self, spec: LayerSpec) -> Vec<[i8; 256]> {
-    let mut num_layers = 0;
-    let mut layers = unsafe { std::mem::uninitialized() };
+  pub fn select_layers(&self, spec: FeatureSpec) -> Vec<[i8; 256]> {
+    let layers = do_or_die!(self.list_instance_layers());
     unsafe {
-      let result = self.entry_points.EnumerateInstanceLayerProperties(
-        &mut num_layers, ptr::null::<vk::LayerProperties>() as *mut _);
-
-      if result != vk::SUCCESS {
-        panic!("failed to enumerate instance layer properties instance with {}", vk_result_to_human(result as i32));
-      }
-
-      layers = Vec::with_capacity(num_layers as usize);
-
-      let result = self.entry_points.EnumerateInstanceLayerProperties(
-        &mut num_layers, layers.as_mut_ptr());
-
-      if result != vk::SUCCESS {
-        panic!("failed to enumerate instance layer properties instance with {}", vk_result_to_human(result as i32));
-      }
-
-      layers.set_len(num_layers as usize);
-
       let enabled_layers = layers.into_iter()
         .filter(|l| {
           let layer_as_str = CStr::from_ptr(l.layerName.as_ptr()).to_str().unwrap();
@@ -369,7 +566,7 @@ impl VkCtx {
 
     let ppEnabledLayerNames = layers.iter().map(|i| i.as_ptr()).collect::<Vec<_>>();
     let ppEnabledExtensionNames = extensions.iter().map(|i| i.as_ptr()).collect::<Vec<_>>();
-    let vk_instance_create_info = vk::InstanceCreateInfo {
+    let instance_create_info = vk::InstanceCreateInfo {
       sType: vk::STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
       pApplicationInfo: &vk_application_info as *const _,
       flags: 0,
@@ -380,16 +577,7 @@ impl VkCtx {
       ppEnabledExtensionNames: ppEnabledExtensionNames.as_ptr(),
     };
 
-    let mut instance = 0;
-    unsafe {
-      let result = self.entry_points.CreateInstance(
-        &vk_instance_create_info, ptr::null(), &mut instance);
-
-      if result != vk::SUCCESS {
-        panic!("failed to create vulkan instance with {}", vk_result_to_human(result as i32));
-      }
-    }
-
+    let instance = do_or_die!(self.create_instance(&instance_create_info));
     let instance_pointers = self.load_instance_ptrs(instance);
     self.instance_pointers_map.insert(instance, instance_pointers);
 
@@ -402,7 +590,6 @@ impl VkCtx {
 
   pub fn configure_default_callback(&mut self, instance: vk::Instance, cb: vk::PFN_vkDebugReportCallbackEXT) {
     let debug_report_callback_ext = {
-      let mut debug_report_callback_ext = 0;
       let debug_report_callback_create_info_ext = vk::DebugReportCallbackCreateInfoEXT {
         sType: vk::STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
         flags: vk::DEBUG_REPORT_ERROR_BIT_EXT | vk::DEBUG_REPORT_WARNING_BIT_EXT,
@@ -410,18 +597,7 @@ impl VkCtx {
         pfnCallback: cb,
         pUserData: ptr::null_mut(),
       };
-      unsafe {
-        let result = self.instance_pointers_map.get(&instance).unwrap().CreateDebugReportCallbackEXT(
-          instance,
-          &debug_report_callback_create_info_ext as *const _,
-          ptr::null(),
-          &mut debug_report_callback_ext
-        );
-        if result != vk::SUCCESS {
-          panic!("failed to create vulkan instance with {}", vk_result_to_human(result as i32));
-        }
-      };
-      debug_report_callback_ext
+      do_or_die!(self.create_debug_callback(instance, &debug_report_callback_create_info_ext))
     };
 
     if self.debug_report_callbacks.contains_key(&instance) {
@@ -437,27 +613,8 @@ impl VkCtx {
     let mut swapchain_formats: Vec<vk::SurfaceFormatKHR> = Vec::new();
     let mut swapchain_present_modes: Vec<vk::PresentModeKHR> = Vec::new();
     let mut gfx_supporting_queue_family_index: u32 = 0;
+    let physical_devices = do_or_die!(self.list_physical_devices(instance));
     unsafe {
-      let mut num_physical_devices = 0u32;
-      let result = self.instance_ptrs(instance).EnumeratePhysicalDevices(
-        instance, &mut num_physical_devices, ptr::null_mut());
-
-      if result != vk::SUCCESS {
-        panic!("failed to enumerate physical devices with {}", vk_result_to_human(result as i32));
-      }
-
-      println!("found {} physical devices", num_physical_devices);
-
-      let mut physical_devices: Vec<vk::PhysicalDevice> = Vec::with_capacity(num_physical_devices as usize);
-
-      let result = self.instance_ptrs(instance).EnumeratePhysicalDevices(
-        instance, &mut num_physical_devices, physical_devices.as_mut_ptr());
-
-      if result != vk::SUCCESS {
-        panic!("failed to enumerate instance extension properties instance with {}", vk_result_to_human(result as i32));
-      }
-      physical_devices.set_len(num_physical_devices as usize);
-
       for _physical_device in physical_devices.iter() {
         let mut physical_device_properties: vk::PhysicalDeviceProperties = std::mem::uninitialized();
         self.instance_ptrs(instance).GetPhysicalDeviceProperties(*_physical_device, &mut physical_device_properties);
@@ -467,38 +624,18 @@ impl VkCtx {
 
         println!("Vulkan Physical Device found: {}", CStr::from_ptr(physical_device_properties.deviceName.as_ptr()).to_str().unwrap());
 
-        let mut num_queue_family_properties = 0u32;
-        self.instance_ptrs(instance).GetPhysicalDeviceQueueFamilyProperties(
-          *_physical_device, &mut num_queue_family_properties, ptr::null_mut());
-
-        println!("Vulkan Physical Queue Family Properties: {} found", num_queue_family_properties);
-
-        let mut queue_family_properties_list: Vec<vk::QueueFamilyProperties> =
-          Vec::with_capacity(num_queue_family_properties as usize);
-
-        self.instance_ptrs(instance).GetPhysicalDeviceQueueFamilyProperties(
-          *_physical_device, &mut num_queue_family_properties, queue_family_properties_list.as_mut_ptr());
-
-        println!("populated queue family properties list");
-
-        queue_family_properties_list.set_len(num_queue_family_properties as usize);
-
         let gfx_supporting_queue_family_index_opt = {
           let surface_is_supported_for_queue_idx_fn = |queue_family_idx| {
-            let mut support_is_present = 0 /* false */;
-            let result = self.instance_ptrs(instance)
-              .GetPhysicalDeviceSurfaceSupportKHR(*_physical_device, queue_family_idx, *surface, &mut support_is_present);
-
-            if result != vk::SUCCESS {
-              panic!("failed to determine surface-device suitability with {}", vk_result_to_human(result as i32));
-            }
-
-            println!("support present in device: {}", support_is_present);
+            let mut support_is_present = do_or_die!(loady("surface-device suitability", &|a| unsafe {
+              self.instance_ptrs(instance)
+                .GetPhysicalDeviceSurfaceSupportKHR(*_physical_device, queue_family_idx, *surface, a)
+            }));
 
             // N.B.: Output is a vulkan-style 32 bit bool
             support_is_present > 0
           };
 
+          let queue_family_properties_list = self.list_queue_family_properties(instance, *_physical_device);
           // TODO(acmcarther): Support independent GRAPHICS and PRESENT queues.
           // The current implementation expects to find a single queue for both, but it isn't
           // unreasonable to have these live in separate queues.
@@ -518,13 +655,7 @@ impl VkCtx {
         ];
 
         let required_extensions_supported = {
-          let mut num_extensions = 0;
-          self.instance_ptrs(instance).EnumerateDeviceExtensionProperties(*_physical_device, ptr::null(), &mut num_extensions, ptr::null_mut());
-          let mut available_extensions: Vec<vk::ExtensionProperties> =
-            Vec::with_capacity(num_extensions as usize);
-          self.instance_ptrs(instance).EnumerateDeviceExtensionProperties(*_physical_device, ptr::null(), &mut num_extensions, available_extensions.as_mut_ptr());
-          available_extensions.set_len(num_extensions as usize);
-
+          let available_extensions = do_or_die!(self.list_device_extension_properties(instance, *_physical_device));
           let available_extension_names = available_extensions.iter().map(|e| CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap()).collect::<Vec<_>>();
           for available_extension_name in available_extension_names.iter() {
             println!("Vulkan Device Extension found: {}", available_extension_name);
@@ -535,58 +666,11 @@ impl VkCtx {
             .all(|is_contained| is_contained)
         };
 
-        let _swapchain_capabilities = {
-          let mut swapchain_capabilities: vk::SurfaceCapabilitiesKHR = std::mem::uninitialized();
-          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceCapabilitiesKHR(*_physical_device, *surface, &mut swapchain_capabilities);
+        let _swapchain_capabilities = do_or_die!(self.get_physical_device_surface_capabilities(instance, *_physical_device, surface));
 
-          if result != vk::SUCCESS {
-            panic!("failed to extract physical device surface capabilities with {}", vk_result_to_human(result as i32));
-          }
+        let _swapchain_formats = do_or_die!(self.list_physical_device_surface_formats(instance, *_physical_device, surface));
 
-          swapchain_capabilities
-        };
-
-        let _swapchain_formats = {
-          let mut num_formats = 0;
-          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceFormatsKHR(
-            *_physical_device, *surface, &mut num_formats, ptr::null_mut());
-
-          if result != vk::SUCCESS {
-            panic!("failed to enumerate surface formats for device with {}", vk_result_to_human(result as i32));
-          }
-
-          let mut swapchain_formats = Vec::with_capacity(num_formats as usize);
-
-          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfaceFormatsKHR(
-            *_physical_device, *surface, &mut num_formats, swapchain_formats.as_mut_ptr());
-
-          if result != vk::SUCCESS {
-            panic!("failed to list surface formats for device with {}", vk_result_to_human(result as i32));
-          }
-          swapchain_formats.set_len(num_formats as usize);
-          swapchain_formats
-        };
-
-        let _swapchain_present_modes = {
-          let mut num_present_modes = 0;
-          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfacePresentModesKHR(
-            *_physical_device, *surface, &mut num_present_modes, ptr::null_mut());
-
-          if result != vk::SUCCESS {
-            panic!("failed to enumerate surface present modes for device with {}", vk_result_to_human(result as i32));
-          }
-
-          let mut swapchain_present_modes = Vec::with_capacity(num_present_modes as usize);
-
-          let result = self.instance_ptrs(instance).GetPhysicalDeviceSurfacePresentModesKHR(
-            *_physical_device, *surface, &mut num_present_modes, swapchain_present_modes.as_mut_ptr());
-
-          if result != vk::SUCCESS {
-            panic!("failed to list surface present modes for device with {}", vk_result_to_human(result as i32));
-          }
-          swapchain_present_modes.set_len(num_present_modes as usize);
-          swapchain_present_modes
-        };
+        let _swapchain_present_modes = do_or_die!(self.list_physical_device_present_modes(instance, *_physical_device, surface));
 
         let required_swapchain_support_present = {
           !_swapchain_formats.is_empty() && !_swapchain_present_modes.is_empty()
@@ -706,15 +790,8 @@ impl VkCtx {
     };
     println!("Constructing logical device");
 
-    let mut logical_device = 0;
-    unsafe {
-      let result = self.instance_ptrs(capable_physical_device.instance).CreateDevice(
-        capable_physical_device.device, &device_create_info, ptr::null(), &mut logical_device);
-
-      if result != vk::SUCCESS {
-        panic!("failed to create logical device with {}", vk_result_to_human(result as i32));
-      }
-    }
+    let logical_device = do_or_die!(self.create_logical_device(
+        capable_physical_device.instance, capable_physical_device.device, &device_create_info));
 
     println!("Loading device pointers");
 
@@ -729,16 +806,16 @@ impl VkCtx {
 
     println!("Loading common queue");
 
-    let mut queue: vk::Queue = unsafe {std::mem::uninitialized() } ;
     unsafe {
+      let mut queue: vk::Queue = std::mem::uninitialized();
       self.device_ptrs(logical_device).GetDeviceQueue(
         logical_device,
         capable_physical_device.gfx_supporting_queue_family_index,
         0,
         &mut queue
       );
+      self.queues_map.insert(logical_device, queue);
     }
-    self.queues_map.insert(logical_device, queue);
 
     logical_device
   }
@@ -864,44 +941,11 @@ impl VkCtx {
     };
     println!("Vulkan creating swap chain");
 
-    let swapchain = {
-      let mut swapchain = 0u64;
-      unsafe {
-        let result = self.device_ptrs(logical_device)
-          .CreateSwapchainKHR(logical_device, &swapchain_create_info_khr, ptr::null(), &mut swapchain);
-
-        if result != vk::SUCCESS {
-          panic!("failed to create swapchain with {}", vk_result_to_human(result as i32));
-        }
-        swapchain
-      }
-    };
+    let swapchain = do_or_die!(self.create_swapchain(logical_device, &swapchain_create_info_khr));
 
     println!("Vulkan creating swapchain images");
 
-    let swapchain_images = {
-      let mut num_images = 0;
-
-      unsafe {
-        let result = self.device_ptrs(logical_device)
-          .GetSwapchainImagesKHR(logical_device, swapchain, &mut num_images, ptr::null_mut());
-
-        if result != vk::SUCCESS {
-          panic!("failed to enumerate swapchain images with {}", vk_result_to_human(result as i32));
-        }
-
-        let mut swapchain_images = Vec::with_capacity(num_images as usize);
-
-        let result = self.device_ptrs(logical_device).GetSwapchainImagesKHR(
-          logical_device, swapchain, &mut num_images, swapchain_images.as_mut_ptr());
-
-        if result != vk::SUCCESS {
-          panic!("failed to fetch swapchain images with {}", vk_result_to_human(result as i32));
-        }
-        swapchain_images.set_len(num_images as usize);
-        swapchain_images
-      }
-    };
+    let swapchain_images = do_or_die!(self.get_swapchain_images(logical_device, swapchain));
 
     self.swapchains_map.insert(logical_device, swapchain);
     self.swapchain_params_map.insert(swapchain, SwapchainParams {
@@ -943,15 +987,7 @@ impl VkCtx {
         },
       };
 
-      unsafe {
-        let mut image_view = std::mem::uninitialized();
-        let result = self.device_ptrs(logical_device).CreateImageView(logical_device, &image_view_create_info, ptr::null(), &mut image_view);
-        if result != vk::SUCCESS {
-          panic!("failed to fetch swapchain image view with {}", vk_result_to_human(result as i32));
-        }
-
-        image_views.push(image_view);
-      }
+      image_views.push(do_or_die!(self.create_image_view(logical_device, &image_view_create_info)));
     }
 
     self.swapchain_image_views_map.insert(swapchain, image_views);
@@ -1014,14 +1050,7 @@ impl VkCtx {
         pDependencies: &dependency,
       };
 
-      unsafe {
-        let mut render_pass = std::mem::uninitialized();
-        let result = self.device_ptrs(logical_device).CreateRenderPass(logical_device, &render_pass_create_info, ptr::null(), &mut render_pass);
-        if result != vk::SUCCESS {
-          panic!("failed to create render pass with {}", vk_result_to_human(result as i32));
-        }
-        render_pass
-      }
+      do_or_die!(self.create_render_pass(logical_device, &render_pass_create_info))
     };
 
     if self.device_render_passes_map.contains_key(&logical_device) {
@@ -1039,9 +1068,43 @@ impl VkCtx {
     // single vert shader, and a single frag shader.
 
     println!("Vulkan creating vertex shader module");
-    let vert_shader_module = self.create_shader_module(logical_device, vert_shader_bytes);
+    let vert_shader_module = {
+      let shader_module_create_info = vk::ShaderModuleCreateInfo {
+        sType: vk::STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        pNext: ptr::null(),
+        flags: 0,
+        codeSize: vert_shader_bytes.len(),
+        pCode: vert_shader_bytes.as_ptr() as *const u32,
+      };
+      let shader_module = do_or_die!(self.create_shader_module(logical_device, &shader_module_create_info));
+
+      if self.device_shader_modules_map.contains_key(&logical_device) {
+        self.device_shader_modules_map.get_mut(&logical_device).unwrap().push(shader_module);
+      } else {
+        self.device_shader_modules_map.insert(logical_device, vec![shader_module]);
+      }
+
+      shader_module
+    };
     println!("Vulkan creating fragment shader module");
-    let frag_shader_module = self.create_shader_module(logical_device, frag_shader_bytes);
+    let frag_shader_module = {
+      let shader_module_create_info = vk::ShaderModuleCreateInfo {
+        sType: vk::STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        pNext: ptr::null(),
+        flags: 0,
+        codeSize: frag_shader_bytes.len(),
+        pCode: frag_shader_bytes.as_ptr() as *const u32,
+      };
+      let shader_module = do_or_die!(self.create_shader_module(logical_device, &shader_module_create_info));
+
+      if self.device_shader_modules_map.contains_key(&logical_device) {
+        self.device_shader_modules_map.get_mut(&logical_device).unwrap().push(shader_module);
+      } else {
+        self.device_shader_modules_map.insert(logical_device, vec![shader_module]);
+      }
+
+      shader_module
+    };
 
     let common_shader_pipeline_name = CString::new("main").unwrap();
     let pName = common_shader_pipeline_name.as_c_str().as_ptr();
@@ -1204,16 +1267,7 @@ impl VkCtx {
         pPushConstantRanges: ptr::null(),
       };
 
-      unsafe {
-        let mut pipeline_layout = std::mem::uninitialized();
-        let result = self.device_ptrs(logical_device).CreatePipelineLayout(
-          logical_device, &pipeline_layout_create_info, ptr::null(), &mut pipeline_layout);
-
-        if result != vk::SUCCESS {
-          panic!("failed to create pipeline layout with {}", vk_result_to_human(result as i32));
-        }
-        pipeline_layout
-      }
+      do_or_die!(self.create_pipeline_layout(logical_device, &pipeline_layout_create_info))
     };
 
     if self.device_pipeline_layouts_map.contains_key(&logical_device) {
@@ -1246,16 +1300,7 @@ impl VkCtx {
         basePipelineIndex: -1,
       };
 
-      unsafe {
-        let mut graphics_pipeline = std::mem::uninitialized();
-        let result = self.device_ptrs(logical_device).CreateGraphicsPipelines(
-          logical_device, 0 /* vk_null_handle */, 1, &graphics_pipeline_create_info, ptr::null(), &mut graphics_pipeline);
-
-        if result != vk::SUCCESS {
-          panic!("failed to create graphics pipeline {}", vk_result_to_human(result as i32));
-        }
-        graphics_pipeline
-      }
+      do_or_die!(self.create_graphics_pipelines(logical_device, &vec![graphics_pipeline_create_info])).get(0).unwrap().clone()
     };
 
     if self.device_pipelines_map.contains_key(&logical_device) {
@@ -1267,41 +1312,12 @@ impl VkCtx {
     graphics_pipeline
   }
 
-  fn create_shader_module(&mut self, logical_device: vk::Device, shader_contents: &[u8]) -> vk::ShaderModule {
-    let shader_module_create_info = vk::ShaderModuleCreateInfo {
-      sType: vk::STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-      pNext: ptr::null(),
-      flags: 0,
-      codeSize: shader_contents.len(),
-      pCode: shader_contents.as_ptr() as *const u32,
-    };
-    let shader_module = unsafe {
-      let mut shader_module: vk::ShaderModule = std::mem::uninitialized();
-      let result = self.device_ptrs(logical_device)
-        .CreateShaderModule(logical_device, &shader_module_create_info, ptr::null(), &mut shader_module);
-
-      if result != vk::SUCCESS {
-        panic!("failed create shader module with {}", vk_result_to_human(result as i32));
-      }
-      shader_module
-    };
-
-    if self.device_shader_modules_map.contains_key(&logical_device) {
-      self.device_shader_modules_map.get_mut(&logical_device).unwrap().push(shader_module);
-    } else {
-      self.device_shader_modules_map.insert(logical_device, vec![shader_module]);
-    }
-
-    shader_module
-  }
-
   pub fn init_framebuffers(&mut self, logical_device: vk::Device, swapchain_khr: vk::SwapchainKHR, render_pass: vk::RenderPass) -> Vec<vk::Framebuffer> {
     let swapchain_image_views = self.swapchain_image_views_map.get(&swapchain_khr).unwrap();
     let swapchain_params = self.swapchain_params_map.get(&swapchain_khr).unwrap();
     let mut framebuffers = Vec::with_capacity(swapchain_image_views.len());
     for swapchain_image_view in swapchain_image_views.iter() {
       unsafe {
-        let mut framebuffer = std::mem::uninitialized();
         let framebuffer_create_info = vk::FramebufferCreateInfo {
           sType: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
           pNext: ptr::null(),
@@ -1314,13 +1330,7 @@ impl VkCtx {
           layers: 1,
         };
 
-        let result = self.device_ptrs(logical_device)
-          .CreateFramebuffer(logical_device, &framebuffer_create_info, ptr::null(), &mut framebuffer);
-        if result != vk::SUCCESS {
-          panic!("failed create framebuffer with {}", vk_result_to_human(result as i32));
-        }
-
-        framebuffers.push(framebuffer);
+        framebuffers.push(do_or_die!(self.create_framebuffer(logical_device, &framebuffer_create_info)));
       }
     }
 
@@ -1337,21 +1347,10 @@ impl VkCtx {
       queueFamilyIndex: capable_physical_device.gfx_supporting_queue_family_index,
     };
 
-    unsafe {
-      let mut command_pool = std::mem::uninitialized();
-      let result = self.device_ptrs(logical_device)
-        .CreateCommandPool(logical_device, &command_pool_create_info, ptr::null(), &mut command_pool);
-      if result != vk::SUCCESS {
-        panic!("failed create command pool with {}", vk_result_to_human(result as i32));
-      }
-
-      self.device_command_pool_map.insert(logical_device, command_pool);
-      command_pool
-    }
+    do_or_die!(self.create_command_pool(logical_device, &command_pool_create_info))
   }
 
   pub fn init_command_buffers(&mut self, logical_device: vk::Device, swapchain_khr: vk::SwapchainKHR, framebuffers: &Vec<vk::Framebuffer>, command_pool: vk::CommandPool, render_pass: vk::RenderPass, graphics_pipeline: vk::Pipeline) -> Vec<vk::CommandBuffer> {
-    let mut command_buffers = Vec::with_capacity(framebuffers.len());
     let swapchain_params = self.swapchain_params_map.get(&swapchain_khr).unwrap();
 
     let command_buffer_allocate_info = vk::CommandBufferAllocateInfo {
@@ -1362,17 +1361,11 @@ impl VkCtx {
       commandBufferCount: framebuffers.len() as u32,
     };
 
-    unsafe {
-      let result = self.device_ptrs(logical_device).AllocateCommandBuffers(
-        logical_device, &command_buffer_allocate_info, command_buffers.as_mut_ptr());
-
-      if result != vk::SUCCESS {
-        panic!("failed to allocate command buffers with {}", vk_result_to_human(result as i32));
-      }
-
-      command_buffers.set_len(framebuffers.len() as usize);
+    let mut command_buffers = unsafe {
+      let command_buffers = do_or_die!(self.allocate_command_buffers(logical_device, &command_buffer_allocate_info, &framebuffers));
       self.device_command_buffers_map.insert(logical_device, command_buffers.clone());
-    }
+      command_buffers
+    };
 
     for (idx, command_buffer) in command_buffers.iter().enumerate() {
       let command_buffer_begin_info = vk::CommandBufferBeginInfo {
@@ -1384,11 +1377,7 @@ impl VkCtx {
 
       let result = {
         unsafe {
-          let result = self.device_ptrs(logical_device).BeginCommandBuffer(*command_buffer, &command_buffer_begin_info);
-
-          if result != vk::SUCCESS {
-            panic!("failed to begin command buffer with {}", vk_result_to_human(result as i32));
-          }
+          do_or_die!(dooy("start command buffer", &|| self.device_ptrs(logical_device).BeginCommandBuffer(*command_buffer, &command_buffer_begin_info)));
 
           let clear_color = vk::ClearValue {
             color: vk::ClearColorValue {
@@ -1418,12 +1407,9 @@ impl VkCtx {
           self.device_ptrs(logical_device).CmdBindPipeline(*command_buffer, vk::PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
           self.device_ptrs(logical_device).CmdDraw(*command_buffer, 3, 1, 0, 0);
           self.device_ptrs(logical_device).CmdEndRenderPass(*command_buffer);
-          self.device_ptrs(logical_device).EndCommandBuffer(*command_buffer)
+          do_or_die!(dooy("end command buffer", &|| self.device_ptrs(logical_device).EndCommandBuffer(*command_buffer)))
         }
       };
-      if result != vk::SUCCESS {
-        panic!("failed during recording or while ending command buffer with {}", vk_result_to_human(result as i32));
-      }
     }
 
     command_buffers
@@ -1437,19 +1423,8 @@ impl VkCtx {
     };
 
     unsafe {
-      let mut image_available_semaphore = std::mem::uninitialized();
-      let mut render_finished_semaphore = std::mem::uninitialized();
-
-      let result = self.device_ptrs(logical_device)
-        .CreateSemaphore(logical_device, &semaphore_create_info, ptr::null(), &mut image_available_semaphore);
-      if result != vk::SUCCESS {
-        panic!("failed during creaing image_available_semaphore {}", vk_result_to_human(result as i32));
-      }
-      let result = self.device_ptrs(logical_device)
-        .CreateSemaphore(logical_device, &semaphore_create_info, ptr::null(), &mut render_finished_semaphore);
-      if result != vk::SUCCESS {
-        panic!("failed during creaing render_finished_semaphore {}", vk_result_to_human(result as i32));
-      }
+      let mut image_available_semaphore = do_or_die!(self.create_semaphore(logical_device, &semaphore_create_info));
+      let mut render_finished_semaphore = do_or_die!(self.create_semaphore(logical_device, &semaphore_create_info));
 
       self.device_image_available_semaphore_map.insert(logical_device, image_available_semaphore);
       self.device_render_finished_semaphore_map.insert(logical_device, render_finished_semaphore);
@@ -1460,17 +1435,13 @@ impl VkCtx {
     let &VkRenderSession {logical_device, swapchain_khr} = vk_render_session;
     let mut image_index = 0;
     unsafe {
-      let result = self.device_ptrs(logical_device).AcquireNextImageKHR(
+      let image_index = do_or_die!(loady("next image", &|a| self.device_ptrs(logical_device).AcquireNextImageKHR(
         logical_device,
         swapchain_khr,
         u64::max_value(),
         *self.device_image_available_semaphore_map.get(&logical_device).unwrap(),
         0 /* vk_null_handle */,
-        &mut image_index);
-
-      if result != vk::SUCCESS {
-        panic!("failed to acquire next image with {}", vk_result_to_human(result as i32));
-      }
+        a)));
 
       let wait_semaphores = [*self.device_image_available_semaphore_map.get(&logical_device).unwrap()];
       let wait_stages = [vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
@@ -1487,11 +1458,8 @@ impl VkCtx {
         pSignalSemaphores: signal_semaphores.as_ptr(),
       };
 
-      let result = self.device_ptrs(logical_device)
-        .QueueSubmit(*self.queues_map.get(&logical_device).unwrap(), 1, &submit_info, 0 /* vk_null_handle */);
-      if result != vk::SUCCESS {
-        panic!("failed to submit draw command buffer with {}", vk_result_to_human(result as i32));
-      }
+      do_or_die!(dooy("queue submit", &|| {self.device_ptrs(logical_device)
+        .QueueSubmit(*self.queues_map.get(&logical_device).unwrap(), 1, &submit_info, 0 /* vk_null_handle */)}));
 
       let swapchains = [swapchain_khr];
       let present_info_khr = vk::PresentInfoKHR {
@@ -1505,13 +1473,9 @@ impl VkCtx {
         pResults: ptr::null_mut(),
       };
 
-      let result = self.device_ptrs(logical_device).QueuePresentKHR(
+      do_or_die!(dooy("queue present", &|| self.device_ptrs(logical_device).QueuePresentKHR(
         *self.queues_map.get(&logical_device).unwrap(),
-        &present_info_khr);
-
-      if result != vk::SUCCESS {
-        panic!("failed to submit draw command buffer with {}", vk_result_to_human(result as i32));
-      }
+        &present_info_khr)));
     }
   }
 }
@@ -1526,12 +1490,7 @@ pub struct VkDeviceCtx<'a> {
   pub device_pointers: &'a vk::DevicePointers,
 }
 
-pub struct ExtensionSpec {
-  pub wanted: Vec<&'static str>,
-  pub required: Vec<&'static str>
-}
-
-pub struct LayerSpec {
+pub struct FeatureSpec {
   pub wanted: Vec<&'static str>,
   pub required: Vec<&'static str>
 }
@@ -1551,7 +1510,7 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W, vert_shader_b
 
   let mut vk_ctx = VkCtx::from_dylib(dylib);
 
-  let extension_spec = ExtensionSpec {
+  let extension_spec = FeatureSpec {
     wanted: vec! [
       "VK_EXT_acquire_xlib_display",
       //"VK_EXT_display_surface_counter",
@@ -1569,7 +1528,7 @@ pub fn vulkan<W: WindowSystemPlugin>(window_system_plugin: &mut W, vert_shader_b
   };
   let enabled_extensions = vk_ctx.select_extensions(extension_spec);
 
-  let layer_spec = LayerSpec {
+  let layer_spec = FeatureSpec {
     wanted: vec![
       "VK_LAYER_LUNARG_core_validation",
       "VK_LAYER_LUNARG_parameter_validation",
