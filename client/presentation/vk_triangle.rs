@@ -91,6 +91,34 @@ pub fn draw_demo_frame(t: &VulkanTriangle) {
   }
 }
 
+impl Drop for VulkanTriangle {
+  fn drop(&mut self) {
+    do_or_die!(self.device.device_wait_idle());
+    self.device.destroy_semaphore(self.render_finished_semaphore);
+    self.device.destroy_semaphore(self.image_available_semaphore);
+    self.device.destroy_command_pool(self.command_pool);
+    for framebuffer in self.framebuffers.drain(..) {
+      self.device.destroy_framebuffer(framebuffer);
+    }
+    self.device.destroy_pipeline(self.graphics_pipeline);
+    self.device.destroy_pipeline_layout(self.pipeline_layout);
+    self.device.destroy_shader_module(self.vert_shader_module);
+    self.device.destroy_shader_module(self.frag_shader_module);
+    self.device.destroy_render_pass(self.render_pass);
+    for image_view in self.image_views.drain(..) {
+      self.device.destroy_image_view(image_view);
+    }
+
+    self.device.destroy_swapchain(self.swapchain_khr);
+    self.instance.destroy_debug_callback(self.debug_report_callback)
+
+    // swapchain_params: does not need explicit destruction
+    // capable_physical_device: does not need explicit destruction
+    // device: Destroyed on drop
+    // instance: Destroyed on drop
+  }
+}
+
 pub struct SwapchainParams {
   format: vk::Format,
   extent: vk::Extent2D,
@@ -938,7 +966,7 @@ pub fn vulkan<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, window_sy
   VulkanTriangle {
     instance: v_i,
     device: v_d,
-    _debug_report_callback: debug_report_callback,
+    debug_report_callback: debug_report_callback,
     capable_physical_device: capable_physical_device,
     swapchain_params: swapchain_params,
     swapchain_khr: swapchain_khr,
@@ -959,7 +987,7 @@ pub fn vulkan<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, window_sy
 pub struct VulkanTriangle {
   instance: vkl::LInstance,
   device: vkl::LDevice,
-  _debug_report_callback: vk::DebugReportCallbackEXT,
+  debug_report_callback: vk::DebugReportCallbackEXT,
   capable_physical_device: CapablePhysicalDevice,
   swapchain_params: SwapchainParams,
   swapchain_khr: vk::SwapchainKHR,

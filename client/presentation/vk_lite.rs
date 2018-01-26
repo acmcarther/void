@@ -206,6 +206,14 @@ pub struct LInstance {
   instance_ptrs: vk::InstancePointers,
 }
 
+impl Drop for LInstance {
+  fn drop(&mut self) {
+    unsafe {
+      self.instance_ptrs.DestroyInstance(self.instance, ptr::null())
+    }
+  }
+}
+
 impl LInstance {
   // TODO(acmcarther): Create a "dies on drop" object for debug report callback.
   pub fn create_debug_callback(&self, debug_report_callback_create_info_ext: &vk::DebugReportCallbackCreateInfoEXT) -> RawResult<vk::DebugReportCallbackEXT> {
@@ -213,6 +221,12 @@ impl LInstance {
       self.instance_ptrs
         .CreateDebugReportCallbackEXT(self.instance, debug_report_callback_create_info_ext, ptr::null(), a)
     })
+  }
+
+  pub fn destroy_debug_callback(&self, debug_report_callback: vk::DebugReportCallbackEXT) {
+    unsafe {
+      self.instance_ptrs.DestroyDebugReportCallbackEXT(self.instance, debug_report_callback, ptr::null())
+    }
   }
 
   pub fn list_physical_devices(&self) -> RawResult<Vec<usize>> {
@@ -318,26 +332,36 @@ impl LInstance {
   }
 }
 
-pub struct LDebugReportCallback {
-  debug_report_callback: vk::DebugReportCallbackEXT,
-}
-
 pub struct LDevice {
   // Public for drawing in demo
   pub logical_device: vk::Device,
   device_ptrs: vk::DevicePointers,
 }
 
+impl Drop for LDevice {
+  fn drop(&mut self) {
+    unsafe {
+      self.device_ptrs.DestroyDevice(self.logical_device, ptr::null())
+    }
+  }
+}
+
 impl LDevice {
+  // Use for recording command buffers
+  pub unsafe fn ptrs(&self) -> &vk::DevicePointers {
+    &self.device_ptrs
+  }
+
   pub fn create_swapchain(&self, swapchain_create_info_khr: &vk::SwapchainCreateInfoKHR) -> RawResult<vk::SwapchainKHR> {
     util::loady("swapchain", &|a| unsafe {
       self.device_ptrs.CreateSwapchainKHR(self.logical_device, swapchain_create_info_khr, ptr::null(), a)
     })
   }
 
-  // Use for recording command buffers
-  pub unsafe fn ptrs(&self) -> &vk::DevicePointers {
-    &self.device_ptrs
+  pub fn destroy_swapchain(&self, swapchain: vk::SwapchainKHR) {
+    unsafe {
+      self.device_ptrs.DestroySwapchainKHR(self.logical_device, swapchain, ptr::null())
+    }
   }
 
   // Unsafe because vk::Images aren't properly tied to their parent swapchain
@@ -353,17 +377,31 @@ impl LDevice {
     })
   }
 
+  pub fn destroy_image_view(&self, image_view: vk::ImageView) {
+    unsafe {self.device_ptrs.DestroyImageView(self.logical_device, image_view, ptr::null()) }
+  }
+
   pub fn create_render_pass(&self, render_pass_create_info: &vk::RenderPassCreateInfo) -> RawResult<vk::RenderPass> {
     util::loady("render pass", &|a| unsafe {
       self.device_ptrs.CreateRenderPass(self.logical_device, render_pass_create_info, ptr::null(), a)
     })
   }
 
+  pub fn destroy_render_pass(&self, render_pass: vk::RenderPass) {
+    unsafe {self.device_ptrs.DestroyRenderPass(self.logical_device, render_pass, ptr::null()) }
+  }
+
+
   pub fn create_pipeline_layout(&self, pipeline_layout_create_info: &vk::PipelineLayoutCreateInfo) -> RawResult<vk::PipelineLayout> {
     util::loady("pipeline layout", &|a| unsafe {
       self.device_ptrs.CreatePipelineLayout(self.logical_device, pipeline_layout_create_info, ptr::null(), a)
     })
   }
+
+  pub fn destroy_pipeline_layout(&self, pipeline_layout: vk::PipelineLayout) {
+    unsafe {self.device_ptrs.DestroyPipelineLayout(self.logical_device, pipeline_layout, ptr::null()) }
+  }
+
 
   pub fn create_graphics_pipelines(&self, graphics_pipeline_layout_create_infos: &[vk::GraphicsPipelineCreateInfo]) -> RawResult<Vec<vk::Pipeline>> {
     // N.B.: Not generic because the number of pipelines is known in advance
@@ -386,10 +424,18 @@ impl LDevice {
     }
   }
 
+  pub fn destroy_pipeline(&self, pipeline: vk::Pipeline) {
+    unsafe {self.device_ptrs.DestroyPipeline(self.logical_device, pipeline, ptr::null()) }
+  }
+
   pub fn create_shader_module(&self, shader_module_create_info: &vk::ShaderModuleCreateInfo) -> RawResult<vk::ShaderModule> {
     util::loady("shader module", &|a| unsafe {
       self.device_ptrs.CreateShaderModule(self.logical_device, shader_module_create_info, ptr::null(), a)
     })
+  }
+
+  pub fn destroy_shader_module(&self, shader_module: vk::ShaderModule) {
+    unsafe {self.device_ptrs.DestroyShaderModule(self.logical_device, shader_module, ptr::null()) }
   }
 
   pub fn create_framebuffer(&self, framebuffer_create_info: &vk::FramebufferCreateInfo) -> RawResult<vk::Framebuffer> {
@@ -398,10 +444,24 @@ impl LDevice {
     })
   }
 
+  pub fn destroy_framebuffer(&self, framebuffer: vk::Framebuffer) {
+    unsafe {self.device_ptrs.DestroyFramebuffer(self.logical_device, framebuffer, ptr::null()) }
+  }
+
   pub fn create_command_pool(&self, command_pool_create_info: &vk::CommandPoolCreateInfo) -> RawResult<vk::CommandPool> {
     util::loady("command pool", &|a| unsafe {
       self.device_ptrs.CreateCommandPool(self.logical_device, command_pool_create_info, ptr::null(), a)
     })
+  }
+
+  pub fn reset_command_pool(&self, command_pool: vk::CommandPool) -> RawResult<()> {
+    util::dooy("reset command pool", &|| unsafe {
+      self.device_ptrs.ResetCommandPool(self.logical_device, command_pool, 0/* VkCommandPoolResetFlagsBit */)
+    })
+  }
+
+  pub fn destroy_command_pool(&self, command_pool: vk::CommandPool) {
+    unsafe {self.device_ptrs.DestroyCommandPool(self.logical_device, command_pool, ptr::null()) }
   }
 
   pub fn allocate_command_buffers(&self, command_buffer_allocate_info: &vk::CommandBufferAllocateInfo, framebuffers: &[vk::Framebuffer]) -> RawResult<Vec<vk::CommandBuffer>> {
@@ -420,10 +480,69 @@ impl LDevice {
     }
   }
 
+  pub fn reset_command_buffer(&self, command_buffer: &vk::CommandBuffer) -> RawResult<()> {
+    util::dooy("reset command buffer", &|| unsafe {
+      self.device_ptrs.ResetCommandBuffer(*command_buffer, 0/* VkCommandBufferResetFlagsBit */)
+    })
+  }
+
+  pub fn free_command_buffers(&self, command_pool: &vk::CommandPool, command_buffers: Vec<vk::CommandBuffer>) {
+    unsafe {
+      self.device_ptrs.FreeCommandBuffers(
+        self.logical_device, *command_pool, command_buffers.len() as u32, command_buffers.as_ptr());
+    }
+  }
+
+  pub fn create_fence(&self, fence_create_info: &vk::FenceCreateInfo) -> RawResult<vk::Fence> {
+    util::loady("fence", &|a| unsafe {
+      self.device_ptrs.CreateFence(self.logical_device, fence_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn destroy_fence(&self, fence: vk::Fence) {
+    unsafe {self.device_ptrs.DestroyFence(self.logical_device, fence, ptr::null()) }
+  }
+
+  // TODO(acmcarther): ResetFences
+  // TODO(acmcarther): GetFenceStatus
+  // TODO(acmcarther): WaitForFences
+  // TODO(acmcarther): CreateEvent
+  // TODO(acmcarther): DestroyEvent
+  // TODO(acmcarther): GetEventStatus
+  // TODO(acmcarther): SetEvent
+  // TODO(acmcarther): ResetEvent
+  // TODO(acmcarther): CreateQueryPool
+  // TODO(acmcarther): DestroyQueryPool
+  // TODO(acmcarther): GetQueryPoolResults
+  // TODO(acmcarther): CreateBuffer
+  // TODO(acmcarther): DestroyBuffer
+  // TODO(acmcarther): CreateBufferView
+  // TODO(acmcarther): DestroyBufferView
+  // TODO(acmcarther): CreateImage
+  // TODO(acmcarther): DestroyImage
+  // TODO(acmcarther): GetImageSubresourceLayout
+  // TODO(acmcarther): CreatePipelineCache
+  // TODO(acmcarther): DestroyPipelineCache
+  // TODO(acmcarther): CreateSampler
+  // TODO(acmcarther): DestroySampler
+  // TODO(acmcarther): CreateDescriptorSetLayout
+  // TODO(acmcarther): DestroyDescriptorSetLayout
+  // TODO(acmcarther): CreateDescriptorPool
+  // TODO(acmcarther): DestroyDescriptorPool
+  // TODO(acmcarther): AllocateDescriptorSets
+  // TODO(acmcarther): FreeDescriptorSets
+  // TODO(acmcarther): UpdateDescriptorSets
+  // TODO(acmcarther): GetRenderAreaGranularity
+  // TODO(acmcarther): TrimCommandPoolKHR
+
   pub fn create_semaphore(&self, semaphore_create_info: &vk::SemaphoreCreateInfo) -> RawResult<vk::Semaphore> {
     util::loady("semaphore", &|a| unsafe {
       self.device_ptrs.CreateSemaphore(self.logical_device, semaphore_create_info, ptr::null(), a)
     })
+  }
+
+  pub fn destroy_semaphore(&self, semaphore: vk::Semaphore) {
+    unsafe {self.device_ptrs.DestroySemaphore(self.logical_device, semaphore, ptr::null()) }
   }
 
   pub fn get_device_queue(&self, queue_family_idx: u32, queue_index: u32) -> vk::Queue {
@@ -432,6 +551,18 @@ impl LDevice {
       self.device_ptrs.GetDeviceQueue(self.logical_device, queue_family_idx, queue_index, &mut queue);
       queue
     }
+  }
+
+  pub fn queue_wait_idle(&self, queue: &vk::Queue) -> RawResult<()> {
+    util::dooy("waiting for queue to become idle", &|| unsafe {
+      self.device_ptrs.QueueWaitIdle(*queue)
+    })
+  }
+
+  pub fn device_wait_idle(&self) -> RawResult<()> {
+    util::dooy("waiting for device to become idle", &|| unsafe {
+      self.device_ptrs.DeviceWaitIdle(self.logical_device)
+    })
   }
 }
 
