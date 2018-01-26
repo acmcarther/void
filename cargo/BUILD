@@ -60,6 +60,10 @@ alias(
     actual = "@raze__log__0_3_9//:log",
 )
 alias(
+    name = "memoffset",
+    actual = "@raze__memoffset__0_2_1//:memoffset",
+)
+alias(
     name = "rand",
     actual = "@raze__rand__0_3_20//:rand",
 )
