@@ -17,39 +17,59 @@ rust_library(
 )
 
 rust_library(
-    name = "sdl2_vulkan_interop",
-    srcs = ["sdl2_vulkan_interop.rs"],
+    name = "vk_lite",
+    srcs = ["vk_lite.rs"],
     deps = [
-        ":vulkan",
-        "//third_party/SDL2:sdl2_sys",
-        "//cargo:sdl2",
+        "//cargo:dylib",
         "//cargo:vk_sys",
     ],
 )
 
+rust_library(
+    name = "vk_triangle",
+    srcs = ["vk_triangle.rs"],
+    data = [
+        ":triangle_frag_shader",
+        ":triangle_vert_shader",
+    ],
+    deps = [
+        "//cargo:vk_sys",
+        "//cargo:memoffset",
+        ":vk_lite",
+    ],
+)
+
+
+rust_library(
+    name = "sdl2_vulkan_interop",
+    srcs = ["sdl2_vulkan_interop.rs"],
+    deps = [
+        ":vk_lite",
+        "//cargo:sdl2",
+        "//cargo:vk_sys",
+        "//cargo/overrides/sdl2-sys:sdl2_sys",
+    ],
+)
 
 rust_binary(
     name = "toy",
     srcs = ["toy.rs"],
-    data = [
-        ":toy_vert_shader",
-        ":toy_frag_shader",
-    ],
     deps = [
-        ":vulkan",
-        "//cargo:sdl2",
         ":sdl2_vulkan_interop",
+        ":vk_lite",
+        ":vk_triangle",
+        "//cargo:sdl2",
     ],
 )
 
 load("//tools:glslang.bzl", "compile_spirv_shader")
 
 compile_spirv_shader(
-    name = "toy_vert_shader",
-    src = ":toy.vert",
+    name = "triangle_vert_shader",
+    src = ":triangle.vert",
 )
 
 compile_spirv_shader(
-    name = "toy_frag_shader",
-    src = ":toy.frag",
+    name = "triangle_frag_shader",
+    src = ":triangle.frag",
 )
