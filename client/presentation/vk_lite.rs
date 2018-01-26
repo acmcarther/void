@@ -4,6 +4,7 @@ extern crate vk_sys as vk;
 use std::ffi::CStr;
 use std::path::PathBuf;
 use std::ptr;
+use std::os::raw::c_void;
 
 pub struct FeatureSpec {
   pub wanted: Vec<&'static str>,
@@ -258,31 +259,31 @@ impl LInstance {
     }
   }
 
-  pub fn list_device_extension_properties(&self, physical_device: usize) -> RawResult<Vec<vk::ExtensionProperties>> {
+  pub fn list_device_extension_properties(&self, physical_device: vk::PhysicalDevice) -> RawResult<Vec<vk::ExtensionProperties>> {
     util::loady_listy("physical device extension properties", &|a, b| unsafe {
       self.instance_ptrs.EnumerateDeviceExtensionProperties(physical_device, ptr::null() /* pLayerName */, a, b)
     })
   }
 
-  pub fn get_physical_device_surface_capabilities(&self, physical_device: usize, surface: &vk::SurfaceKHR) -> RawResult<vk::SurfaceCapabilitiesKHR> {
+  pub fn get_physical_device_surface_capabilities(&self, physical_device: vk::PhysicalDevice, surface: &vk::SurfaceKHR) -> RawResult<vk::SurfaceCapabilitiesKHR> {
     util::loady("physical device surface properties", &|a| unsafe {
       self.instance_ptrs.GetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, *surface, a)
     })
   }
 
-  pub fn list_physical_device_surface_formats(&self, physical_device: usize, surface: &vk::SurfaceKHR) -> RawResult<Vec<vk::SurfaceFormatKHR>> {
+  pub fn list_physical_device_surface_formats(&self, physical_device: vk::PhysicalDevice, surface: &vk::SurfaceKHR) -> RawResult<Vec<vk::SurfaceFormatKHR>> {
     util::loady_listy("physical device surface formats", &|a, b| unsafe {
       self.instance_ptrs.GetPhysicalDeviceSurfaceFormatsKHR(physical_device, *surface, a, b)
     })
   }
 
-  pub fn list_physical_device_present_modes(&self, physical_device: usize, surface: &vk::SurfaceKHR) -> RawResult<Vec<vk::PresentModeKHR>> {
+  pub fn list_physical_device_present_modes(&self, physical_device: vk::PhysicalDevice, surface: &vk::SurfaceKHR) -> RawResult<Vec<vk::PresentModeKHR>> {
     util::loady_listy("physical device present modes", &|a, b| unsafe {
       self.instance_ptrs.GetPhysicalDeviceSurfacePresentModesKHR(physical_device, *surface, a, b)
     })
   }
 
-  pub fn create_logical_device(&self, physical_device: usize, device_create_info: &vk::DeviceCreateInfo) -> RawResult<LDevice> {
+  pub fn create_logical_device(&self, physical_device: vk::PhysicalDevice, device_create_info: &vk::DeviceCreateInfo) -> RawResult<LDevice> {
     util::loady("logical device", &|a| unsafe {
       self.instance_ptrs.CreateDevice(physical_device, device_create_info, ptr::null(), a)
     }).map(|logical_device| {
@@ -300,7 +301,7 @@ impl LInstance {
   }
 
   // TODO(acmcarther): Different semantics for "get" vs "fetch" or something
-  pub fn get_physical_device_properties(&self, physical_device: usize) -> vk::PhysicalDeviceProperties {
+  pub fn get_physical_device_properties(&self, physical_device: vk::PhysicalDevice) -> vk::PhysicalDeviceProperties {
     unsafe {
       let mut physical_device_properties: vk::PhysicalDeviceProperties = std::mem::uninitialized();
       self.instance_ptrs.GetPhysicalDeviceProperties(physical_device, &mut physical_device_properties);
@@ -308,7 +309,7 @@ impl LInstance {
     }
   }
 
-  pub fn get_physical_device_features(&self, physical_device: usize) -> vk::PhysicalDeviceFeatures {
+  pub fn get_physical_device_features(&self, physical_device: vk::PhysicalDevice) -> vk::PhysicalDeviceFeatures {
     unsafe {
       let mut physical_device_features: vk::PhysicalDeviceFeatures = std::mem::uninitialized();
       self.instance_ptrs.GetPhysicalDeviceFeatures(physical_device, &mut physical_device_features);
@@ -316,8 +317,15 @@ impl LInstance {
     }
   }
 
+  pub fn get_physical_device_memory_properties(&self, physical_device: vk::PhysicalDevice) -> vk::PhysicalDeviceMemoryProperties {
+    unsafe {
+      let mut physical_device_memory_properties: vk::PhysicalDeviceMemoryProperties = std::mem::uninitialized();
+      self.instance_ptrs.GetPhysicalDeviceMemoryProperties(physical_device, &mut physical_device_memory_properties);
+      physical_device_memory_properties
+    }
+  }
 
-  pub fn get_physical_device_surface_support(&self, physical_device: usize, queue_family_idx: u32, surface: &vk::SurfaceKHR) -> RawResult<vk::Bool32> {
+  pub fn get_physical_device_surface_support(&self, physical_device: vk::PhysicalDevice, queue_family_idx: u32, surface: &vk::SurfaceKHR) -> RawResult<vk::Bool32> {
     util::loady("surface-device suitability", &|a| unsafe {
       self.instance_ptrs
         .GetPhysicalDeviceSurfaceSupportKHR(physical_device, queue_family_idx, *surface, a)
@@ -503,6 +511,73 @@ impl LDevice {
     unsafe {self.device_ptrs.DestroyFence(self.logical_device, fence, ptr::null()) }
   }
 
+  pub fn create_buffer(&self, buffer_create_info: &vk::BufferCreateInfo) -> RawResult<vk::Buffer> {
+    util::loady("buffer", &|a| unsafe {
+      self.device_ptrs.CreateBuffer(self.logical_device, buffer_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn destroy_buffer(&self, buffer: vk::Buffer) {
+    unsafe {self.device_ptrs.DestroyBuffer(self.logical_device, buffer, ptr::null()) }
+  }
+
+  pub fn create_buffer_view(&self, buffer_view_create_info: &vk::BufferViewCreateInfo) -> RawResult<vk::BufferView> {
+    util::loady("buffer view", &|a| unsafe {
+      self.device_ptrs.CreateBufferView(self.logical_device, buffer_view_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn destroy_buffer_view(&self, buffer_view: vk::BufferView) {
+    unsafe {self.device_ptrs.DestroyBufferView(self.logical_device, buffer_view, ptr::null()) }
+  }
+
+  pub fn get_buffer_memory_requirements(&self, buffer: &vk::Buffer) -> vk::MemoryRequirements {
+    unsafe {
+      let mut memory_requirements = std::mem::uninitialized();
+      self.device_ptrs.GetBufferMemoryRequirements(self.logical_device, *buffer, &mut memory_requirements);
+      memory_requirements
+    }
+  }
+
+  pub fn allocate_memory(&self, memory_allocate_info: &vk::MemoryAllocateInfo) -> RawResult<vk::DeviceMemory> {
+    util::loady("allocate memory", &|a| unsafe {
+      self.device_ptrs.AllocateMemory(self.logical_device, memory_allocate_info, ptr::null(), a)
+    })
+  }
+
+  pub fn free_memory(&self, memory: vk::DeviceMemory) {
+    unsafe {self.device_ptrs.FreeMemory(self.logical_device, memory, ptr::null()) }
+  }
+
+  pub unsafe fn bind_buffer_memory(&self, buffer: &vk::Buffer, device_memory: &vk::DeviceMemory) -> RawResult<()> {
+    unsafe {
+      util::dooy("bind buffer memory", &|| unsafe {
+        self.device_ptrs.BindBufferMemory(self.logical_device,
+                                          *buffer,
+                                          *device_memory,
+                                          0 /* TODO(acmcarther): device offset (necessary if there's more than one binding */)
+                                          })
+    }
+  }
+
+  pub unsafe fn map_data_to_memory<T>(&self, memory: &vk::DeviceMemory, data: &Vec<T>) -> RawResult<()> {
+    unsafe {
+      let mut bound_data: *mut *mut c_void = std::mem::uninitialized();
+      let bound_data = try!(util::loady("map memory", &|a| unsafe {
+        self.device_ptrs.MapMemory(self.logical_device,
+                                   *memory,
+                                   0 /* TODO(acmcarther): device offset (necessary if there's more than one binding) */,
+                                   (std::mem::size_of::<T>() * data.len()) as u64,
+                                   0 /* vk::MemoryMapFlags */,
+                                   a)}));
+
+      ptr::copy_nonoverlapping(data.as_ptr(), bound_data as *mut T, data.len());
+
+      self.device_ptrs.UnmapMemory(self.logical_device, *memory);
+      Ok(())
+    }
+  }
+
   // TODO(acmcarther): ResetFences
   // TODO(acmcarther): GetFenceStatus
   // TODO(acmcarther): WaitForFences
@@ -514,10 +589,6 @@ impl LDevice {
   // TODO(acmcarther): CreateQueryPool
   // TODO(acmcarther): DestroyQueryPool
   // TODO(acmcarther): GetQueryPoolResults
-  // TODO(acmcarther): CreateBuffer
-  // TODO(acmcarther): DestroyBuffer
-  // TODO(acmcarther): CreateBufferView
-  // TODO(acmcarther): DestroyBufferView
   // TODO(acmcarther): CreateImage
   // TODO(acmcarther): DestroyImage
   // TODO(acmcarther): GetImageSubresourceLayout

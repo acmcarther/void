@@ -1,5 +1,7 @@
 extern crate vk_sys as vk;
 extern crate vk_lite as vkl;
+#[macro_use]
+extern crate memoffset;
 
 use std::ffi::CString;
 use std::ffi::CStr;
@@ -101,6 +103,8 @@ impl Drop for VulkanTriangle {
       self.device.destroy_framebuffer(framebuffer);
     }
     self.device.destroy_pipeline(self.graphics_pipeline);
+    self.device.destroy_buffer(self.vertex_buffer);
+    self.device.free_memory(self.vertex_device_memory);
     self.device.destroy_pipeline_layout(self.pipeline_layout);
     self.device.destroy_shader_module(self.vert_shader_module);
     self.device.destroy_shader_module(self.frag_shader_module);
@@ -606,8 +610,75 @@ pub fn make_pipeline_layout(create_fn: &Fn(&vk::PipelineLayoutCreateInfo) -> vkl
   do_or_die!(create_fn(&pipeline_layout_create_info))
 }
 
+#[repr(C, packed)]
+struct TriangleData {
+  pos: [f32; 2],
+  color: [f32; 3],
+}
+
+pub struct VertexBuffersInfo {
+  vertices: Vec<TriangleData>,
+  pos_attr_desc: vk::VertexInputAttributeDescription,
+  color_attr_desc: vk::VertexInputAttributeDescription,
+  vertex_binding_description: vk::VertexInputBindingDescription,
+  vertex_buffer: vk::Buffer,
+}
+
+pub fn make_vertex_buffer(create_fn: &Fn(&vk::BufferCreateInfo) -> vkl::RawResult<vk::Buffer>) -> VertexBuffersInfo {
+  let vertices = vec![
+    TriangleData { pos: [0.0f32, -0.5f32], color: [1.0f32, 0.0f32, 0.0f32] },
+    TriangleData { pos: [0.5f32, 0.5f32], color: [0.0f32, 1.0f32, 0.0f32] },
+    TriangleData { pos: [-0.5f32, 0.5f32], color: [0.0f32, 0.0f32, 1.0f32] },
+  ];
+
+  let pos_vertex_input_attribute_description = vk::VertexInputAttributeDescription {
+    binding: 0,
+    location: 0,
+    format: vk::FORMAT_R32G32_SFLOAT,
+    offset: offset_of!(TriangleData, pos) as u32,
+  };
+
+  let color_vertex_input_attribute_description = vk::VertexInputAttributeDescription {
+    binding: 0,
+    location: 1,
+    format: vk::FORMAT_R32G32B32_SFLOAT,
+    offset: offset_of!(TriangleData, color) as u32,
+  };
+
+  let vertex_binding_description = vk::VertexInputBindingDescription {
+    binding: 0,
+    stride: std::mem::size_of::<TriangleData>() as u32,
+    inputRate: vk::VERTEX_INPUT_RATE_VERTEX /* advance per vertex (instead of per instance) */,
+  };
+
+
+  let vertex_buffer_create_info = vk::BufferCreateInfo {
+    sType: vk::STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+    pNext: ptr::null(),
+    flags: 0,
+    size: (std::mem::size_of::<([f32; 2], [f32; 3])>() * vertices.len()) as u64,
+    usage: vk::BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    sharingMode: vk::SHARING_MODE_EXCLUSIVE,
+    queueFamilyIndexCount: 0,
+    pQueueFamilyIndices: ptr::null(),
+  };
+
+  let vertex_buffer = do_or_die!(create_fn(&vertex_buffer_create_info));
+
+  VertexBuffersInfo {
+    vertices: vertices,
+    pos_attr_desc: pos_vertex_input_attribute_description,
+    color_attr_desc: color_vertex_input_attribute_description,
+    vertex_binding_description: vertex_binding_description,
+    vertex_buffer: vertex_buffer,
+  }
+}
+
 pub fn make_graphics_pipeline(vert_shader_module: &vk::ShaderModule,
                               frag_shader_module: &vk::ShaderModule,
+                              pos_attr_desc: vk::VertexInputAttributeDescription,
+                              color_attr_desc: vk::VertexInputAttributeDescription,
+                              vertex_binding_description: vk::VertexInputBindingDescription,
                               render_pass: &vk::RenderPass,
                               swapchain_params: &SwapchainParams,
                               pipeline_layout: &vk::PipelineLayout,
@@ -635,14 +706,19 @@ pub fn make_graphics_pipeline(vert_shader_module: &vk::ShaderModule,
     pSpecializationInfo: ptr::null(),
   };
 
+  let all_vertex_binding_descriptions = [vertex_binding_description];
+  let all_vertex_attribute_descriptions = [
+    pos_attr_desc,
+    color_attr_desc,
+  ];
   let pipeline_vertex_input_state_create_info = vk::PipelineVertexInputStateCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
     pNext: ptr::null(),
     flags: 0,
-    vertexBindingDescriptionCount: 0,
-    pVertexBindingDescriptions: ptr::null(),
-    vertexAttributeDescriptionCount: 0,
-    pVertexAttributeDescriptions: ptr::null(),
+    vertexBindingDescriptionCount: 1,
+    pVertexBindingDescriptions: all_vertex_binding_descriptions.as_ptr(),
+    vertexAttributeDescriptionCount: 2,
+    pVertexAttributeDescriptions: all_vertex_attribute_descriptions.as_ptr(),
   };
 
   let pipeline_input_assembly_state_create_info = vk::PipelineInputAssemblyStateCreateInfo {
@@ -831,7 +907,13 @@ pub fn make_command_buffers(swapchain_params: &SwapchainParams,
   do_or_die!(allocate_fn(&command_buffer_allocate_info, &framebuffers))
 }
 
-pub fn record_command_buffers(v_d: &vkl::LDevice, swapchain_params: &SwapchainParams, framebuffers: &Vec<vk::Framebuffer>, render_pass: &vk::RenderPass, graphics_pipeline: &vk::Pipeline, command_buffers: &Vec<vk::CommandBuffer>) {
+pub fn record_command_buffers(v_d: &vkl::LDevice,
+                              swapchain_params: &SwapchainParams,
+                              framebuffers: &Vec<vk::Framebuffer>,
+                              render_pass: &vk::RenderPass,
+                              vertex_buffer: &vk::Buffer,
+                              graphics_pipeline: &vk::Pipeline,
+                              command_buffers: &Vec<vk::CommandBuffer>) {
   for (idx, command_buffer) in command_buffers.iter().enumerate() {
     let command_buffer_begin_info = vk::CommandBufferBeginInfo {
       sType: vk::STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -870,6 +952,9 @@ pub fn record_command_buffers(v_d: &vkl::LDevice, swapchain_params: &SwapchainPa
       unsafe {
         v_d.ptrs().CmdBeginRenderPass(*command_buffer, &render_pass_begin_info, vk::SUBPASS_CONTENTS_INLINE);
         v_d.ptrs().CmdBindPipeline(*command_buffer, vk::PIPELINE_BIND_POINT_GRAPHICS, *graphics_pipeline);
+        let all_vertex_buffers = [*vertex_buffer];
+        let all_buffer_offsets = [0];
+        v_d.ptrs().CmdBindVertexBuffers(*command_buffer, 0, 1, all_vertex_buffers.as_ptr(), all_buffer_offsets.as_ptr());
         v_d.ptrs().CmdDraw(*command_buffer, 3, 1, 0, 0);
         v_d.ptrs().CmdEndRenderPass(*command_buffer);
       }
@@ -888,7 +973,9 @@ pub fn make_semaphore(create_fn: &Fn(&vk::SemaphoreCreateInfo) -> vkl::RawResult
   do_or_die!(create_fn(&semaphore_create_info))
 }
 
-pub fn vulkan<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, window_system_plugin: &mut W, vert_shader_bytes: &[u8], frag_shader_bytes: &[u8]) -> VulkanTriangle {
+pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, window_system_plugin: &mut W) -> VulkanTriangle {
+  let vert_shader_bytes = include_bytes!("../../bazel-genfiles/client/presentation/triangle_vert_shader.spv");
+  let frag_shader_bytes = include_bytes!("../../bazel-genfiles/client/presentation/triangle_frag_shader.spv");
   let extension_spec = vkl::FeatureSpec { wanted: vec! [
       "VK_EXT_acquire_xlib_display",
       //"VK_EXT_display_surface_counter",
@@ -951,14 +1038,50 @@ pub fn vulkan<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, window_sy
 
   let pipeline_layout = make_pipeline_layout(&|a| v_d.create_pipeline_layout(a));
 
-  let graphics_pipeline = make_graphics_pipeline(&vert_shader_module, &frag_shader_module, &render_pass, &swapchain_params, &pipeline_layout, &|a| v_d.create_graphics_pipelines(a));
+  let VertexBuffersInfo { vertices, pos_attr_desc, color_attr_desc, vertex_binding_description, vertex_buffer } = make_vertex_buffer(&|a| v_d.create_buffer(a));
+
+  let vertex_device_memory = {
+    let memory_requirements = v_d.get_buffer_memory_requirements(&vertex_buffer);
+    let physical_device_memory_properties = v_i.get_physical_device_memory_properties(capable_physical_device.device);
+
+    let suitable_mem_idx = (0..physical_device_memory_properties.memoryTypeCount)
+      .filter(|idx| memory_requirements.memoryTypeBits & (1u32 << idx) > 0 /* type suitable */)
+      .filter(|idx| {
+        let prop_flags = physical_device_memory_properties.memoryTypes[*idx as usize].propertyFlags;
+        prop_flags & (vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT) > 0 /* props suitable */
+      })
+      .next()
+      .expect("Vulkan: couldn't find physical device memory suitable for Vertex Buffer");
+
+    let memory_allocate_info = vk::MemoryAllocateInfo {
+      sType: vk::STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+      pNext: ptr::null(),
+      allocationSize: memory_requirements.size,
+      memoryTypeIndex: suitable_mem_idx,
+    };
+
+    let vertex_device_memory = do_or_die!(v_d.allocate_memory(&memory_allocate_info));
+    do_or_die!(unsafe {v_d.bind_buffer_memory(&vertex_buffer, &vertex_device_memory)});
+    do_or_die!(unsafe {v_d.map_data_to_memory(&vertex_device_memory, &vertices)});
+    vertex_device_memory
+  };
+
+  let graphics_pipeline = make_graphics_pipeline(&vert_shader_module,
+                                                 &frag_shader_module,
+                                                 pos_attr_desc,
+                                                 color_attr_desc,
+                                                 vertex_binding_description,
+                                                 &render_pass,
+                                                 &swapchain_params,
+                                                 &pipeline_layout,
+                                                 &|a| v_d.create_graphics_pipelines(a));
 
   let framebuffers = make_framebuffers(&image_views, &swapchain_params, &render_pass, &|a| v_d.create_framebuffer(a));
   let command_pool = make_command_pool(&capable_physical_device, &|a| v_d.create_command_pool(a));
 
   let command_buffers = make_command_buffers(&swapchain_params, &framebuffers, &command_pool, &|a, b| v_d.allocate_command_buffers(a, b));
 
-  record_command_buffers(&v_d, &swapchain_params, &framebuffers, &render_pass, &graphics_pipeline, &command_buffers);
+  record_command_buffers(&v_d, &swapchain_params, &framebuffers, &render_pass, &vertex_buffer, &graphics_pipeline, &command_buffers);
 
   let image_available_semaphore = make_semaphore(&|a| v_d.create_semaphore(a));
   let render_finished_semaphore = make_semaphore(&|a| v_d.create_semaphore(a));
@@ -974,6 +1097,8 @@ pub fn vulkan<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, window_sy
     render_pass: render_pass,
     vert_shader_module: vert_shader_module,
     frag_shader_module: frag_shader_module,
+    vertex_device_memory: vertex_device_memory,
+    vertex_buffer: vertex_buffer,
     pipeline_layout: pipeline_layout,
     graphics_pipeline: graphics_pipeline,
     framebuffers: framebuffers,
@@ -995,6 +1120,8 @@ pub struct VulkanTriangle {
   render_pass: vk::RenderPass,
   vert_shader_module: vk::ShaderModule,
   frag_shader_module: vk::ShaderModule,
+  vertex_device_memory: vk::DeviceMemory,
+  vertex_buffer: vk::Buffer,
   pipeline_layout: vk::PipelineLayout,
   graphics_pipeline: vk::Pipeline,
   framebuffers: Vec<vk::Framebuffer>,
