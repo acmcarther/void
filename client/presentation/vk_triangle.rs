@@ -1,59 +1,41 @@
-extern crate vk_sys as vk;
-extern crate vk_lite as vkl;
+extern crate log;
 #[macro_use]
 extern crate memoffset;
+extern crate vk_lite as vkl;
+extern crate vk_sys as vk;
 
-use std::ffi::CString;
 use std::ffi::CStr;
+use std::ffi::CString;
 use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr;
 
 /** Essentially "try!", but for Vulkan Error Types. Prints things nicely. */
+#[macro_export]
 macro_rules! do_or_die {
   ($res:expr) => {
     match $res {
-      Err(vkl::RawReturnCode(code, ctx_string)) => panic!("Low level Vulkan error {} with context: {}", vk_result_to_human(code), ctx_string),
+      Err(vkl::RawReturnCode(code, ctx_string)) => panic!("Low level Vulkan error {} with context: {}", $crate::util::vk_result_to_human(code), ctx_string),
       v => v.unwrap(),
     }
   };
 }
 
 
-fn vk_result_to_human(code: i32) -> String {
-  match code {
-    0 => "VK_SUCCESS".to_owned(),
-    1 => "VK_NOT_READY".to_owned(),
-    2 => "VK_TIMEOUT".to_owned(),
-    3 => "VK_EVENT_SET".to_owned(),
-    4 => "VK_EVENT_RESET".to_owned(),
-    5 => "VK_INCOMPLETE".to_owned(),
-    -1 => "VK_ERROR_OUT_OF_HOST_MEMORY".to_owned(),
-    -2 => "VK_ERROR_OUT_OF_DEVICE_MEMORY".to_owned(),
-    -3 => "VK_ERROR_INITIALIZATION_FAILED".to_owned(),
-    -4 => "VK_ERROR_DEVICE_LOST".to_owned(),
-    -5 => "VK_ERROR_MEMORY_MAP_FAILED".to_owned(),
-    -6 => "VK_ERROR_LAYER_NOT_PRESENT".to_owned(),
-    -7 => "VK_ERROR_EXTENSION_NOT_PRESENT".to_owned(),
-    -8 => "VK_ERROR_FEATURE_NOT_PRESENT".to_owned(),
-    -9 => "VK_ERROR_INCOMPATIBLE_DRIVER".to_owned(),
-    -10 => "VK_ERROR_TOO_MANY_OBJECTS".to_owned(),
-    -11 => "VK_ERROR_FORMAT_NOT_SUPPORTED".to_owned(),
-    -12 => "VK_ERROR_FRAGMENTED_POOL".to_owned(),
-    _ => format!("UNKNOWN VK CODE {}", code)
-  }
-}
 
 pub fn draw_demo_frame(t: &VulkanTriangle) {
   let mut image_index = 0;
   unsafe {
-    let image_index = do_or_die!(vkl::util::loady("next image", &|a| t.device.ptrs().AcquireNextImageKHR(
-      t.device.logical_device,
-      t.swapchain_khr,
-      u64::max_value(),
-      t.image_available_semaphore,
-      0 /* vk_null_handle */,
-      a)));
+    let image_index = do_or_die!(vkl::util::loady("next image", &|a| {
+      t.device.ptrs().AcquireNextImageKHR(
+        t.device.logical_device,
+        t.swapchain_khr,
+        u64::max_value(),
+        t.image_available_semaphore,
+        0, /* vk_null_handle */
+        a,
+      )
+    }));
 
     let wait_semaphores = [t.image_available_semaphore];
     let wait_stages = [vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
@@ -70,10 +52,16 @@ pub fn draw_demo_frame(t: &VulkanTriangle) {
       pSignalSemaphores: signal_semaphores.as_ptr(),
     };
 
-    let queue = t.device.get_device_queue(t.capable_physical_device.gfx_supporting_queue_family_index, 0 /* queue_index */);
+    let queue = t.device.get_device_queue(
+      t.capable_physical_device.gfx_queue_family_idx,
+      0, /* queue_index */
+    );
 
-    do_or_die!(vkl::util::dooy("queue submit", &|| {t.device.ptrs()
-      .QueueSubmit(queue, 1, &submit_info, 0 /* vk_null_handle */)}));
+    do_or_die!(vkl::util::dooy("queue submit", &|| {
+      t.device
+        .ptrs()
+        .QueueSubmit(queue, 1, &submit_info, 0 /* vk_null_handle */)
+    }));
 
     let swapchains = [t.swapchain_khr];
     let present_info_khr = vk::PresentInfoKHR {
@@ -87,17 +75,21 @@ pub fn draw_demo_frame(t: &VulkanTriangle) {
       pResults: ptr::null_mut(),
     };
 
-    do_or_die!(vkl::util::dooy("queue present", &|| t.device.ptrs().QueuePresentKHR(
-      queue,
-      &present_info_khr)));
+    do_or_die!(vkl::util::dooy("queue present", &|| {
+      t.device.ptrs().QueuePresentKHR(queue, &present_info_khr)
+    }));
   }
 }
 
 impl Drop for VulkanTriangle {
   fn drop(&mut self) {
     do_or_die!(self.device.device_wait_idle());
-    self.device.destroy_semaphore(self.render_finished_semaphore);
-    self.device.destroy_semaphore(self.image_available_semaphore);
+    self
+      .device
+      .destroy_semaphore(self.render_finished_semaphore);
+    self
+      .device
+      .destroy_semaphore(self.image_available_semaphore);
     self.device.destroy_command_pool(self.command_pool);
     for framebuffer in self.framebuffers.drain(..) {
       self.device.destroy_framebuffer(framebuffer);
@@ -114,7 +106,9 @@ impl Drop for VulkanTriangle {
     }
 
     self.device.destroy_swapchain(self.swapchain_khr);
-    self.instance.destroy_debug_callback(self.debug_report_callback)
+    self
+      .instance
+      .destroy_debug_callback(self.debug_report_callback)
 
     // swapchain_params: does not need explicit destruction
     // capable_physical_device: does not need explicit destruction
@@ -131,7 +125,9 @@ pub struct SwapchainParams {
 
 pub struct CapablePhysicalDevice {
   device: vk::PhysicalDevice,
-  gfx_supporting_queue_family_index: u32,
+  gfx_queue_family_idx: u32,
+  present_queue_family_idx: u32,
+  transfer_queue_family_idx: u32,
   swapchain_capabilities: vk::SurfaceCapabilitiesKHR,
   swapchain_formats: Vec<vk::SurfaceFormatKHR>,
   swapchain_present_modes: Vec<vk::PresentModeKHR>,
@@ -139,11 +135,13 @@ pub struct CapablePhysicalDevice {
 
 // TODO(acmcarther): This is a higher level function, inlined here during refactoring
 // The intent is that the application will use this api directly
-fn make_instance(application_name: &'static str,
-                 engine_name: &'static str,
-                 extensions: &Vec<[i8; 256]>,
-                 layers: &Vec<[i8; 256]>,
-                 create_fn: &Fn(&vk::InstanceCreateInfo) -> vkl::RawResult<vkl::LInstance>) -> vkl::LInstance {
+fn make_instance(
+  application_name: &'static str,
+  engine_name: &'static str,
+  extensions: &Vec<[i8; 256]>,
+  layers: &Vec<[i8; 256]>,
+  create_fn: &Fn(&vk::InstanceCreateInfo) -> vkl::RawResult<vkl::LInstance>,
+) -> vkl::LInstance {
   let pApplicationName = CString::new(application_name).unwrap();
   let pEngineName = CString::new(engine_name).unwrap();
 
@@ -155,7 +153,7 @@ fn make_instance(application_name: &'static str,
     applicationVersion: 1,
     pEngineName: pEngineName.as_ptr(),
     engineVersion: 1,
-    apiVersion: 0 /* 1? */,
+    apiVersion: 0, /* 1? */
   };
 
   let ppEnabledLayerNames = layers.iter().map(|i| i.as_ptr()).collect::<Vec<_>>();
@@ -173,7 +171,11 @@ fn make_instance(application_name: &'static str,
 }
 
 // This can probably stay baked into the lite lib
-fn make_debug_report_callback(cb: vk::PFN_vkDebugReportCallbackEXT, create_fn: &Fn(&vk::DebugReportCallbackCreateInfoEXT) -> vkl::RawResult<vk::DebugReportCallbackEXT>) -> vk::DebugReportCallbackEXT {
+fn make_debug_report_callback(
+  cb: vk::PFN_vkDebugReportCallbackEXT,
+  create_fn: &Fn(&vk::DebugReportCallbackCreateInfoEXT)
+    -> vkl::RawResult<vk::DebugReportCallbackEXT>,
+) -> vk::DebugReportCallbackEXT {
   do_or_die!(create_fn(&vk::DebugReportCallbackCreateInfoEXT {
     sType: vk::STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
     flags: vk::DEBUG_REPORT_ERROR_BIT_EXT | vk::DEBUG_REPORT_WARNING_BIT_EXT,
@@ -185,53 +187,75 @@ fn make_debug_report_callback(cb: vk::PFN_vkDebugReportCallbackEXT, create_fn: &
 
 // TODO(acmcarther): Some of this should be refactored out. Callers will want to customize how they
 // select devices
-fn find_capable_gfx_device(v_i: &vkl::LInstance, surface: &vk::SurfaceKHR) -> Option<CapablePhysicalDevice> {
+fn find_capable_gfx_device(
+  v_i: &vkl::LInstance,
+  surface: &vk::SurfaceKHR,
+) -> Option<CapablePhysicalDevice> {
   let mut physical_device: vk::PhysicalDevice = 0;
   let mut swapchain_capabilities: vk::SurfaceCapabilitiesKHR = unsafe { std::mem::uninitialized() };
   let mut swapchain_formats: Vec<vk::SurfaceFormatKHR> = Vec::new();
   let mut swapchain_present_modes: Vec<vk::PresentModeKHR> = Vec::new();
-  let mut gfx_supporting_queue_family_index: u32 = 0;
+  let mut gfx_queue_family_idx: u32 = 0;
   let physical_devices = do_or_die!(v_i.list_physical_devices());
   unsafe {
     for _physical_device in physical_devices.iter() {
-      let mut physical_device_properties: vk::PhysicalDeviceProperties = v_i.get_physical_device_properties(*_physical_device);
+      let mut physical_device_properties: vk::PhysicalDeviceProperties =
+        v_i.get_physical_device_properties(*_physical_device);
 
-      let mut physical_device_features: vk::PhysicalDeviceFeatures = v_i.get_physical_device_features(*_physical_device);
+      let mut physical_device_features: vk::PhysicalDeviceFeatures =
+        v_i.get_physical_device_features(*_physical_device);
 
-      println!("Vulkan Physical Device found: {}", CStr::from_ptr(physical_device_properties.deviceName.as_ptr()).to_str().unwrap());
+      println!(
+        "Vulkan Physical Device found: {}",
+        CStr::from_ptr(physical_device_properties.deviceName.as_ptr())
+          .to_str()
+          .unwrap()
+      );
 
-      let gfx_supporting_queue_family_index_opt = {
+      let queue_family_properties_list = v_i.list_queue_family_properties(*_physical_device);
+      let gfx_queue_family_idx_opt = {
         let surface_is_supported_for_queue_idx_fn = |queue_family_idx| {
-          let support_is_present = do_or_die!(v_i.get_physical_device_surface_support(*_physical_device, queue_family_idx, surface));
+          let support_is_present = do_or_die!(v_i.get_physical_device_surface_support(
+            *_physical_device,
+            queue_family_idx,
+            surface
+          ));
 
           // N.B.: Output is a vulkan-style 32 bit bool
           support_is_present > 0
         };
 
-        let queue_family_properties_list = v_i.list_queue_family_properties(*_physical_device);
         // TODO(acmcarther): Support independent GRAPHICS and PRESENT queues.
         // The current implementation expects to find a single queue for both, but it isn't
         // unreasonable to have these live in separate queues.
-        queue_family_properties_list.iter()
+        queue_family_properties_list
+          .iter()
           .enumerate()
-          .filter(|&(idx, props)|
-                    props.queueCount > 0
-                    && (props.queueFlags & vk::QUEUE_GRAPHICS_BIT) > 0
-                    && surface_is_supported_for_queue_idx_fn(idx as u32))
+          .filter(|&(idx, props)| {
+            props.queueCount > 0 && (props.queueFlags & vk::QUEUE_GRAPHICS_BIT) > 0
+              && surface_is_supported_for_queue_idx_fn(idx as u32)
+          })
           .map(|(idx, props)| idx)
           .next() /* get first */
       };
 
       // TODO(acmcarther): This is duplicated in logical device instantiation
-      let required_extension_names = vec![
-        "VK_KHR_swapchain",
-      ];
+      let required_extension_names = vec!["VK_KHR_swapchain"];
 
       let required_extensions_supported = {
-        let available_extensions = do_or_die!(v_i.list_device_extension_properties(*_physical_device));
-        let available_extension_names = available_extensions.iter().map(|e| CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap()).collect::<Vec<_>>();
+        let available_extensions =
+          do_or_die!(v_i.list_device_extension_properties(*_physical_device));
+        let available_extension_names = available_extensions
+          .iter()
+          .map(|e| {
+            CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap()
+          })
+          .collect::<Vec<_>>();
         for available_extension_name in available_extension_names.iter() {
-          println!("Vulkan Device Extension found: {}", available_extension_name);
+          println!(
+            "Vulkan Device Extension found: {}",
+            available_extension_name
+          );
         }
         required_extension_names
           .iter()
@@ -239,26 +263,27 @@ fn find_capable_gfx_device(v_i: &vkl::LInstance, surface: &vk::SurfaceKHR) -> Op
           .all(|is_contained| is_contained)
       };
 
-      let _swapchain_capabilities = do_or_die!(v_i.get_physical_device_surface_capabilities(*_physical_device, surface));
+      let _swapchain_capabilities =
+        do_or_die!(v_i.get_physical_device_surface_capabilities(*_physical_device, surface));
 
-      let _swapchain_formats = do_or_die!(v_i.list_physical_device_surface_formats(*_physical_device, surface));
+      let _swapchain_formats =
+        do_or_die!(v_i.list_physical_device_surface_formats(*_physical_device, surface));
 
-      let _swapchain_present_modes = do_or_die!(v_i.list_physical_device_present_modes(*_physical_device, surface));
+      let _swapchain_present_modes =
+        do_or_die!(v_i.list_physical_device_present_modes(*_physical_device, surface));
 
-      let required_swapchain_support_present = {
-        !_swapchain_formats.is_empty() && !_swapchain_present_modes.is_empty()
-      };
+      let required_swapchain_support_present =
+        { !_swapchain_formats.is_empty() && !_swapchain_present_modes.is_empty() };
 
-      if physical_device == 0
-        && gfx_supporting_queue_family_index_opt.is_some()
-        && required_extensions_supported
-        && required_swapchain_support_present {
+      if physical_device == 0 && gfx_queue_family_idx_opt.is_some() && required_extensions_supported
+        && required_swapchain_support_present
+      {
         println!("going with that physical_device, as it supports a gfx and present queue");
         physical_device = *_physical_device;
         swapchain_capabilities = _swapchain_capabilities;
         swapchain_formats = _swapchain_formats;
         swapchain_present_modes = _swapchain_present_modes;
-        gfx_supporting_queue_family_index = gfx_supporting_queue_family_index_opt.unwrap() as u32;
+        gfx_queue_family_idx = gfx_queue_family_idx_opt.unwrap() as u32;
       }
     }
   }
@@ -268,7 +293,7 @@ fn find_capable_gfx_device(v_i: &vkl::LInstance, surface: &vk::SurfaceKHR) -> Op
   } else {
     Some(CapablePhysicalDevice {
       device: physical_device,
-      gfx_supporting_queue_family_index: gfx_supporting_queue_family_index,
+      gfx_queue_family_idx: gfx_queue_family_idx,
       swapchain_capabilities: swapchain_capabilities,
       swapchain_formats: swapchain_formats,
       swapchain_present_modes: swapchain_present_modes,
@@ -277,13 +302,17 @@ fn find_capable_gfx_device(v_i: &vkl::LInstance, surface: &vk::SurfaceKHR) -> Op
 }
 
 // TODO(acmcarther): This needs to be customizable
-fn make_logical_device(capable_physical_device: &CapablePhysicalDevice, enabled_layers: &Vec<[i8; 256]>, create_fn: &Fn(usize, &vk::DeviceCreateInfo) -> vkl::RawResult<vkl::LDevice>) -> vkl::LDevice {
+fn make_logical_device(
+  capable_physical_device: &CapablePhysicalDevice,
+  enabled_layers: &Vec<[i8; 256]>,
+  create_fn: &Fn(usize, &vk::DeviceCreateInfo) -> vkl::RawResult<vkl::LDevice>,
+) -> vkl::LDevice {
   let queue_priorities = [1.0f32];
   let device_queue_create_info = vk::DeviceQueueCreateInfo {
     sType: vk::STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
     pNext: ptr::null(),
     flags: 0,
-    queueFamilyIndex: capable_physical_device.gfx_supporting_queue_family_index,
+    queueFamilyIndex: capable_physical_device.gfx_queue_family_idx,
     queueCount: 1,
     pQueuePriorities: queue_priorities.as_ptr(),
   };
@@ -345,9 +374,15 @@ fn make_logical_device(capable_physical_device: &CapablePhysicalDevice, enabled_
     variableMultisampleRate: vk::FALSE,
     inheritedQueries: vk::FALSE,
   };
-  let ppEnabledLayerNames = enabled_layers.iter().map(|i| i.as_ptr()).collect::<Vec<_>>();
+  let ppEnabledLayerNames = enabled_layers
+    .iter()
+    .map(|i| i.as_ptr())
+    .collect::<Vec<_>>();
   let enabled_extension_names = vec![CString::new("VK_KHR_swapchain").unwrap()];
-  let ppEnabledExtensionNames = enabled_extension_names.iter().map(|i| i.as_c_str().as_ptr()).collect::<Vec<_>>();
+  let ppEnabledExtensionNames = enabled_extension_names
+    .iter()
+    .map(|i| i.as_c_str().as_ptr())
+    .collect::<Vec<_>>();
   let device_create_info = vk::DeviceCreateInfo {
     sType: vk::STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     pNext: ptr::null(),
@@ -361,26 +396,33 @@ fn make_logical_device(capable_physical_device: &CapablePhysicalDevice, enabled_
     pEnabledFeatures: &physical_device_features as *const _,
   };
 
-  do_or_die!(create_fn(capable_physical_device.device, &device_create_info))
+  do_or_die!(create_fn(
+    capable_physical_device.device,
+    &device_create_info
+  ))
 }
 
-pub fn make_swap_chain(capable_physical_device: &CapablePhysicalDevice,
-                           surface: &vk::SurfaceKHR,
-                           create_fn: &Fn(&vk::SwapchainCreateInfoKHR) -> vkl::RawResult<vk::SwapchainKHR>) -> (SwapchainParams, vk::SwapchainKHR) {
+pub fn make_swapchain(
+  capable_physical_device: &CapablePhysicalDevice,
+  surface: &vk::SurfaceKHR,
+  create_fn: &Fn(&vk::SwapchainCreateInfoKHR) -> vkl::RawResult<vk::SwapchainKHR>,
+) -> (SwapchainParams, vk::SwapchainKHR) {
   let swapchain_best_format = {
     let swapchain_formats = &capable_physical_device.swapchain_formats;
 
     // Device has no preference at all
-    if swapchain_formats.len() == 1 && swapchain_formats.get(0).unwrap().format == vk::FORMAT_UNDEFINED {
+    if swapchain_formats.len() == 1
+      && swapchain_formats.get(0).unwrap().format == vk::FORMAT_UNDEFINED
+    {
       vk::SurfaceFormatKHR {
         format: vk::FORMAT_B8G8R8A8_UNORM,
         colorSpace: vk::COLOR_SPACE_SRGB_NONLINEAR_KHR,
       }
     } else {
       // Try to find our favorite format
-      let ideal_format_opt = swapchain_formats
-        .iter()
-        .find(|f| f.format == vk::FORMAT_B8G8R8A8_UNORM && f.colorSpace == vk::COLOR_SPACE_SRGB_NONLINEAR_KHR);
+      let ideal_format_opt = swapchain_formats.iter().find(|f| {
+        f.format == vk::FORMAT_B8G8R8A8_UNORM && f.colorSpace == vk::COLOR_SPACE_SRGB_NONLINEAR_KHR
+      });
       if ideal_format_opt.is_some() {
         vk::SurfaceFormatKHR {
           format: vk::FORMAT_B8G8R8A8_UNORM,
@@ -426,12 +468,18 @@ pub fn make_swap_chain(capable_physical_device: &CapablePhysicalDevice,
       }
     } else {
       vk::Extent2D {
-        width: swapchain_capabilities.minImageExtent.width
-          .max(swapchain_capabilities.maxImageExtent.width
-               .min(DEFAULT_SWAP_WIDTH)),
-        height: swapchain_capabilities.minImageExtent.height
-          .max(swapchain_capabilities.maxImageExtent.height
-               .min(DEFAULT_SWAP_HEIGHT)),
+        width: swapchain_capabilities.minImageExtent.width.max(
+          swapchain_capabilities
+            .maxImageExtent
+            .width
+            .min(DEFAULT_SWAP_WIDTH),
+        ),
+        height: swapchain_capabilities.minImageExtent.height.max(
+          swapchain_capabilities
+            .maxImageExtent
+            .height
+            .min(DEFAULT_SWAP_HEIGHT),
+        ),
       }
     }
   };
@@ -443,7 +491,8 @@ pub fn make_swap_chain(capable_physical_device: &CapablePhysicalDevice,
 
     // Max images may be bounded, use that if its lower than our desired image count
     if swapchain_capabilities.maxImageCount != 0
-      && swapchain_capabilities.maxImageCount < desired_image_count {
+      && swapchain_capabilities.maxImageCount < desired_image_count
+    {
       swapchain_capabilities.maxImageCount
     } else {
       desired_image_count
@@ -471,13 +520,13 @@ pub fn make_swap_chain(capable_physical_device: &CapablePhysicalDevice,
       imageArrayLayers: 1,
       imageUsage: vk::IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
       imageSharingMode: vk::SHARING_MODE_EXCLUSIVE,
-      queueFamilyIndexCount: 0 /* omitted under SHARING_MODE_EXCLUSIVE */,
-      pQueueFamilyIndices: ptr::null() /* omitted under SHARING_MODE_EXCLUSIVE */,
+      queueFamilyIndexCount: 0, /* omitted under SHARING_MODE_EXCLUSIVE */
+      pQueueFamilyIndices: ptr::null(), /* omitted under SHARING_MODE_EXCLUSIVE */
       preTransform: swapchain_capabilities.currentTransform,
       compositeAlpha: vk::COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
       presentMode: swapchain_best_present_mode,
       clipped: vk::TRUE,
-      oldSwapchain: 0 /* null handle */,
+      oldSwapchain: 0, /* null handle */
       surface: *surface,
     }
   };
@@ -485,15 +534,20 @@ pub fn make_swap_chain(capable_physical_device: &CapablePhysicalDevice,
 
   let swapchain = do_or_die!(create_fn(&swapchain_create_info_khr));
 
-  (SwapchainParams {
-    format: swapchain_best_format.format,
-    extent: swapchain_extent,
-  }, swapchain)
+  (
+    SwapchainParams {
+      format: swapchain_best_format.format,
+      extent: swapchain_extent,
+    },
+    swapchain,
+  )
 }
 
-fn make_image_views(swapchain_images: &Vec<vk::Image>,
-                        swapchain_params: &SwapchainParams,
-                        create_fn: &Fn(&vk::ImageViewCreateInfo) -> vkl::RawResult<vk::ImageView>) -> Vec<vk::ImageView> {
+fn make_image_views(
+  swapchain_images: &Vec<vk::Image>,
+  swapchain_params: &SwapchainParams,
+  create_fn: &Fn(&vk::ImageViewCreateInfo) -> vkl::RawResult<vk::ImageView>,
+) -> Vec<vk::ImageView> {
   let mut image_views = Vec::with_capacity(swapchain_images.len());
   println!("Vulkan creating image view for each image.");
   for swapchain_image in swapchain_images.iter() {
@@ -527,7 +581,10 @@ fn make_image_views(swapchain_images: &Vec<vk::Image>,
   image_views
 }
 
-pub fn make_render_pass(swapchain_params: &SwapchainParams, create_fn: &Fn(&vk::RenderPassCreateInfo) -> vkl::RawResult<vk::RenderPass>) -> vk::RenderPass {
+pub fn make_render_pass(
+  swapchain_params: &SwapchainParams,
+  create_fn: &Fn(&vk::RenderPassCreateInfo) -> vkl::RawResult<vk::RenderPass>,
+) -> vk::RenderPass {
   let color_attachment_description = vk::AttachmentDescription {
     flags: 0,
     format: swapchain_params.format,
@@ -585,7 +642,10 @@ pub fn make_render_pass(swapchain_params: &SwapchainParams, create_fn: &Fn(&vk::
   do_or_die!(create_fn(&render_pass_create_info))
 }
 
-pub fn make_shader_module(shader_bytes: &[u8], create_fn: &Fn(&vk::ShaderModuleCreateInfo) -> vkl::RawResult<vk::ShaderModule>) -> vk::ShaderModule {
+pub fn make_shader_module(
+  shader_bytes: &[u8],
+  create_fn: &Fn(&vk::ShaderModuleCreateInfo) -> vkl::RawResult<vk::ShaderModule>,
+) -> vk::ShaderModule {
   let shader_module_create_info = vk::ShaderModuleCreateInfo {
     sType: vk::STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
     pNext: ptr::null(),
@@ -596,7 +656,9 @@ pub fn make_shader_module(shader_bytes: &[u8], create_fn: &Fn(&vk::ShaderModuleC
   do_or_die!(create_fn(&shader_module_create_info))
 }
 
-pub fn make_pipeline_layout(create_fn: &Fn(&vk::PipelineLayoutCreateInfo) -> vkl::RawResult<vk::PipelineLayout>) -> vk::PipelineLayout {
+pub fn make_pipeline_layout(
+  create_fn: &Fn(&vk::PipelineLayoutCreateInfo) -> vkl::RawResult<vk::PipelineLayout>,
+) -> vk::PipelineLayout {
   let pipeline_layout_create_info = vk::PipelineLayoutCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     pNext: ptr::null(),
@@ -624,11 +686,22 @@ pub struct VertexBuffersInfo {
   vertex_buffer: vk::Buffer,
 }
 
-pub fn make_vertex_buffer(create_fn: &Fn(&vk::BufferCreateInfo) -> vkl::RawResult<vk::Buffer>) -> VertexBuffersInfo {
+pub fn make_vertex_buffer(
+  create_fn: &Fn(&vk::BufferCreateInfo) -> vkl::RawResult<vk::Buffer>,
+) -> VertexBuffersInfo {
   let vertices = vec![
-    TriangleData { pos: [0.0f32, -0.5f32], color: [1.0f32, 0.0f32, 0.0f32] },
-    TriangleData { pos: [0.5f32, 0.5f32], color: [0.0f32, 1.0f32, 0.0f32] },
-    TriangleData { pos: [-0.5f32, 0.5f32], color: [0.0f32, 0.0f32, 1.0f32] },
+    TriangleData {
+      pos: [0.0f32, -0.5f32],
+      color: [1.0f32, 0.0f32, 0.0f32],
+    },
+    TriangleData {
+      pos: [0.5f32, 0.5f32],
+      color: [0.0f32, 1.0f32, 0.0f32],
+    },
+    TriangleData {
+      pos: [-0.5f32, 0.5f32],
+      color: [0.0f32, 0.0f32, 1.0f32],
+    },
   ];
 
   let pos_vertex_input_attribute_description = vk::VertexInputAttributeDescription {
@@ -648,7 +721,7 @@ pub fn make_vertex_buffer(create_fn: &Fn(&vk::BufferCreateInfo) -> vkl::RawResul
   let vertex_binding_description = vk::VertexInputBindingDescription {
     binding: 0,
     stride: std::mem::size_of::<TriangleData>() as u32,
-    inputRate: vk::VERTEX_INPUT_RATE_VERTEX /* advance per vertex (instead of per instance) */,
+    inputRate: vk::VERTEX_INPUT_RATE_VERTEX, /* advance per vertex (instead of per instance) */
   };
 
 
@@ -674,16 +747,17 @@ pub fn make_vertex_buffer(create_fn: &Fn(&vk::BufferCreateInfo) -> vkl::RawResul
   }
 }
 
-pub fn make_graphics_pipeline(vert_shader_module: &vk::ShaderModule,
-                              frag_shader_module: &vk::ShaderModule,
-                              pos_attr_desc: vk::VertexInputAttributeDescription,
-                              color_attr_desc: vk::VertexInputAttributeDescription,
-                              vertex_binding_description: vk::VertexInputBindingDescription,
-                              render_pass: &vk::RenderPass,
-                              swapchain_params: &SwapchainParams,
-                              pipeline_layout: &vk::PipelineLayout,
-                              create_fn: &Fn(&[vk::GraphicsPipelineCreateInfo]) -> vkl::RawResult<Vec<vk::Pipeline>>) -> vk::Pipeline {
-
+pub fn make_graphics_pipeline(
+  vert_shader_module: &vk::ShaderModule,
+  frag_shader_module: &vk::ShaderModule,
+  pos_attr_desc: vk::VertexInputAttributeDescription,
+  color_attr_desc: vk::VertexInputAttributeDescription,
+  vertex_binding_description: vk::VertexInputBindingDescription,
+  render_pass: &vk::RenderPass,
+  swapchain_params: &SwapchainParams,
+  pipeline_layout: &vk::PipelineLayout,
+  create_fn: &Fn(&[vk::GraphicsPipelineCreateInfo]) -> vkl::RawResult<Vec<vk::Pipeline>>,
+) -> vk::Pipeline {
   let common_shader_pipeline_name = CString::new("main").unwrap();
   let pName = common_shader_pipeline_name.as_c_str().as_ptr();
   let vert_pipeline_shader_stage_create_info = vk::PipelineShaderStageCreateInfo {
@@ -707,10 +781,7 @@ pub fn make_graphics_pipeline(vert_shader_module: &vk::ShaderModule,
   };
 
   let all_vertex_binding_descriptions = [vertex_binding_description];
-  let all_vertex_attribute_descriptions = [
-    pos_attr_desc,
-    color_attr_desc,
-  ];
+  let all_vertex_attribute_descriptions = [pos_attr_desc, color_attr_desc];
   let pipeline_vertex_input_state_create_info = vk::PipelineVertexInputStateCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
     pNext: ptr::null(),
@@ -730,20 +801,17 @@ pub fn make_graphics_pipeline(vert_shader_module: &vk::ShaderModule,
   };
 
   let viewport = vk::Viewport {
-     x: 0.0f32,
-     y: 0.0f32,
-     width: swapchain_params.extent.width as f32,
-     height: swapchain_params.extent.height as f32,
-     minDepth: 0.0f32,
-     maxDepth: 1.0f32,
+    x: 0.0f32,
+    y: 0.0f32,
+    width: swapchain_params.extent.width as f32,
+    height: swapchain_params.extent.height as f32,
+    minDepth: 0.0f32,
+    maxDepth: 1.0f32,
   };
 
   // Defines how the image in the viewport is truncated
   let scissor = vk::Rect2D {
-    offset: vk::Offset2D {
-      x: 0,
-      y: 0
-    },
+    offset: vk::Offset2D { x: 0, y: 0 },
     extent: vk::Extent2D {
       width: swapchain_params.extent.width,
       height: swapchain_params.extent.height,
@@ -797,7 +865,8 @@ pub fn make_graphics_pipeline(vert_shader_module: &vk::ShaderModule,
   // TODO(acmcarther): Examine these options
   let pipeline_color_blend_attachment_state = vk::PipelineColorBlendAttachmentState {
     blendEnable: vk::FALSE,
-    colorWriteMask: vk::COLOR_COMPONENT_R_BIT | vk::COLOR_COMPONENT_G_BIT | vk::COLOR_COMPONENT_B_BIT | vk::COLOR_COMPONENT_A_BIT,
+    colorWriteMask: vk::COLOR_COMPONENT_R_BIT | vk::COLOR_COMPONENT_G_BIT
+      | vk::COLOR_COMPONENT_B_BIT | vk::COLOR_COMPONENT_A_BIT,
     srcColorBlendFactor: vk::BLEND_FACTOR_ONE,
     dstColorBlendFactor: vk::BLEND_FACTOR_ZERO,
     colorBlendOp: vk::BLEND_OP_ADD,
@@ -817,10 +886,7 @@ pub fn make_graphics_pipeline(vert_shader_module: &vk::ShaderModule,
     blendConstants: [0f32, 0f32, 0f32, 0f32],
   };
 
-  let dynamic_states = [
-    vk::DYNAMIC_STATE_VIEWPORT,
-    vk::DYNAMIC_STATE_LINE_WIDTH,
-  ];
+  let dynamic_states = [vk::DYNAMIC_STATE_VIEWPORT, vk::DYNAMIC_STATE_LINE_WIDTH];
 
   let pipeline_dynamic_state_create_info = vk::PipelineDynamicStateCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
@@ -832,7 +898,7 @@ pub fn make_graphics_pipeline(vert_shader_module: &vk::ShaderModule,
 
   let pipeline_shader_stage_infos = vec![
     vert_pipeline_shader_stage_create_info,
-    frag_pipeline_shader_stage_create_info
+    frag_pipeline_shader_stage_create_info,
   ];
 
   let graphics_pipeline_create_info = vk::GraphicsPipelineCreateInfo {
@@ -853,14 +919,19 @@ pub fn make_graphics_pipeline(vert_shader_module: &vk::ShaderModule,
     layout: *pipeline_layout,
     renderPass: *render_pass,
     subpass: 0,
-    basePipelineHandle: 0 /* vk_null_handle */,
+    basePipelineHandle: 0, /* vk_null_handle */
     basePipelineIndex: -1,
   };
 
   do_or_die!(create_fn(&vec![graphics_pipeline_create_info])).remove(0)
 }
 
-pub fn make_framebuffers(image_views: &Vec<vk::ImageView>, swapchain_params: &SwapchainParams, render_pass: &vk::RenderPass, create_fn: &Fn(&vk::FramebufferCreateInfo) -> vkl::RawResult<vk::Framebuffer>) -> Vec<vk::Framebuffer> {
+pub fn make_framebuffers(
+  image_views: &Vec<vk::ImageView>,
+  swapchain_params: &SwapchainParams,
+  render_pass: &vk::RenderPass,
+  create_fn: &Fn(&vk::FramebufferCreateInfo) -> vkl::RawResult<vk::Framebuffer>,
+) -> Vec<vk::Framebuffer> {
   let mut framebuffers = Vec::with_capacity(image_views.len());
   for swapchain_image_view in image_views.iter() {
     let framebuffer_create_info = vk::FramebufferCreateInfo {
@@ -881,21 +952,27 @@ pub fn make_framebuffers(image_views: &Vec<vk::ImageView>, swapchain_params: &Sw
   framebuffers
 }
 
-pub fn make_command_pool(capable_physical_device: &CapablePhysicalDevice, create_fn: &Fn(&vk::CommandPoolCreateInfo) -> vkl::RawResult<vk::CommandPool>) -> vk::CommandPool {
+pub fn make_command_pool(
+  capable_physical_device: &CapablePhysicalDevice,
+  create_fn: &Fn(&vk::CommandPoolCreateInfo) -> vkl::RawResult<vk::CommandPool>,
+) -> vk::CommandPool {
   let command_pool_create_info = vk::CommandPoolCreateInfo {
     sType: vk::STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
     pNext: ptr::null(),
     flags: 0,
-    queueFamilyIndex: capable_physical_device.gfx_supporting_queue_family_index,
+    queueFamilyIndex: capable_physical_device.gfx_queue_family_idx,
   };
 
   do_or_die!(create_fn(&command_pool_create_info))
 }
 
-pub fn make_command_buffers(swapchain_params: &SwapchainParams,
-                            framebuffers: &Vec<vk::Framebuffer>,
-                            command_pool: &vk::CommandPool,
-                            allocate_fn: &Fn(&vk::CommandBufferAllocateInfo, &[vk::Framebuffer]) -> vkl::RawResult<Vec<vk::CommandBuffer>>) -> Vec<vk::CommandBuffer> {
+pub fn make_command_buffers(
+  swapchain_params: &SwapchainParams,
+  framebuffers: &Vec<vk::Framebuffer>,
+  command_pool: &vk::CommandPool,
+  allocate_fn: &Fn(&vk::CommandBufferAllocateInfo, &[vk::Framebuffer])
+    -> vkl::RawResult<Vec<vk::CommandBuffer>>,
+) -> Vec<vk::CommandBuffer> {
   let command_buffer_allocate_info = vk::CommandBufferAllocateInfo {
     sType: vk::STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
     pNext: ptr::null(),
@@ -907,13 +984,15 @@ pub fn make_command_buffers(swapchain_params: &SwapchainParams,
   do_or_die!(allocate_fn(&command_buffer_allocate_info, &framebuffers))
 }
 
-pub fn record_command_buffers(v_d: &vkl::LDevice,
-                              swapchain_params: &SwapchainParams,
-                              framebuffers: &Vec<vk::Framebuffer>,
-                              render_pass: &vk::RenderPass,
-                              vertex_buffer: &vk::Buffer,
-                              graphics_pipeline: &vk::Pipeline,
-                              command_buffers: &Vec<vk::CommandBuffer>) {
+pub fn record_command_buffers(
+  v_d: &vkl::LDevice,
+  swapchain_params: &SwapchainParams,
+  framebuffers: &Vec<vk::Framebuffer>,
+  render_pass: &vk::RenderPass,
+  vertex_buffer: &vk::Buffer,
+  graphics_pipeline: &vk::Pipeline,
+  command_buffers: &Vec<vk::CommandBuffer>,
+) {
   for (idx, command_buffer) in command_buffers.iter().enumerate() {
     let command_buffer_begin_info = vk::CommandBufferBeginInfo {
       sType: vk::STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -922,13 +1001,17 @@ pub fn record_command_buffers(v_d: &vkl::LDevice,
       pInheritanceInfo: ptr::null(),
     };
 
-    do_or_die!(vkl::util::dooy("start command buffer", &|| unsafe {v_d.ptrs().BeginCommandBuffer(*command_buffer, &command_buffer_begin_info)}));
+    do_or_die!(vkl::util::dooy("start command buffer", &|| unsafe {
+      v_d
+        .ptrs()
+        .BeginCommandBuffer(*command_buffer, &command_buffer_begin_info)
+    }));
 
     {
       let clear_color = vk::ClearValue {
         color: vk::ClearColorValue {
-          float32: [0.0f32, 0.0f32, 0.0f32, 1.0f32]
-        }
+          float32: [0.0f32, 0.0f32, 0.0f32, 1.0f32],
+        },
       };
       let render_pass_begin_info = vk::RenderPassBeginInfo {
         sType: vk::STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -936,10 +1019,7 @@ pub fn record_command_buffers(v_d: &vkl::LDevice,
         renderPass: *render_pass,
         framebuffer: *framebuffers.get(idx).unwrap(),
         renderArea: vk::Rect2D {
-          offset: vk::Offset2D {
-            x: 0,
-            y: 0,
-          },
+          offset: vk::Offset2D { x: 0, y: 0 },
           extent: vk::Extent2D {
             width: swapchain_params.extent.width,
             height: swapchain_params.extent.height,
@@ -950,21 +1030,39 @@ pub fn record_command_buffers(v_d: &vkl::LDevice,
       };
 
       unsafe {
-        v_d.ptrs().CmdBeginRenderPass(*command_buffer, &render_pass_begin_info, vk::SUBPASS_CONTENTS_INLINE);
-        v_d.ptrs().CmdBindPipeline(*command_buffer, vk::PIPELINE_BIND_POINT_GRAPHICS, *graphics_pipeline);
+        v_d.ptrs().CmdBeginRenderPass(
+          *command_buffer,
+          &render_pass_begin_info,
+          vk::SUBPASS_CONTENTS_INLINE,
+        );
+        v_d.ptrs().CmdBindPipeline(
+          *command_buffer,
+          vk::PIPELINE_BIND_POINT_GRAPHICS,
+          *graphics_pipeline,
+        );
         let all_vertex_buffers = [*vertex_buffer];
         let all_buffer_offsets = [0];
-        v_d.ptrs().CmdBindVertexBuffers(*command_buffer, 0, 1, all_vertex_buffers.as_ptr(), all_buffer_offsets.as_ptr());
+        v_d.ptrs().CmdBindVertexBuffers(
+          *command_buffer,
+          0,
+          1,
+          all_vertex_buffers.as_ptr(),
+          all_buffer_offsets.as_ptr(),
+        );
         v_d.ptrs().CmdDraw(*command_buffer, 3, 1, 0, 0);
         v_d.ptrs().CmdEndRenderPass(*command_buffer);
       }
     }
 
-    do_or_die!(vkl::util::dooy("end command buffer", &|| unsafe {v_d.ptrs().EndCommandBuffer(*command_buffer)}))
+    do_or_die!(vkl::util::dooy("end command buffer", &|| unsafe {
+      v_d.ptrs().EndCommandBuffer(*command_buffer)
+    }))
   }
 }
 
-pub fn make_semaphore(create_fn: &Fn(&vk::SemaphoreCreateInfo) -> vkl::RawResult<vk::Semaphore>) -> vk::Semaphore {
+pub fn make_semaphore(
+  create_fn: &Fn(&vk::SemaphoreCreateInfo) -> vkl::RawResult<vk::Semaphore>,
+) -> vk::Semaphore {
   let semaphore_create_info = vk::SemaphoreCreateInfo {
     sType: vk::STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     pNext: ptr::null(),
@@ -973,10 +1071,16 @@ pub fn make_semaphore(create_fn: &Fn(&vk::SemaphoreCreateInfo) -> vkl::RawResult
   do_or_die!(create_fn(&semaphore_create_info))
 }
 
-pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, window_system_plugin: &mut W) -> VulkanTriangle {
-  let vert_shader_bytes = include_bytes!("../../bazel-genfiles/client/presentation/triangle_vert_shader.spv");
-  let frag_shader_bytes = include_bytes!("../../bazel-genfiles/client/presentation/triangle_frag_shader.spv");
-  let extension_spec = vkl::FeatureSpec { wanted: vec! [
+pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
+  vulkan: &'a vkl::Vulkan,
+  window_system_plugin: &mut W,
+) -> VulkanTriangle {
+  let vert_shader_bytes =
+    include_bytes!("../../bazel-genfiles/client/presentation/triangle_vert_shader.spv");
+  let frag_shader_bytes =
+    include_bytes!("../../bazel-genfiles/client/presentation/triangle_frag_shader.spv");
+  let extension_spec = vkl::FeatureSpec {
+    wanted: vec![
       "VK_EXT_acquire_xlib_display",
       //"VK_EXT_display_surface_counter",
       "VK_KHR_display",
@@ -987,9 +1091,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, 
       "VK_KHR_xlib_surface",
       "VK_KHX_device_group_creation",
     ],
-    required: vec! [
-      "VK_EXT_debug_report",
-    ],
+    required: vec!["VK_EXT_debug_report"],
   };
   let enabled_extensions = do_or_die!(vulkan.select_extensions(extension_spec));
 
@@ -998,37 +1100,45 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, 
       "VK_LAYER_LUNARG_core_validation",
       "VK_LAYER_LUNARG_parameter_validation",
     ],
-    required: vec! [
-      "VK_LAYER_LUNARG_standard_validation",
-    ],
+    required: vec!["VK_LAYER_LUNARG_standard_validation"],
   };
   let enabled_layers = do_or_die!(vulkan.select_layers(layer_spec));
 
   println!("setting up instance");
-  let v_i = make_instance("dummy_application_name",
-                                 "dummy_engine_name",
-                                 &enabled_extensions,
-                                 &enabled_layers,
-                                 &|a| vulkan.create_instance(a));
+  let v_i = make_instance(
+    "dummy_application_name",
+    "dummy_engine_name",
+    &enabled_extensions,
+    &enabled_layers,
+    &|a| vulkan.create_instance(a),
+  );
 
   // Configure debug callback
-  let debug_report_callback =
-    make_debug_report_callback(vk_debug_report_callback_ext, &|a| v_i.create_debug_callback(a));
+  let debug_report_callback = make_debug_report_callback(vk_debug_report_callback_ext, &|a| {
+    v_i.create_debug_callback(a)
+  });
 
   let v_surface = do_or_die!(window_system_plugin.create_surface(&v_i));
 
-  let capable_physical_device = find_capable_gfx_device(&v_i, &v_surface)
-    .expect("there was no suitable physical device!");
+  let capable_physical_device =
+    find_capable_gfx_device(&v_i, &v_surface).expect("there was no suitable physical device!");
 
-  let v_d = make_logical_device(&capable_physical_device, &enabled_layers, &|a, b| v_i.create_logical_device(a, b));
+  let v_d = make_logical_device(&capable_physical_device, &enabled_layers, &|a, b| {
+    v_i.create_logical_device(a, b)
+  });
 
   //let queue = v_d.get_device_queue(capable_physical_device.queue_family_idx, 0 /* queueIndex */);
 
-  let (swapchain_params, swapchain_khr) = make_swap_chain(&capable_physical_device, &v_surface, &|a| v_d.create_swapchain(a));
+  let (swapchain_params, swapchain_khr) =
+    make_swapchain(&capable_physical_device, &v_surface, &|a| {
+      v_d.create_swapchain(a)
+    });
 
-  let swapchain_images = do_or_die!(unsafe {v_d.get_swapchain_images(&swapchain_khr) });
+  let swapchain_images = do_or_die!(unsafe { v_d.get_swapchain_images(&swapchain_khr) });
 
-  let image_views = make_image_views(&swapchain_images, &swapchain_params, &|a| v_d.create_image_view(a));
+  let image_views = make_image_views(&swapchain_images, &swapchain_params, &|a| {
+    v_d.create_image_view(a)
+  });
 
   let render_pass = make_render_pass(&swapchain_params, &|a| v_d.create_render_pass(a));
 
@@ -1038,17 +1148,23 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, 
 
   let pipeline_layout = make_pipeline_layout(&|a| v_d.create_pipeline_layout(a));
 
-  let VertexBuffersInfo { vertices, pos_attr_desc, color_attr_desc, vertex_binding_description, vertex_buffer } = make_vertex_buffer(&|a| v_d.create_buffer(a));
+  let VertexBuffersInfo {
+    vertices,
+    pos_attr_desc,
+    color_attr_desc,
+    vertex_binding_description,
+    vertex_buffer,
+  } = make_vertex_buffer(&|a| v_d.create_buffer(a));
 
   let vertex_device_memory = {
     let memory_requirements = v_d.get_buffer_memory_requirements(&vertex_buffer);
-    let physical_device_memory_properties = v_i.get_physical_device_memory_properties(capable_physical_device.device);
 
     let suitable_mem_idx = (0..physical_device_memory_properties.memoryTypeCount)
       .filter(|idx| memory_requirements.memoryTypeBits & (1u32 << idx) > 0 /* type suitable */)
       .filter(|idx| {
         let prop_flags = physical_device_memory_properties.memoryTypes[*idx as usize].propertyFlags;
-        prop_flags & (vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT) > 0 /* props suitable */
+        prop_flags & (vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT)
+          > 0 /* props suitable */
       })
       .next()
       .expect("Vulkan: couldn't find physical device memory suitable for Vertex Buffer");
@@ -1061,27 +1177,46 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(vulkan: &'a vkl::Vulkan, 
     };
 
     let vertex_device_memory = do_or_die!(v_d.allocate_memory(&memory_allocate_info));
-    do_or_die!(unsafe {v_d.bind_buffer_memory(&vertex_buffer, &vertex_device_memory)});
-    do_or_die!(unsafe {v_d.map_data_to_memory(&vertex_device_memory, &vertices)});
+    do_or_die!(unsafe {
+      v_d.bind_buffer_memory(&vertex_buffer, &vertex_device_memory)
+    });
+    do_or_die!(unsafe {
+      v_d.map_data_to_memory(&vertex_device_memory, &vertices)
+    });
     vertex_device_memory
   };
 
-  let graphics_pipeline = make_graphics_pipeline(&vert_shader_module,
-                                                 &frag_shader_module,
-                                                 pos_attr_desc,
-                                                 color_attr_desc,
-                                                 vertex_binding_description,
-                                                 &render_pass,
-                                                 &swapchain_params,
-                                                 &pipeline_layout,
-                                                 &|a| v_d.create_graphics_pipelines(a));
+  let graphics_pipeline = make_graphics_pipeline(
+    &vert_shader_module,
+    &frag_shader_module,
+    pos_attr_desc,
+    color_attr_desc,
+    vertex_binding_description,
+    &render_pass,
+    &swapchain_params,
+    &pipeline_layout,
+    &|a| v_d.create_graphics_pipelines(a),
+  );
 
-  let framebuffers = make_framebuffers(&image_views, &swapchain_params, &render_pass, &|a| v_d.create_framebuffer(a));
+  let framebuffers = make_framebuffers(&image_views, &swapchain_params, &render_pass, &|a| {
+    v_d.create_framebuffer(a)
+  });
   let command_pool = make_command_pool(&capable_physical_device, &|a| v_d.create_command_pool(a));
 
-  let command_buffers = make_command_buffers(&swapchain_params, &framebuffers, &command_pool, &|a, b| v_d.allocate_command_buffers(a, b));
+  let command_buffers =
+    make_command_buffers(&swapchain_params, &framebuffers, &command_pool, &|a, b| {
+      v_d.allocate_command_buffers(a, b)
+    });
 
-  record_command_buffers(&v_d, &swapchain_params, &framebuffers, &render_pass, &vertex_buffer, &graphics_pipeline, &command_buffers);
+  record_command_buffers(
+    &v_d,
+    &swapchain_params,
+    &framebuffers,
+    &render_pass,
+    &vertex_buffer,
+    &graphics_pipeline,
+    &command_buffers,
+  );
 
   let image_available_semaphore = make_semaphore(&|a| v_d.create_semaphore(a));
   let render_finished_semaphore = make_semaphore(&|a| v_d.create_semaphore(a));
@@ -1132,16 +1267,20 @@ pub struct VulkanTriangle {
 }
 
 extern "system" fn vk_debug_report_callback_ext(
-    flags: vk::DebugReportFlagsEXT,
-    object_type: vk::DebugReportObjectTypeEXT,
-    obj: u64,
-    location: usize,
-    code: i32,
-    layer_prefix: *const c_char,
-    msg: *const c_char,
-    user_data: *mut c_void) -> vk::Bool32 {
+  flags: vk::DebugReportFlagsEXT,
+  object_type: vk::DebugReportObjectTypeEXT,
+  obj: u64,
+  location: usize,
+  code: i32,
+  layer_prefix: *const c_char,
+  msg: *const c_char,
+  user_data: *mut c_void,
+) -> vk::Bool32 {
   unsafe {
-    println!("validation layer: {}", CStr::from_ptr(msg).to_str().unwrap());
+    println!(
+      "validation layer: {}",
+      CStr::from_ptr(msg).to_str().unwrap()
+    );
   }
   vk::FALSE
 }
