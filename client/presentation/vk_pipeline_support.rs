@@ -70,13 +70,16 @@ pub fn make_render_pass(
   device.create_render_pass(&render_pass_create_info)
 }
 
-pub fn make_pipeline_layout(device: &vkl::LDevice) -> vkl::RawResult<vk::PipelineLayout> {
+pub fn make_pipeline_layout(
+  device: &vkl::LDevice,
+  descriptor_set_layouts: &Vec<vk::DescriptorSetLayout>,
+) -> vkl::RawResult<vk::PipelineLayout> {
   let pipeline_layout_create_info = vk::PipelineLayoutCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     pNext: ptr::null(),
     flags: 0,
-    setLayoutCount: 0,
-    pSetLayouts: ptr::null(),
+    setLayoutCount: descriptor_set_layouts.len() as u32,
+    pSetLayouts: descriptor_set_layouts.as_ptr(),
     pushConstantRangeCount: 0,
     pPushConstantRanges: ptr::null(),
   };
@@ -174,7 +177,7 @@ pub fn make_graphics_pipeline(
     rasterizerDiscardEnable: vk::FALSE,
     polygonMode: vk::POLYGON_MODE_FILL,
     cullMode: vk::CULL_MODE_BACK_BIT,
-    frontFace: vk::FRONT_FACE_CLOCKWISE,
+    frontFace: vk::FRONT_FACE_COUNTER_CLOCKWISE,
     depthBiasEnable: vk::FALSE,
     depthBiasConstantFactor: 0.0f32,
     depthBiasClamp: 0.0f32,

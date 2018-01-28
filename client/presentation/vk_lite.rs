@@ -968,7 +968,29 @@ impl LDevice {
     }
   }
 
-  pub unsafe fn map_data_to_memory<T>(
+  pub unsafe fn map_data_to_memory<T>(&self, memory: &vk::DeviceMemory, data: &T) -> RawResult<()> {
+    unsafe {
+      let mut bound_data: *mut *mut c_void = std::mem::uninitialized();
+      let bound_data = try!(util::loady("map memory", &|a| unsafe {
+        self.device_ptrs.MapMemory(
+          self.logical_device,
+          *memory,
+          0, /* TODO(acmcarther): device offset (necessary if there's more than one binding) */
+          std::mem::size_of::<T>() as u64,
+          0, /* vk::MemoryMapFlags */
+          a,
+        )
+      }));
+
+      ptr::copy_nonoverlapping(data as *const _, bound_data as *mut T, 1);
+
+      self.device_ptrs.UnmapMemory(self.logical_device, *memory);
+      Ok(())
+    }
+  }
+
+
+  pub unsafe fn map_vec_data_to_memory<T>(
     &self,
     memory: &vk::DeviceMemory,
     data: &Vec<T>,
@@ -993,6 +1015,109 @@ impl LDevice {
     }
   }
 
+  pub fn create_descriptor_set_layout(
+    &self,
+    descriptor_set_layout_create_info: &vk::DescriptorSetLayoutCreateInfo,
+  ) -> RawResult<vk::DescriptorSetLayout> {
+    util::loady("create descriptor set layout", &|a| unsafe {
+      self.device_ptrs.CreateDescriptorSetLayout(
+        self.logical_device,
+        descriptor_set_layout_create_info,
+        ptr::null(),
+        a,
+      )
+    })
+  }
+
+  pub fn destroy_descriptor_set_layout(&self, descriptor_set_layout: vk::DescriptorSetLayout) {
+    unsafe {
+      self.device_ptrs.DestroyDescriptorSetLayout(
+        self.logical_device,
+        descriptor_set_layout,
+        ptr::null(),
+      )
+    }
+  }
+
+  pub fn create_descriptor_pool(
+    &self,
+    descriptor_pool_create_info: &vk::DescriptorPoolCreateInfo,
+  ) -> RawResult<vk::DescriptorPool> {
+    util::loady("create descriptor pool", &|a| unsafe {
+      self.device_ptrs.CreateDescriptorPool(
+        self.logical_device,
+        descriptor_pool_create_info,
+        ptr::null(),
+        a,
+      )
+    })
+  }
+
+  pub fn destroy_descriptor_pool(&self, descriptor_pool: vk::DescriptorPool) {
+    unsafe {
+      self
+        .device_ptrs
+        .DestroyDescriptorPool(self.logical_device, descriptor_pool, ptr::null())
+    }
+  }
+
+  pub fn allocate_descriptor_sets(
+    &self,
+    descriptor_set_allocate_info: &vk::DescriptorSetAllocateInfo,
+  ) -> RawResult<Vec<vk::DescriptorSet>> {
+    // N.B.: Not generic because the number of descriptor sets is known in advance
+    unsafe {
+      let num_items = descriptor_set_allocate_info.descriptorSetCount;
+      let mut descriptor_sets = Vec::with_capacity(num_items as usize);
+      let result = self.device_ptrs.AllocateDescriptorSets(
+        self.logical_device,
+        descriptor_set_allocate_info,
+        descriptor_sets.as_mut_ptr(),
+      );
+
+      if result != vk::SUCCESS {
+        return Err(RawReturnCode(
+          result as i32,
+          format!("while fetching list of descriptor sets"),
+        ));
+      }
+      descriptor_sets.set_len(num_items as usize);
+      Ok(descriptor_sets)
+    }
+  }
+
+  pub fn free_descriptor_sets(
+    &self,
+    descriptor_pool: &vk::DescriptorPool,
+    descriptor_sets: Vec<vk::DescriptorSet>,
+  ) -> RawResult<()> {
+    unsafe {
+      util::dooy("free descriptor sets", &|| {
+        self.device_ptrs.FreeDescriptorSets(
+          self.logical_device,
+          *descriptor_pool,
+          descriptor_sets.len() as u32,
+          descriptor_sets.as_ptr(),
+        )
+      })
+    }
+  }
+
+  pub fn update_descriptor_sets(
+    &self,
+    descriptor_set_writes: &Vec<vk::WriteDescriptorSet>,
+    descriptor_set_copies: &Vec<vk::CopyDescriptorSet>,
+  ) {
+    unsafe {
+      self.device_ptrs.UpdateDescriptorSets(
+        self.logical_device,
+        descriptor_set_writes.len() as u32,
+        descriptor_set_writes.as_ptr(),
+        descriptor_set_copies.len() as u32,
+        descriptor_set_copies.as_ptr(),
+      );
+    }
+  }
   // TODO(acmcarther): ResetFences
   // TODO(acmcarther): GetFenceStatus
   // TODO(acmcarther): WaitForFences
@@ -1011,13 +1136,6 @@ impl LDevice {
   // TODO(acmcarther): DestroyPipelineCache
   // TODO(acmcarther): CreateSampler
   // TODO(acmcarther): DestroySampler
-  // TODO(acmcarther): CreateDescriptorSetLayout
-  // TODO(acmcarther): DestroyDescriptorSetLayout
-  // TODO(acmcarther): CreateDescriptorPool
-  // TODO(acmcarther): DestroyDescriptorPool
-  // TODO(acmcarther): AllocateDescriptorSets
-  // TODO(acmcarther): FreeDescriptorSets
-  // TODO(acmcarther): UpdateDescriptorSets
   // TODO(acmcarther): GetRenderAreaGranularity
   // TODO(acmcarther): TrimCommandPoolKHR
 

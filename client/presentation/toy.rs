@@ -38,7 +38,7 @@ fn main() {
   // TODO(acmcarther): This seems unpleasant and brittle-ish.
   let mut sdl_window_system_plugin = sdl2_vulkan_interop::SdlWindowSystemPlugin::new(&mut window);
   let vulkan = vkl::Vulkan::new("libvulkan.so.1");
-  let vulkan_triangle = vkt::vulkan_triangle(&vulkan, &mut sdl_window_system_plugin);
+  let mut vulkan_triangle = vkt::vulkan_triangle(&vulkan, &mut sdl_window_system_plugin);
 
   let mut event_pump = sdl_context.event_pump().unwrap();
 

@@ -1,3 +1,5 @@
+extern crate cgmath;
+extern crate chrono;
 #[macro_use]
 extern crate log;
 #[macro_use]
@@ -11,7 +13,13 @@ extern crate vk_pipeline_support as vkps;
 extern crate vk_swapchain_support as vkss;
 extern crate vk_sys as vk;
 
+use cgmath::Angle;
+use cgmath::BaseFloat;
+use cgmath::Transform;
+use cgmath::Zero;
 use std::ptr;
+use std::time::Duration;
+use std::time::Instant;
 
 /** Dumps hardcoded x11-related extensions into a FeatureSpec */
 fn x11_related_extension_spec() -> vkl::FeatureSpec {
@@ -96,7 +104,7 @@ pub fn make_vertex_buffer(
 
   unsafe {
     try!(device.bind_buffer_memory(&transfer_buffer, &transfer_device_memory));
-    try!(device.map_data_to_memory(&transfer_device_memory, &vertices));
+    try!(device.map_vec_data_to_memory(&transfer_device_memory, &vertices));
   }
 
   let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_buffer(
@@ -177,7 +185,7 @@ pub fn make_index_buffer(
 
   unsafe {
     try!(device.bind_buffer_memory(&transfer_buffer, &transfer_device_memory));
-    try!(device.map_data_to_memory(&transfer_device_memory, &indexes));
+    try!(device.map_vec_data_to_memory(&transfer_device_memory, &indexes));
   }
 
   let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_buffer(
@@ -209,6 +217,128 @@ pub fn make_index_buffer(
   })
 }
 
+#[repr(C, packed)]
+pub struct MVPUniform {
+  model: cgmath::Matrix4<f32>,
+  view: cgmath::Matrix4<f32>,
+  proj: cgmath::Matrix4<f32>,
+}
+
+pub struct UniformBufferDetails {
+  buffer: vkbs::PreparedBuffer,
+}
+
+pub fn make_uniform_buffer(
+  device: &vkl::LDevice,
+  memory_properties: &vk::PhysicalDeviceMemoryProperties,
+) -> vkl::RawResult<UniformBufferDetails> {
+  let buffer_size = std::mem::size_of::<MVPUniform>();
+  let prepared_buffer = try!(vkbs::make_buffer(
+    device,
+    buffer_size as u64,
+    vk::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    memory_properties,
+  ));
+  unsafe {
+    try!(device.bind_buffer_memory(
+      &prepared_buffer.0, /* buffer */
+      &prepared_buffer.1  /* deviceMemory */
+    ));
+  }
+  Ok(UniformBufferDetails {
+    buffer: prepared_buffer,
+  })
+}
+
+pub fn make_descriptor_pool(device: &vkl::LDevice) -> vkl::RawResult<vk::DescriptorPool> {
+  let pool_size = vk::DescriptorPoolSize {
+    ty: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    descriptorCount: 1,
+  };
+
+  let all_pool_sizes = [pool_size];
+  let descriptor_pool_create_info = vk::DescriptorPoolCreateInfo {
+    sType: vk::STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+    pNext: ptr::null(),
+    flags: 0,
+    maxSets: 1,
+    poolSizeCount: all_pool_sizes.len() as u32,
+    pPoolSizes: all_pool_sizes.as_ptr(),
+  };
+
+  device.create_descriptor_pool(&descriptor_pool_create_info)
+}
+
+pub fn make_descriptor_set_layouts(
+  device: &vkl::LDevice,
+) -> vkl::RawResult<Vec<vk::DescriptorSetLayout>> {
+  let ubo_layout_binding = vk::DescriptorSetLayoutBinding {
+    binding: 0,
+    descriptorType: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    descriptorCount: 1,
+    stageFlags: vk::SHADER_STAGE_VERTEX_BIT,
+    pImmutableSamplers: ptr::null(),
+  };
+  let all_bindings = [ubo_layout_binding];
+
+  let descriptor_set_layout_create_info = vk::DescriptorSetLayoutCreateInfo {
+    sType: vk::STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+    pNext: ptr::null(),
+    flags: 0,
+    bindingCount: 1,
+    pBindings: all_bindings.as_ptr(),
+  };
+
+  device
+    .create_descriptor_set_layout(&descriptor_set_layout_create_info)
+    .map(|l| vec![l])
+}
+
+pub fn make_descriptor_sets(
+  device: &vkl::LDevice,
+  descriptor_set_layouts: &Vec<vk::DescriptorSetLayout>,
+  descriptor_pool: &vk::DescriptorPool,
+) -> vkl::RawResult<Vec<vk::DescriptorSet>> {
+  let descriptor_set_allocate_info = vk::DescriptorSetAllocateInfo {
+    sType: vk::STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+    pNext: ptr::null(),
+    descriptorPool: *descriptor_pool,
+    descriptorSetCount: 1,
+    pSetLayouts: descriptor_set_layouts.as_ptr(),
+  };
+
+  device.allocate_descriptor_sets(&descriptor_set_allocate_info)
+}
+
+pub fn write_descriptor(
+  device: &vkl::LDevice,
+  uniform_buffer: &vk::Buffer,
+  descriptor_set: &vk::DescriptorSet,
+) {
+  let descriptor_buffer_info = vk::DescriptorBufferInfo {
+    buffer: *uniform_buffer,
+    offset: 0,
+    range: std::mem::size_of::<MVPUniform>() as u64,
+  };
+
+  let descriptor_set_write = vk::WriteDescriptorSet {
+    sType: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+    pNext: ptr::null(),
+    dstSet: *descriptor_set,
+    dstBinding: 0,
+    dstArrayElement: 0,
+    descriptorCount: 1,
+    descriptorType: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    pImageInfo: ptr::null(),
+    pBufferInfo: &descriptor_buffer_info,
+    pTexelBufferView: ptr::null(),
+  };
+
+  let all_descriptor_set_writes = vec![descriptor_set_write];
+  device.update_descriptor_sets(&all_descriptor_set_writes, &Vec::new());
+}
+
 pub fn record_command_buffers(
   device: &vkl::LDevice,
   swapchain: &vkss::LoadedSwapchain,
@@ -218,6 +348,8 @@ pub fn record_command_buffers(
   index_buffer: &vk::Buffer,
   num_indexes: u32,
   graphics_pipeline: &vk::Pipeline,
+  pipeline_layout: &vk::PipelineLayout,
+  descriptor_sets: &Vec<vk::DescriptorSet>,
   command_buffers: &Vec<vk::CommandBuffer>,
 ) {
   for (idx, command_buffer) in command_buffers.iter().enumerate() {
@@ -276,6 +408,16 @@ pub fn record_command_buffers(
           all_vertex_buffers.as_ptr(),
           all_buffer_offsets.as_ptr(),
         );
+        device.ptrs().CmdBindDescriptorSets(
+          *command_buffer,
+          vk::PIPELINE_BIND_POINT_GRAPHICS,
+          *pipeline_layout,
+          0,                            /* firstSet */
+          descriptor_sets.len() as u32, /* descriptorSetCount */
+          descriptor_sets.as_ptr(),
+          0, /* dynamicOffsetCount */
+          ptr::null(),
+        );
         device
           .ptrs()
           .CmdBindIndexBuffer(*command_buffer, *index_buffer, 0, vk::INDEX_TYPE_UINT16);
@@ -293,6 +435,7 @@ pub fn record_command_buffers(
 }
 
 pub struct VulkanTriangle {
+  start_time: Instant,
   instance: vkl::LInstance,
   device: vkl::LDevice,
   debug_report_callback: vk::DebugReportCallbackEXT,
@@ -302,8 +445,12 @@ pub struct VulkanTriangle {
   render_pass: vk::RenderPass,
   vert_shader_module: vk::ShaderModule,
   frag_shader_module: vk::ShaderModule,
+  uniform_buffer: vkbs::PreparedBuffer,
   vertex_buffer: vkbs::PreparedBuffer,
   index_buffer: vkbs::PreparedBuffer,
+  descriptor_pool: vk::DescriptorPool,
+  descriptor_set_layouts: Vec<vk::DescriptorSetLayout>,
+  descriptor_sets: Vec<vk::DescriptorSet>,
   pipeline_layout: vk::PipelineLayout,
   graphics_pipeline: vk::Pipeline,
   framebuffers: Vec<vk::Framebuffer>,
@@ -381,7 +528,8 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
   ));
 
   let render_pass = do_or_die!(vkps::make_render_pass(&device, &swapchain));
-  let pipeline_layout = do_or_die!(vkps::make_pipeline_layout(&device));
+  let descriptor_set_layouts = do_or_die!(make_descriptor_set_layouts(&device));
+  let pipeline_layout = do_or_die!(vkps::make_pipeline_layout(&device, &descriptor_set_layouts));
 
   let gfx_command_pool = do_or_die!(vkl::builtins::make_command_pool(
     &device,
@@ -399,7 +547,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
   } else {
     None
   };
-  let (vertex_buffer_details, index_buffer_details) = {
+  let (vertex_buffer_details, index_buffer_details, uniform_buffer_details) = {
     let copy_command_pool = transfer_command_pool_opt
       .as_ref()
       .unwrap_or(&gfx_command_pool);
@@ -421,8 +569,42 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
       &device_spec.memory_properties
     ));
 
-    (vertex_buffer_details, index_buffer_details)
+    let uniform_buffer_details =
+      do_or_die!(make_uniform_buffer(&device, &device_spec.memory_properties));
+
+    (
+      vertex_buffer_details,
+      index_buffer_details,
+      uniform_buffer_details,
+    )
   };
+
+  let descriptor_pool = do_or_die!(make_descriptor_pool(&device));
+
+  let descriptor_sets = do_or_die!(make_descriptor_sets(
+    &device,
+    &descriptor_set_layouts,
+    &descriptor_pool
+  ));
+
+  let default_uniform = MVPUniform {
+    model: cgmath::Matrix4::<f32>::one(),
+    view: cgmath::Matrix4::<f32>::one(),
+    proj: cgmath::Matrix4::<f32>::one(),
+  };
+
+  unsafe {
+    do_or_die!(device.map_data_to_memory(
+      &uniform_buffer_details.buffer.1, /* deviceMemory */
+      &default_uniform
+    ));
+  }
+
+  write_descriptor(
+    &device,
+    &uniform_buffer_details.buffer.0, /* buffer */
+    descriptor_sets.get(0).unwrap(),
+  );
 
   let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(
     &device,
@@ -468,6 +650,8 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     &index_buffer_details.buffer.0,  /* buffer */
     index_buffer_details.num_indexes,
     &graphics_pipeline,
+    &pipeline_layout,
+    &descriptor_sets,
     &command_buffers,
   );
 
@@ -475,6 +659,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
   let render_finished_semaphore = do_or_die!(vkl::builtins::make_semaphore(&device));
 
   VulkanTriangle {
+    start_time: Instant::now(),
     instance: instance,
     device: device,
     debug_report_callback: debug_report_callback,
@@ -484,8 +669,12 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     render_pass: render_pass,
     vert_shader_module: vert_shader_module,
     frag_shader_module: frag_shader_module,
+    uniform_buffer: uniform_buffer_details.buffer,
     index_buffer: index_buffer_details.buffer,
     vertex_buffer: vertex_buffer_details.buffer,
+    descriptor_pool: descriptor_pool,
+    descriptor_set_layouts: descriptor_set_layouts,
+    descriptor_sets: descriptor_sets,
     pipeline_layout: pipeline_layout,
     graphics_pipeline: graphics_pipeline,
     framebuffers: framebuffers,
@@ -498,8 +687,55 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
 }
 
 impl VulkanTriangle {
-  pub fn draw_demo_frame(&self) {
+  fn update_uniform_buffer(&mut self) {
+    let this_frame_time = Instant::now();
+    let dt = this_frame_time.duration_since(self.start_time);
+    let dt_millis = {
+      let dt_s_partial = dt.as_secs();
+      let dt_ns_partial = dt.subsec_nanos();
+      let dt_millis_partial_from_s = ((dt_s_partial as u32) * 1000u32) as f32;
+      let dt_millis_partial_from_ns = (dt_ns_partial as f32) / 1000f32;
+      dt_millis_partial_from_s + dt_millis_partial_from_ns
+    };
+    let millis_to_quarter_rotation = 100000.0;
+    // Cgmath appears to lack a scaling operation for radians for some reason
+    let rotation_fraction =
+      cgmath::Rad::<f32>::turn_div_4() * (dt_millis / millis_to_quarter_rotation);
+    info!("rotation_fraction {:?}", rotation_fraction);
+    let axis_of_rotation = cgmath::Vector3::<f32>::unit_z();
+    let model = cgmath::Matrix4::<f32>::from_axis_angle(axis_of_rotation, rotation_fraction);
+    let view = cgmath::Matrix4::<f32>::look_at(
+      cgmath::Point3::<f32>::new(2.0f32, 2.0f32, 2.0f32),
+      cgmath::Point3::<f32>::new(0.0f32, 0.0f32, 0.0f32),
+      cgmath::Vector3::<f32>::new(0.0f32, 0.0f32, 1.0f32),
+    );
+    let mut proj = cgmath::perspective(
+      (cgmath::Rad::<f32>::turn_div_4() / 2.0f32),
+      ((self.swapchain.surface_extent.width as f32)
+        / (self.swapchain.surface_extent.height as f32)),
+      0.1f32,
+      10.0f32,
+    );
+    proj.y.y = proj.y.y * -1.0f32;
+
+    let new_uniform = MVPUniform {
+      model: model,
+      view: view,
+      proj: proj,
+    };
+
     unsafe {
+      do_or_die!(
+        self
+          .device
+          .map_data_to_memory(&self.uniform_buffer.1 /* deviceMemory */, &new_uniform)
+      );
+    }
+  }
+
+  pub fn draw_demo_frame(&mut self) {
+    unsafe {
+      self.update_uniform_buffer();
       let image_index = do_or_die!(vkl::util::loady("next image", &|a| {
         self.device.ptrs().AcquireNextImageKHR(
           self.device.logical_device,
@@ -574,16 +810,28 @@ impl Drop for VulkanTriangle {
       self.device.destroy_framebuffer(framebuffer);
     }
     self.device.destroy_pipeline(self.graphics_pipeline);
+    self
+      .device
+      .destroy_buffer(self.uniform_buffer.0 /* buffer */);
     self.device.destroy_buffer(self.index_buffer.0 /* buffer */);
     self
       .device
       .destroy_buffer(self.vertex_buffer.0 /* buffer */);
     self
       .device
+      .free_memory(self.uniform_buffer.1 /* deviceMemory */);
+    self
+      .device
       .free_memory(self.index_buffer.1 /* deviceMemory */);
     self
       .device
       .free_memory(self.vertex_buffer.1 /* deviceMemory */);
+    self.device.destroy_descriptor_pool(self.descriptor_pool);
+    for descriptor_set_layout in self.descriptor_set_layouts.drain(..) {
+      self
+        .device
+        .destroy_descriptor_set_layout(descriptor_set_layout)
+    }
     self.device.destroy_pipeline_layout(self.pipeline_layout);
     self.device.destroy_shader_module(self.vert_shader_module);
     self.device.destroy_shader_module(self.frag_shader_module);

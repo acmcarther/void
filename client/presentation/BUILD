@@ -116,6 +116,8 @@ rust_library(
         ":vk_pipeline_support",
         ":vk_buffer_support",
         "//cargo:log",
+        "//cargo:cgmath",
+        "//cargo:chrono",
     ],
 )
 
