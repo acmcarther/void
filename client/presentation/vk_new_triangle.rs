@@ -171,7 +171,21 @@ pub fn make_index_buffer(
   queue: &vk::Queue,
   memory_properties: &vk::PhysicalDeviceMemoryProperties,
 ) -> vkl::RawResult<IndexBufferDetails> {
-  let indexes = vec![0u16, 1u16, 2u16, 2u16, 3u16, 0u16];
+  let indexes = vec![
+    0u16,
+    1u16,
+    2u16,
+    2u16,
+    3u16,
+    0u16,
+    // Make double sided
+    0u16,
+    3u16,
+    2u16,
+    2u16,
+    1u16,
+    0u16,
+  ];
 
   let buffer_size = (std::mem::size_of::<u16>() * indexes.len()) as u64;
 
@@ -587,19 +601,6 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     &descriptor_pool
   ));
 
-  let default_uniform = MVPUniform {
-    model: cgmath::Matrix4::<f32>::one(),
-    view: cgmath::Matrix4::<f32>::one(),
-    proj: cgmath::Matrix4::<f32>::one(),
-  };
-
-  unsafe {
-    do_or_die!(device.map_data_to_memory(
-      &uniform_buffer_details.buffer.1, /* deviceMemory */
-      &default_uniform
-    ));
-  }
-
   write_descriptor(
     &device,
     &uniform_buffer_details.buffer.0, /* buffer */
@@ -702,7 +703,7 @@ impl VulkanTriangle {
     let rotation_fraction =
       cgmath::Rad::<f32>::turn_div_4() * (dt_millis / millis_to_quarter_rotation);
     info!("rotation_fraction {:?}", rotation_fraction);
-    let axis_of_rotation = cgmath::Vector3::<f32>::unit_z();
+    let axis_of_rotation = cgmath::Vector3::<f32>::unit_x();
     let model = cgmath::Matrix4::<f32>::from_axis_angle(axis_of_rotation, rotation_fraction);
     let view = cgmath::Matrix4::<f32>::look_at(
       cgmath::Point3::<f32>::new(2.0f32, 2.0f32, 2.0f32),
