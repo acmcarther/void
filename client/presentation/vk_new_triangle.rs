@@ -54,29 +54,33 @@ pub struct VertexInputProps {
   binding_description: vk::VertexInputBindingDescription,
 }
 
-pub struct TransferableVertexBuffer {
+pub struct VertexBufferDetails {
   vertex_input_props: VertexInputProps,
-  transfer_buffer: vkbs::PreparedBuffer,
   buffer: vkbs::PreparedBuffer,
-  buffer_size: u64,
 }
 
 pub fn make_vertex_buffer(
   device: &vkl::LDevice,
+  command_pool: &vk::CommandPool,
+  queue: &vk::Queue,
   memory_properties: &vk::PhysicalDeviceMemoryProperties,
-) -> vkl::RawResult<TransferableVertexBuffer> {
+) -> vkl::RawResult<VertexBufferDetails> {
   let vertices = vec![
     TriangleData {
-      pos: [0.0f32, -0.5f32],
+      pos: [-0.5f32, -0.5f32],
       color: [1.0f32, 0.0f32, 0.0f32],
     },
     TriangleData {
-      pos: [0.5f32, 0.5f32],
+      pos: [0.5f32, -0.5f32],
       color: [0.0f32, 1.0f32, 0.0f32],
     },
     TriangleData {
-      pos: [-0.5f32, 0.5f32],
+      pos: [0.5f32, 0.5f32],
       color: [0.0f32, 0.0f32, 1.0f32],
+    },
+    TriangleData {
+      pos: [-0.5f32, 0.5f32],
+      color: [1.0f32, 1.0f32, 1.0f32],
     },
   ];
 
@@ -126,15 +130,82 @@ pub fn make_vertex_buffer(
     inputRate: vk::VERTEX_INPUT_RATE_VERTEX, /* advance per vertex (instead of per instance) */
   };
 
-  Ok(TransferableVertexBuffer {
-    transfer_buffer: vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory),
+  // Perform device copy in either transfer queue, or graphics queue (if we must)
+  {
+    do_or_die!(vkbs::copy_buffer(
+      &device,
+      command_pool,
+      &transfer_buffer, /* buffer */
+      &buffer,          /* buffer */
+      buffer_size,
+      queue
+    ));
+  }
+
+  Ok(VertexBufferDetails {
     buffer: vkbs::PreparedBuffer(buffer, device_memory),
     vertex_input_props: VertexInputProps {
       pos_attr_desc: pos_attr_desc,
       color_attr_desc: color_attr_desc,
       binding_description: binding_description,
     },
-    buffer_size: buffer_size,
+  })
+}
+
+pub struct IndexBufferDetails {
+  buffer: vkbs::PreparedBuffer,
+  num_indexes: u32,
+}
+
+pub fn make_index_buffer(
+  device: &vkl::LDevice,
+  command_pool: &vk::CommandPool,
+  queue: &vk::Queue,
+  memory_properties: &vk::PhysicalDeviceMemoryProperties,
+) -> vkl::RawResult<IndexBufferDetails> {
+  let indexes = vec![0u16, 1u16, 2u16, 2u16, 3u16, 0u16];
+
+  let buffer_size = (std::mem::size_of::<u16>() * indexes.len()) as u64;
+
+  let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) = try!(vkbs::make_buffer(
+    device,
+    buffer_size,
+    vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
+    vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    memory_properties
+  ));
+
+  unsafe {
+    try!(device.bind_buffer_memory(&transfer_buffer, &transfer_device_memory));
+    try!(device.map_data_to_memory(&transfer_device_memory, &indexes));
+  }
+
+  let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_buffer(
+    device,
+    buffer_size,
+    vk::BUFFER_USAGE_TRANSFER_DST_BIT | vk::BUFFER_USAGE_INDEX_BUFFER_BIT,
+    vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    memory_properties
+  ));
+  unsafe {
+    try!(device.bind_buffer_memory(&buffer, &device_memory));
+  }
+
+  // Perform device copy in either transfer queue, or graphics queue (if we must)
+  {
+    do_or_die!(vkbs::copy_buffer(
+      &device,
+      command_pool,
+      &transfer_buffer, /* buffer */
+      &buffer,          /* buffer */
+      buffer_size,
+      queue
+    ));
+  }
+
+  Ok(IndexBufferDetails {
+    num_indexes: indexes.len() as u32,
+    buffer: vkbs::PreparedBuffer(buffer, device_memory),
   })
 }
 
@@ -144,6 +215,8 @@ pub fn record_command_buffers(
   framebuffers: &Vec<vk::Framebuffer>,
   render_pass: &vk::RenderPass,
   vertex_buffer: &vk::Buffer,
+  index_buffer: &vk::Buffer,
+  num_indexes: u32,
   graphics_pipeline: &vk::Pipeline,
   command_buffers: &Vec<vk::CommandBuffer>,
 ) {
@@ -203,7 +276,12 @@ pub fn record_command_buffers(
           all_vertex_buffers.as_ptr(),
           all_buffer_offsets.as_ptr(),
         );
-        device.ptrs().CmdDraw(*command_buffer, 3, 1, 0, 0);
+        device
+          .ptrs()
+          .CmdBindIndexBuffer(*command_buffer, *index_buffer, 0, vk::INDEX_TYPE_UINT16);
+        device
+          .ptrs()
+          .CmdDrawIndexed(*command_buffer, num_indexes, 1, 0, 0, 0);
         device.ptrs().CmdEndRenderPass(*command_buffer);
       }
     }
@@ -224,8 +302,8 @@ pub struct VulkanTriangle {
   render_pass: vk::RenderPass,
   vert_shader_module: vk::ShaderModule,
   frag_shader_module: vk::ShaderModule,
-  transfer_buffer: vkbs::PreparedBuffer,
-  buffer: vkbs::PreparedBuffer,
+  vertex_buffer: vkbs::PreparedBuffer,
+  index_buffer: vkbs::PreparedBuffer,
   pipeline_layout: vk::PipelineLayout,
   graphics_pipeline: vk::Pipeline,
   framebuffers: Vec<vk::Framebuffer>,
@@ -305,41 +383,6 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
   let render_pass = do_or_die!(vkps::make_render_pass(&device, &swapchain));
   let pipeline_layout = do_or_die!(vkps::make_pipeline_layout(&device));
 
-  let TransferableVertexBuffer {
-    transfer_buffer,
-    buffer,
-    vertex_input_props,
-    buffer_size,
-  } = do_or_die!(make_vertex_buffer(&device, &device_spec.memory_properties));
-
-  let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(
-    &device,
-    include_bytes!("../../bazel-genfiles/client/presentation/triangle_vert_shader.spv"),
-  ));
-  let frag_shader_module = do_or_die!(vkl::builtins::make_shader_module(
-    &device,
-    include_bytes!("../../bazel-genfiles/client/presentation/triangle_frag_shader.spv"),
-  ));
-
-  let graphics_pipeline = do_or_die!(vkps::make_graphics_pipeline(
-    &device,
-    &vert_shader_module,
-    &frag_shader_module,
-    vertex_input_props.pos_attr_desc,
-    vertex_input_props.color_attr_desc,
-    vertex_input_props.binding_description,
-    &render_pass,
-    &swapchain,
-    &pipeline_layout
-  ));
-
-  let framebuffers = do_or_die!(vkbs::make_framebuffers(
-    &device,
-    &image_views,
-    &swapchain,
-    &render_pass
-  ));
-
   let gfx_command_pool = do_or_die!(vkl::builtins::make_command_pool(
     &device,
     device_spec.gfx_queue_family_idx
@@ -356,9 +399,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
   } else {
     None
   };
-
-  // Perform device copy in either transfer queue, or graphics queue (if we must)
-  {
+  let (vertex_buffer_details, index_buffer_details) = {
     let copy_command_pool = transfer_command_pool_opt
       .as_ref()
       .unwrap_or(&gfx_command_pool);
@@ -366,15 +407,50 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
       .dedicated_transfer_queue_family_idx_opt
       .unwrap_or(device_spec.gfx_queue_family_idx);
     let queue = device.get_device_queue(queue_family_idx, 0 /* queueIdx */);
-    do_or_die!(vkbs::copy_buffer(
+
+    let vertex_buffer_details = do_or_die!(make_vertex_buffer(
       &device,
-      copy_command_pool,
-      &transfer_buffer.0, /* buffer */
-      &buffer.0,          /* buffer */
-      buffer_size,
-      &queue
+      &copy_command_pool,
+      &queue,
+      &device_spec.memory_properties
     ));
-  }
+    let index_buffer_details = do_or_die!(make_index_buffer(
+      &device,
+      &copy_command_pool,
+      &queue,
+      &device_spec.memory_properties
+    ));
+
+    (vertex_buffer_details, index_buffer_details)
+  };
+
+  let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(
+    &device,
+    include_bytes!("../../bazel-genfiles/client/presentation/triangle_vert_shader.spv"),
+  ));
+  let frag_shader_module = do_or_die!(vkl::builtins::make_shader_module(
+    &device,
+    include_bytes!("../../bazel-genfiles/client/presentation/triangle_frag_shader.spv"),
+  ));
+
+  let graphics_pipeline = do_or_die!(vkps::make_graphics_pipeline(
+    &device,
+    &vert_shader_module,
+    &frag_shader_module,
+    vertex_buffer_details.vertex_input_props.pos_attr_desc,
+    vertex_buffer_details.vertex_input_props.color_attr_desc,
+    vertex_buffer_details.vertex_input_props.binding_description,
+    &render_pass,
+    &swapchain,
+    &pipeline_layout
+  ));
+
+  let framebuffers = do_or_die!(vkbs::make_framebuffers(
+    &device,
+    &image_views,
+    &swapchain,
+    &render_pass
+  ));
 
   let command_buffers = do_or_die!(vkbs::make_command_buffers(
     &device,
@@ -388,7 +464,9 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     &swapchain,
     &framebuffers,
     &render_pass,
-    &buffer.0, /* buffer */
+    &vertex_buffer_details.buffer.0, /* buffer */
+    &index_buffer_details.buffer.0,  /* buffer */
+    index_buffer_details.num_indexes,
     &graphics_pipeline,
     &command_buffers,
   );
@@ -406,8 +484,8 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     render_pass: render_pass,
     vert_shader_module: vert_shader_module,
     frag_shader_module: frag_shader_module,
-    transfer_buffer: transfer_buffer,
-    buffer: buffer,
+    index_buffer: index_buffer_details.buffer,
+    vertex_buffer: vertex_buffer_details.buffer,
     pipeline_layout: pipeline_layout,
     graphics_pipeline: graphics_pipeline,
     framebuffers: framebuffers,
@@ -421,7 +499,6 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
 
 impl VulkanTriangle {
   pub fn draw_demo_frame(&self) {
-    let mut image_index = 0;
     unsafe {
       let image_index = do_or_die!(vkl::util::loady("next image", &|a| {
         self.device.ptrs().AcquireNextImageKHR(
@@ -497,14 +574,16 @@ impl Drop for VulkanTriangle {
       self.device.destroy_framebuffer(framebuffer);
     }
     self.device.destroy_pipeline(self.graphics_pipeline);
+    self.device.destroy_buffer(self.index_buffer.0 /* buffer */);
     self
       .device
-      .destroy_buffer(self.transfer_buffer.0 /* buffer */);
-    self.device.destroy_buffer(self.buffer.0 /* buffer */);
+      .destroy_buffer(self.vertex_buffer.0 /* buffer */);
     self
       .device
-      .free_memory(self.transfer_buffer.1 /* deviceMemory */);
-    self.device.free_memory(self.buffer.1 /* deviceMemory */);
+      .free_memory(self.index_buffer.1 /* deviceMemory */);
+    self
+      .device
+      .free_memory(self.vertex_buffer.1 /* deviceMemory */);
     self.device.destroy_pipeline_layout(self.pipeline_layout);
     self.device.destroy_shader_module(self.vert_shader_module);
     self.device.destroy_shader_module(self.frag_shader_module);
