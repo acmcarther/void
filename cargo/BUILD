@@ -16,6 +16,10 @@ alias(
     actual = "@raze__bindgen__0_32_2//:cargo_bin_bindgen",
 )
 alias(
+    name = "cgmath",
+    actual = "@raze__cgmath__0_16_0//:cgmath",
+)
+alias(
     name = "chrono",
     actual = "@raze__chrono__0_4_0//:chrono",
 )

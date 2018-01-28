@@ -13,38 +13,26 @@ load(
     "rust_bench_test",
 )
 
+# Unsupported target "bench" with type "bench" omitted
+# Unsupported target "generators" with type "bench" omitted
+# Unsupported target "misc" with type "bench" omitted
 
 rust_library(
-    name = "winapi",
+    name = "rand",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__libc__0_2_36//:libc",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
-        "consoleapi",
-        "dbghelp",
-        "errhandlingapi",
-        "handleapi",
-        "minwinbase",
-        "minwindef",
-        "ntdef",
-        "ntsecapi",
-        "ntstatus",
-        "processenv",
-        "processthreadsapi",
-        "profileapi",
+        "default",
+        "libc",
         "std",
-        "synchapi",
-        "sysinfoapi",
-        "timezoneapi",
-        "winbase",
-        "winerror",
-        "winnt",
     ],
 )
 

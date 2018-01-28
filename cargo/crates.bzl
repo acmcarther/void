@@ -39,6 +39,14 @@ def raze_fetch_remote_crates():
     )
 
     native.new_http_archive(
+        name = "raze__approx__0_1_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/approx/approx-0.1.1.crate",
+        type = "tar.gz",
+        strip_prefix = "approx-0.1.1",
+        build_file = "//cargo:approx-0.1.1.BUILD"
+    )
+
+    native.new_http_archive(
         name = "raze__arrayvec__0_3_25",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/arrayvec/arrayvec-0.3.25.crate",
         type = "tar.gz",
@@ -172,6 +180,14 @@ def raze_fetch_remote_crates():
         type = "tar.gz",
         strip_prefix = "cfg-if-0.1.2",
         build_file = "//cargo:cfg-if-0.1.2.BUILD"
+    )
+
+    native.new_http_archive(
+        name = "raze__cgmath__0_16_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/cgmath/cgmath-0.16.0.crate",
+        type = "tar.gz",
+        strip_prefix = "cgmath-0.16.0",
+        build_file = "//cargo:cgmath-0.16.0.BUILD"
     )
 
     native.new_http_archive(
@@ -908,6 +924,14 @@ def raze_fetch_remote_crates():
         type = "tar.gz",
         strip_prefix = "rand-0.3.20",
         build_file = "//cargo:rand-0.3.20.BUILD"
+    )
+
+    native.new_http_archive(
+        name = "raze__rand__0_4_2",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/rand/rand-0.4.2.crate",
+        type = "tar.gz",
+        strip_prefix = "rand-0.4.2",
+        build_file = "//cargo:rand-0.4.2.BUILD"
     )
 
     native.new_http_archive(

@@ -15,7 +15,7 @@ load(
 
 
 rust_library(
-    name = "winapi",
+    name = "approx",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
@@ -26,25 +26,9 @@ rust_library(
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
-        "consoleapi",
-        "dbghelp",
-        "errhandlingapi",
-        "handleapi",
-        "minwinbase",
-        "minwindef",
-        "ntdef",
-        "ntsecapi",
-        "ntstatus",
-        "processenv",
-        "processthreadsapi",
-        "profileapi",
-        "std",
-        "synchapi",
-        "sysinfoapi",
-        "timezoneapi",
-        "winbase",
-        "winerror",
-        "winnt",
     ],
 )
 
+# Unsupported target "macros" with type "test" omitted
+# Unsupported target "relative_eq" with type "test" omitted
+# Unsupported target "ulps_eq" with type "test" omitted

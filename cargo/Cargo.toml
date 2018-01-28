@@ -27,6 +27,7 @@ x11-dl = "2.17.2"
 rustfmt-nightly = "0.3.6"
 memoffset = "0.2.1"
 derive_builder = "0.5.1"
+cgmath = "0.16.0"
 
 [lib]
 path = "fake_lib.rs"
@@ -64,3 +65,7 @@ gen_buildrs = true
 additional_deps = [
   "@llvm//:clang"
 ]
+
+[raze.crates.cgmath.'0.16.0']
+# Generates some functions or something
+gen_buildrs = true
