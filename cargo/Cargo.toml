@@ -26,6 +26,7 @@ dylib = "0.0.3"
 x11-dl = "2.17.2"
 rustfmt-nightly = "0.3.6"
 memoffset = "0.2.1"
+derive_builder = "0.5.1"
 
 [lib]
 path = "fake_lib.rs"

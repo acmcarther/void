@@ -271,6 +271,22 @@ def raze_fetch_remote_crates():
     )
 
     native.new_http_archive(
+        name = "raze__derive_builder__0_5_1",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/derive_builder/derive_builder-0.5.1.crate",
+        type = "tar.gz",
+        strip_prefix = "derive_builder-0.5.1",
+        build_file = "//cargo:derive_builder-0.5.1.BUILD"
+    )
+
+    native.new_http_archive(
+        name = "raze__derive_builder_core__0_2_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/derive_builder_core/derive_builder_core-0.2.0.crate",
+        type = "tar.gz",
+        strip_prefix = "derive_builder_core-0.2.0",
+        build_file = "//cargo:derive_builder_core-0.2.0.BUILD"
+    )
+
+    native.new_http_archive(
         name = "raze__diff__0_1_11",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/diff/diff-0.1.11.crate",
         type = "tar.gz",

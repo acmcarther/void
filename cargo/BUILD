@@ -20,6 +20,10 @@ alias(
     actual = "@raze__chrono__0_4_0//:chrono",
 )
 alias(
+    name = "derive_builder",
+    actual = "@raze__derive_builder__0_5_1//:derive_builder",
+)
+alias(
     name = "dylib",
     actual = "@raze__dylib__0_0_3//:dylib",
 )
