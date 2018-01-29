@@ -6,6 +6,7 @@ extern crate log;
 extern crate memoffset;
 extern crate png;
 extern crate vk_buffer_support as vkbs;
+extern crate vk_descriptor_support as vkdrs;
 extern crate vk_device_support as vkds;
 extern crate vk_instance_support as vkis;
 #[macro_use(do_or_die)]
@@ -56,11 +57,13 @@ fn x11_related_layer_spec() -> vkl::FeatureSpec {
 struct TriangleData {
   pos: [f32; 2],
   color: [f32; 3],
+  tex: [f32; 2],
 }
 
 pub struct VertexInputProps {
   pos_attr_desc: vk::VertexInputAttributeDescription,
   color_attr_desc: vk::VertexInputAttributeDescription,
+  tex_attr_desc: vk::VertexInputAttributeDescription,
   binding_description: vk::VertexInputBindingDescription,
 }
 
@@ -79,18 +82,22 @@ pub fn make_vertex_buffer(
     TriangleData {
       pos: [-0.5f32, -0.5f32],
       color: [1.0f32, 0.0f32, 0.0f32],
+      tex: [1.0f32, 0.0f32],
     },
     TriangleData {
       pos: [0.5f32, -0.5f32],
       color: [0.0f32, 1.0f32, 0.0f32],
+      tex: [0.0f32, 0.0f32],
     },
     TriangleData {
       pos: [0.5f32, 0.5f32],
       color: [0.0f32, 0.0f32, 1.0f32],
+      tex: [0.0f32, 1.0f32],
     },
     TriangleData {
       pos: [-0.5f32, 0.5f32],
       color: [1.0f32, 1.0f32, 1.0f32],
+      tex: [1.0f32, 1.0f32],
     },
   ];
 
@@ -134,6 +141,13 @@ pub fn make_vertex_buffer(
     offset: offset_of!(TriangleData, color) as u32,
   };
 
+  let tex_attr_desc = vk::VertexInputAttributeDescription {
+    binding: 0,
+    location: 2,
+    format: vk::FORMAT_R32G32_SFLOAT,
+    offset: offset_of!(TriangleData, tex) as u32,
+  };
+
   let binding_description = vk::VertexInputBindingDescription {
     binding: 0,
     stride: std::mem::size_of::<TriangleData>() as u32,
@@ -160,6 +174,7 @@ pub fn make_vertex_buffer(
     vertex_input_props: VertexInputProps {
       pos_attr_desc: pos_attr_desc,
       color_attr_desc: color_attr_desc,
+      tex_attr_desc: tex_attr_desc,
       binding_description: binding_description,
     },
   })
@@ -184,12 +199,12 @@ pub fn make_index_buffer(
     3u16,
     0u16,
     // Make double sided
-    0u16,
-    3u16,
-    2u16,
-    2u16,
-    1u16,
-    0u16,
+    //0u16,
+    //3u16,
+    //2u16,
+    //2u16,
+    //1u16,
+    //0u16,
   ];
 
   let buffer_size = (std::mem::size_of::<u16>() * indexes.len()) as u64;
@@ -331,6 +346,31 @@ pub fn make_texture_image_view(
   vkss::make_image_view(device, image, vk::FORMAT_R8G8B8A8_UNORM)
 }
 
+pub fn make_texture_sampler(device: &vkl::LDevice) -> vkl::RawResult<vk::Sampler> {
+  let sampler_create_info = vk::SamplerCreateInfo {
+    sType: vk::STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+    pNext: ptr::null(),
+    flags: 0,
+    magFilter: vk::FILTER_LINEAR,
+    minFilter: vk::FILTER_LINEAR,
+    mipmapMode: vk::SAMPLER_MIPMAP_MODE_LINEAR,
+    addressModeU: vk::SAMPLER_ADDRESS_MODE_REPEAT,
+    addressModeV: vk::SAMPLER_ADDRESS_MODE_REPEAT,
+    addressModeW: vk::SAMPLER_ADDRESS_MODE_REPEAT,
+    mipLodBias: 0.0f32,
+    anisotropyEnable: vk::TRUE,
+    maxAnisotropy: 16.0f32,
+    compareEnable: vk::TRUE,
+    compareOp: vk::COMPARE_OP_ALWAYS,
+    minLod: 0.0f32,
+    maxLod: 0.0f32,
+    borderColor: vk::BORDER_COLOR_INT_OPAQUE_BLACK,
+    unnormalizedCoordinates: vk::FALSE,
+  };
+
+  device.create_sampler(&sampler_create_info)
+}
+
 #[repr(C, packed)]
 pub struct MVPUniform {
   model: cgmath::Matrix4<f32>,
@@ -363,94 +403,6 @@ pub fn make_uniform_buffer(
   Ok(UniformBufferDetails {
     buffer: prepared_buffer,
   })
-}
-
-pub fn make_descriptor_pool(device: &vkl::LDevice) -> vkl::RawResult<vk::DescriptorPool> {
-  let pool_size = vk::DescriptorPoolSize {
-    ty: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    descriptorCount: 1,
-  };
-
-  let all_pool_sizes = [pool_size];
-  let descriptor_pool_create_info = vk::DescriptorPoolCreateInfo {
-    sType: vk::STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-    pNext: ptr::null(),
-    flags: 0,
-    maxSets: 1,
-    poolSizeCount: all_pool_sizes.len() as u32,
-    pPoolSizes: all_pool_sizes.as_ptr(),
-  };
-
-  device.create_descriptor_pool(&descriptor_pool_create_info)
-}
-
-pub fn make_descriptor_set_layouts(
-  device: &vkl::LDevice,
-) -> vkl::RawResult<Vec<vk::DescriptorSetLayout>> {
-  let ubo_layout_binding = vk::DescriptorSetLayoutBinding {
-    binding: 0,
-    descriptorType: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    descriptorCount: 1,
-    stageFlags: vk::SHADER_STAGE_VERTEX_BIT,
-    pImmutableSamplers: ptr::null(),
-  };
-  let all_bindings = [ubo_layout_binding];
-
-  let descriptor_set_layout_create_info = vk::DescriptorSetLayoutCreateInfo {
-    sType: vk::STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-    pNext: ptr::null(),
-    flags: 0,
-    bindingCount: 1,
-    pBindings: all_bindings.as_ptr(),
-  };
-
-  device
-    .create_descriptor_set_layout(&descriptor_set_layout_create_info)
-    .map(|l| vec![l])
-}
-
-pub fn make_descriptor_sets(
-  device: &vkl::LDevice,
-  descriptor_set_layouts: &Vec<vk::DescriptorSetLayout>,
-  descriptor_pool: &vk::DescriptorPool,
-) -> vkl::RawResult<Vec<vk::DescriptorSet>> {
-  let descriptor_set_allocate_info = vk::DescriptorSetAllocateInfo {
-    sType: vk::STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-    pNext: ptr::null(),
-    descriptorPool: *descriptor_pool,
-    descriptorSetCount: 1,
-    pSetLayouts: descriptor_set_layouts.as_ptr(),
-  };
-
-  device.allocate_descriptor_sets(&descriptor_set_allocate_info)
-}
-
-pub fn write_descriptor(
-  device: &vkl::LDevice,
-  uniform_buffer: &vk::Buffer,
-  descriptor_set: &vk::DescriptorSet,
-) {
-  let descriptor_buffer_info = vk::DescriptorBufferInfo {
-    buffer: *uniform_buffer,
-    offset: 0,
-    range: std::mem::size_of::<MVPUniform>() as u64,
-  };
-
-  let descriptor_set_write = vk::WriteDescriptorSet {
-    sType: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-    pNext: ptr::null(),
-    dstSet: *descriptor_set,
-    dstBinding: 0,
-    dstArrayElement: 0,
-    descriptorCount: 1,
-    descriptorType: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    pImageInfo: ptr::null(),
-    pBufferInfo: &descriptor_buffer_info,
-    pTexelBufferView: ptr::null(),
-  };
-
-  let all_descriptor_set_writes = vec![descriptor_set_write];
-  device.update_descriptor_sets(&all_descriptor_set_writes, &Vec::new());
 }
 
 pub fn record_command_buffers(
@@ -564,6 +516,7 @@ pub struct VulkanTriangle {
   index_buffer: vkbs::PreparedBuffer,
   texture_image: vkbs::PreparedImage,
   texture_image_view: vk::ImageView,
+  texture_sampler: vk::Sampler,
   descriptor_pool: vk::DescriptorPool,
   descriptor_set_layouts: Vec<vk::DescriptorSetLayout>,
   descriptor_sets: Vec<vk::DescriptorSet>,
@@ -644,7 +597,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
   ));
 
   let render_pass = do_or_die!(vkps::make_render_pass(&device, &swapchain));
-  let descriptor_set_layouts = do_or_die!(make_descriptor_set_layouts(&device));
+  let descriptor_set_layouts = do_or_die!(vkdrs::make_descriptor_set_layouts(&device));
   let pipeline_layout = do_or_die!(vkps::make_pipeline_layout(&device, &descriptor_set_layouts));
 
   let gfx_command_pool = do_or_die!(vkl::builtins::make_command_pool(
@@ -709,18 +662,22 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     &texture_buffer_details.image.0 /* image */
   ));
 
-  let descriptor_pool = do_or_die!(make_descriptor_pool(&device));
+  let texture_sampler = do_or_die!(make_texture_sampler(&device));
 
-  let descriptor_sets = do_or_die!(make_descriptor_sets(
+  let descriptor_pool = do_or_die!(vkdrs::make_descriptor_pool(&device));
+
+  let descriptor_sets = do_or_die!(vkdrs::make_descriptor_sets(
     &device,
     &descriptor_set_layouts,
     &descriptor_pool
   ));
 
-  write_descriptor(
+  vkdrs::write_descriptor::<MVPUniform>(
     &device,
     &uniform_buffer_details.buffer.0, /* buffer */
     descriptor_sets.get(0).unwrap(),
+    &texture_image_view,
+    &texture_sampler,
   );
 
   let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(
@@ -738,6 +695,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     &frag_shader_module,
     vertex_buffer_details.vertex_input_props.pos_attr_desc,
     vertex_buffer_details.vertex_input_props.color_attr_desc,
+    vertex_buffer_details.vertex_input_props.tex_attr_desc,
     vertex_buffer_details.vertex_input_props.binding_description,
     &render_pass,
     &swapchain,
@@ -791,6 +749,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     vertex_buffer: vertex_buffer_details.buffer,
     texture_image: texture_buffer_details.image,
     texture_image_view: texture_image_view,
+    texture_sampler: texture_sampler,
     descriptor_pool: descriptor_pool,
     descriptor_set_layouts: descriptor_set_layouts,
     descriptor_sets: descriptor_sets,
@@ -816,11 +775,11 @@ impl VulkanTriangle {
       let dt_millis_partial_from_ns = (dt_ns_partial as f32) / 1000f32;
       dt_millis_partial_from_s + dt_millis_partial_from_ns
     };
-    let millis_to_quarter_rotation = 100000.0;
+    let millis_to_quarter_rotation = 1000000.0;
     // Cgmath appears to lack a scaling operation for radians for some reason
     let rotation_fraction =
       cgmath::Rad::<f32>::turn_div_4() * (dt_millis / millis_to_quarter_rotation);
-    let axis_of_rotation = cgmath::Vector3::<f32>::unit_x();
+    let axis_of_rotation = cgmath::Vector3::<f32>::unit_z();
     let model = cgmath::Matrix4::<f32>::from_axis_angle(axis_of_rotation, rotation_fraction);
     let view = cgmath::Matrix4::<f32>::look_at(
       cgmath::Point3::<f32>::new(2.0f32, 2.0f32, 2.0f32),
@@ -928,6 +887,7 @@ impl Drop for VulkanTriangle {
       self.device.destroy_framebuffer(framebuffer);
     }
     self.device.destroy_pipeline(self.graphics_pipeline);
+    self.device.destroy_sampler(self.texture_sampler);
     self.device.destroy_image_view(self.texture_image_view);
     self
       .device

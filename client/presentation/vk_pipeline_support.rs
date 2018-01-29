@@ -94,6 +94,7 @@ pub fn make_graphics_pipeline(
   frag_shader_module: &vk::ShaderModule,
   pos_attr_desc: vk::VertexInputAttributeDescription,
   color_attr_desc: vk::VertexInputAttributeDescription,
+  tex_attr_desc: vk::VertexInputAttributeDescription,
   binding_description: vk::VertexInputBindingDescription,
   render_pass: &vk::RenderPass,
   swapchain: &vkss::LoadedSwapchain,
@@ -122,14 +123,14 @@ pub fn make_graphics_pipeline(
   };
 
   let all_vertex_binding_descriptions = [binding_description];
-  let all_vertex_attribute_descriptions = [pos_attr_desc, color_attr_desc];
+  let all_vertex_attribute_descriptions = [pos_attr_desc, color_attr_desc, tex_attr_desc];
   let pipeline_vertex_input_state_create_info = vk::PipelineVertexInputStateCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
     pNext: ptr::null(),
     flags: 0,
     vertexBindingDescriptionCount: 1,
     pVertexBindingDescriptions: all_vertex_binding_descriptions.as_ptr(),
-    vertexAttributeDescriptionCount: 2,
+    vertexAttributeDescriptionCount: 3,
     pVertexAttributeDescriptions: all_vertex_attribute_descriptions.as_ptr(),
   };
 

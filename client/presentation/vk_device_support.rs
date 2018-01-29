@@ -510,7 +510,7 @@ pub fn make_logical_device(
     largePoints: vk::FALSE,
     alphaToOne: vk::FALSE,
     multiViewport: vk::FALSE,
-    samplerAnisotropy: vk::FALSE,
+    samplerAnisotropy: vk::TRUE, /* enabled for demo */
     textureCompressionETC2: vk::FALSE,
     textureCompressionASTC_LDR: vk::FALSE,
     textureCompressionBC: vk::FALSE,

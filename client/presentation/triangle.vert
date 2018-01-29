@@ -9,8 +9,10 @@ layout(binding = 0) uniform MVPUniform {
 
 layout(location = 0) in vec2 inPosition;
 layout(location = 1) in vec3 inColor;
+layout(location = 2) in vec2 inTex;
 
 layout(location = 0) out vec3 fragColor;
+layout(location = 1) out vec2 fragTex;
 
 out gl_PerVertex {
     vec4 gl_Position;
@@ -19,4 +21,5 @@ out gl_PerVertex {
 void main() {
     gl_Position = mvpUbo.proj * mvpUbo.view * mvpUbo.model * vec4(inPosition, 0.0, 1.0);
     fragColor = inColor;
+    fragTex = inTex;
 }

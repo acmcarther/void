@@ -86,6 +86,17 @@ rust_library(
 )
 
 rust_library(
+    name = "vk_descriptor_support",
+    srcs = ["vk_descriptor_support.rs"],
+    deps = [
+        "//cargo:derive_builder",
+        "//cargo:vk_sys",
+        ":vk_lite",
+        "//cargo:log",
+    ],
+)
+
+rust_library(
     name = "vk_new_triangle",
     srcs = ["vk_new_triangle.rs"],
     data = [
@@ -102,6 +113,7 @@ rust_library(
         ":vk_swapchain_support",
         ":vk_pipeline_support",
         ":vk_buffer_support",
+        ":vk_descriptor_support",
         "//cargo:log",
         "//cargo:cgmath",
         "//cargo:chrono",
