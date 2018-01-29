@@ -174,6 +174,36 @@ pub fn make_swapchain(
   })
 }
 
+pub fn make_image_view(
+  device: &vkl::LDevice,
+  image: &vk::Image,
+  format: vk::Format,
+) -> vkl::RawResult<vk::ImageView> {
+  let image_create_info = vk::ImageViewCreateInfo {
+    sType: vk::STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+    pNext: ptr::null(),
+    flags: 0,
+    image: *image,
+    viewType: vk::IMAGE_VIEW_TYPE_2D,
+    format: format,
+    components: vk::ComponentMapping {
+      r: vk::COMPONENT_SWIZZLE_IDENTITY,
+      g: vk::COMPONENT_SWIZZLE_IDENTITY,
+      b: vk::COMPONENT_SWIZZLE_IDENTITY,
+      a: vk::COMPONENT_SWIZZLE_IDENTITY,
+    },
+    subresourceRange: vk::ImageSubresourceRange {
+      aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
+      baseMipLevel: 0,
+      levelCount: 1,
+      baseArrayLayer: 0,
+      layerCount: 1,
+    },
+  };
+
+  device.create_image_view(&image_create_info)
+}
+
 pub fn make_image_views(
   device: &vkl::LDevice,
   swapchain_images: &Vec<vk::Image>,
@@ -182,31 +212,11 @@ pub fn make_image_views(
   let mut image_views = Vec::with_capacity(swapchain_images.len());
   println!("Vulkan creating image view for each image.");
   for swapchain_image in swapchain_images.iter() {
-    let image_view_create_info = vk::ImageViewCreateInfo {
-      sType: vk::STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-      pNext: ptr::null(),
-      flags: 0,
-      image: *swapchain_image,
-      format: swapchain.surface_format.format,
-      viewType: vk::IMAGE_VIEW_TYPE_2D,
-      components: vk::ComponentMapping {
-        r: vk::COMPONENT_SWIZZLE_IDENTITY,
-        g: vk::COMPONENT_SWIZZLE_IDENTITY,
-        b: vk::COMPONENT_SWIZZLE_IDENTITY,
-        a: vk::COMPONENT_SWIZZLE_IDENTITY,
-      },
-      // N.B.: Under a sterographic 3d application situation, create a swapchain containing
-      // multiple layers -- one per view
-      subresourceRange: vk::ImageSubresourceRange {
-        aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
-        baseMipLevel: 0,
-        levelCount: 1,
-        baseArrayLayer: 0,
-        layerCount: 1,
-      },
-    };
-
-    image_views.push(try!(device.create_image_view(&image_view_create_info)));
+    image_views.push(try!(make_image_view(
+      device,
+      swapchain_image,
+      swapchain.surface_format.format
+    )));
   }
 
   Ok(image_views)

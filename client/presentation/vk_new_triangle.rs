@@ -324,6 +324,13 @@ pub fn make_texture_image(
   })
 }
 
+pub fn make_texture_image_view(
+  device: &vkl::LDevice,
+  image: &vk::Image,
+) -> vkl::RawResult<vk::ImageView> {
+  vkss::make_image_view(device, image, vk::FORMAT_R8G8B8A8_UNORM)
+}
+
 #[repr(C, packed)]
 pub struct MVPUniform {
   model: cgmath::Matrix4<f32>,
@@ -556,6 +563,7 @@ pub struct VulkanTriangle {
   vertex_buffer: vkbs::PreparedBuffer,
   index_buffer: vkbs::PreparedBuffer,
   texture_image: vkbs::PreparedImage,
+  texture_image_view: vk::ImageView,
   descriptor_pool: vk::DescriptorPool,
   descriptor_set_layouts: Vec<vk::DescriptorSetLayout>,
   descriptor_sets: Vec<vk::DescriptorSet>,
@@ -696,6 +704,11 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     )
   };
 
+  let texture_image_view = do_or_die!(make_texture_image_view(
+    &device,
+    &texture_buffer_details.image.0 /* image */
+  ));
+
   let descriptor_pool = do_or_die!(make_descriptor_pool(&device));
 
   let descriptor_sets = do_or_die!(make_descriptor_sets(
@@ -777,6 +790,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     index_buffer: index_buffer_details.buffer,
     vertex_buffer: vertex_buffer_details.buffer,
     texture_image: texture_buffer_details.image,
+    texture_image_view: texture_image_view,
     descriptor_pool: descriptor_pool,
     descriptor_set_layouts: descriptor_set_layouts,
     descriptor_sets: descriptor_sets,
@@ -914,6 +928,7 @@ impl Drop for VulkanTriangle {
       self.device.destroy_framebuffer(framebuffer);
     }
     self.device.destroy_pipeline(self.graphics_pipeline);
+    self.device.destroy_image_view(self.texture_image_view);
     self
       .device
       .destroy_buffer(self.uniform_buffer.0 /* buffer */);
