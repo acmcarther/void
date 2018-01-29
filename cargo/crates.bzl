@@ -559,6 +559,14 @@ def raze_fetch_remote_crates():
     )
 
     native.new_http_archive(
+        name = "raze__inflate__0_3_3",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/inflate/inflate-0.3.3.crate",
+        type = "tar.gz",
+        strip_prefix = "inflate-0.3.3",
+        build_file = "//cargo:inflate-0.3.3.BUILD"
+    )
+
+    native.new_http_archive(
         name = "raze__iovec__0_1_1",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/iovec/iovec-0.1.1.crate",
         type = "tar.gz",
@@ -892,6 +900,14 @@ def raze_fetch_remote_crates():
         type = "tar.gz",
         strip_prefix = "pkg-config-0.3.9",
         build_file = "//cargo:pkg-config-0.3.9.BUILD"
+    )
+
+    native.new_http_archive(
+        name = "raze__png__0_11_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/png/png-0.11.0.crate",
+        type = "tar.gz",
+        strip_prefix = "png-0.11.0",
+        build_file = "//cargo:png-0.11.0.BUILD"
     )
 
     native.new_http_archive(

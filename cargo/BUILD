@@ -72,6 +72,10 @@ alias(
     actual = "@raze__memoffset__0_2_1//:memoffset",
 )
 alias(
+    name = "png",
+    actual = "@raze__png__0_11_0//:png",
+)
+alias(
     name = "rand",
     actual = "@raze__rand__0_3_20//:rand",
 )
