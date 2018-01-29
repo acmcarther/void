@@ -152,6 +152,9 @@ pub fn make_vertex_buffer(
     ));
   }
 
+  device.destroy_buffer(transfer_buffer);
+  device.free_memory(transfer_device_memory);
+
   Ok(VertexBufferDetails {
     buffer: vkbs::PreparedBuffer(buffer, device_memory),
     vertex_input_props: VertexInputProps {
@@ -227,10 +230,17 @@ pub fn make_index_buffer(
     ));
   }
 
+  device.destroy_buffer(transfer_buffer);
+  device.free_memory(transfer_device_memory);
+
   Ok(IndexBufferDetails {
     num_indexes: indexes.len() as u32,
     buffer: vkbs::PreparedBuffer(buffer, device_memory),
   })
+}
+
+pub struct TextureImageDetails {
+  image: vkbs::PreparedImage,
 }
 
 pub fn make_texture_image(
@@ -238,17 +248,19 @@ pub fn make_texture_image(
   command_pool: &vk::CommandPool,
   queue: &vk::Queue,
   memory_properties: &vk::PhysicalDeviceMemoryProperties,
-) -> vkl::RawResult<()> {
+) -> vkl::RawResult<TextureImageDetails> {
   let png_bytes = include_bytes!("texture.png");
   let img_decoder = png::Decoder::new(png_bytes as &[u8]);
   let (img_info, mut img_reader) = img_decoder.read_info().unwrap();
   let mut img_buf: Vec<u8> = vec![0; img_info.buffer_size()];
   img_reader.next_frame(&mut img_buf).unwrap();
 
+  let buffer_size = (img_info.width * img_info.height * 4) as u64;
+
   let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) = try!(vkbs::make_buffer(
     device,
-    img_info.buffer_size() as u64,
-    vk::BUFFER_USAGE_TRANSFER_DST_BIT,
+    buffer_size,
+    vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
     vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
     memory_properties
   ));
@@ -266,12 +278,50 @@ pub fn make_texture_image(
   let vkbs::PreparedImage(image, image_device_memory) = try!(vkbs::make_image(
     device,
     image_extent,
+    vk::FORMAT_R8G8B8A8_UNORM,
     vk::IMAGE_USAGE_TRANSFER_DST_BIT | vk::IMAGE_USAGE_SAMPLED_BIT,
     vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     memory_properties
   ));
 
-  Ok(())
+  unsafe {
+    try!(device.bind_image_memory(&image, &image_device_memory, 0));
+  }
+
+  try!(vkbs::transition_image_layout(
+    &device,
+    &command_pool,
+    &queue,
+    &image,
+    vk::IMAGE_LAYOUT_UNDEFINED,
+    vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+  ));
+
+  try!(vkbs::copy_buffer_into_image(
+    &device,
+    &transfer_buffer,
+    &image,
+    img_info.width,
+    img_info.height,
+    &command_pool,
+    &queue
+  ));
+
+  try!(vkbs::transition_image_layout(
+    &device,
+    &command_pool,
+    &queue,
+    &image,
+    vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    vk::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+  ));
+
+  device.destroy_buffer(transfer_buffer);
+  device.free_memory(transfer_device_memory);
+
+  Ok(TextureImageDetails {
+    image: vkbs::PreparedImage(image, image_device_memory),
+  })
 }
 
 #[repr(C, packed)]
@@ -505,6 +555,7 @@ pub struct VulkanTriangle {
   uniform_buffer: vkbs::PreparedBuffer,
   vertex_buffer: vkbs::PreparedBuffer,
   index_buffer: vkbs::PreparedBuffer,
+  texture_image: vkbs::PreparedImage,
   descriptor_pool: vk::DescriptorPool,
   descriptor_set_layouts: Vec<vk::DescriptorSetLayout>,
   descriptor_sets: Vec<vk::DescriptorSet>,
@@ -612,6 +663,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
       .dedicated_transfer_queue_family_idx_opt
       .unwrap_or(device_spec.gfx_queue_family_idx);
     let queue = device.get_device_queue(queue_family_idx, 0 /* queueIdx */);
+    let gfx_queue = device.get_device_queue(device_spec.gfx_queue_family_idx, 0 /* queueIdx */);
 
     let vertex_buffer_details = do_or_die!(make_vertex_buffer(
       &device,
@@ -631,8 +683,8 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
 
     let texture_buffer_details = do_or_die!(make_texture_image(
       &device,
-      &copy_command_pool,
-      &queue,
+      &gfx_command_pool,
+      &gfx_queue,
       &device_spec.memory_properties
     ));
 
@@ -724,6 +776,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     uniform_buffer: uniform_buffer_details.buffer,
     index_buffer: index_buffer_details.buffer,
     vertex_buffer: vertex_buffer_details.buffer,
+    texture_image: texture_buffer_details.image,
     descriptor_pool: descriptor_pool,
     descriptor_set_layouts: descriptor_set_layouts,
     descriptor_sets: descriptor_sets,
@@ -753,7 +806,6 @@ impl VulkanTriangle {
     // Cgmath appears to lack a scaling operation for radians for some reason
     let rotation_fraction =
       cgmath::Rad::<f32>::turn_div_4() * (dt_millis / millis_to_quarter_rotation);
-    info!("rotation_fraction {:?}", rotation_fraction);
     let axis_of_rotation = cgmath::Vector3::<f32>::unit_x();
     let model = cgmath::Matrix4::<f32>::from_axis_angle(axis_of_rotation, rotation_fraction);
     let view = cgmath::Matrix4::<f32>::look_at(
@@ -869,6 +921,10 @@ impl Drop for VulkanTriangle {
     self
       .device
       .destroy_buffer(self.vertex_buffer.0 /* buffer */);
+    self.device.destroy_image(self.texture_image.0 /* image */);
+    self
+      .device
+      .free_memory(self.texture_image.1 /* deviceMemory */);
     self
       .device
       .free_memory(self.uniform_buffer.1 /* deviceMemory */);

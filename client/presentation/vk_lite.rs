@@ -980,6 +980,22 @@ impl LDevice {
     }
   }
 
+  pub unsafe fn bind_image_memory(
+    &self,
+    image: &vk::Image,
+    device_memory: &vk::DeviceMemory,
+    offset: u64,
+  ) -> RawResult<()> {
+    unsafe {
+      util::dooy("bind buffer memory", &|| unsafe {
+        self
+          .device_ptrs
+          .BindImageMemory(self.logical_device, *image, *device_memory, offset)
+      })
+    }
+  }
+
+
   pub unsafe fn map_data_to_memory<T>(&self, memory: &vk::DeviceMemory, data: &T) -> RawResult<()> {
     unsafe {
       let mut bound_data: *mut *mut c_void = std::mem::uninitialized();

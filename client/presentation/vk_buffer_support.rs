@@ -73,6 +73,7 @@ pub fn make_buffer(
 pub fn make_image(
   device: &vkl::LDevice,
   image_extent: vk::Extent3D,
+  format: vk::Format,
   image_usage: vk::BufferUsageFlags,
   memory_property_flags: vk::MemoryPropertyFlags,
   memory_properties: &vk::PhysicalDeviceMemoryProperties,
@@ -82,7 +83,7 @@ pub fn make_image(
     pNext: ptr::null(),
     flags: 0,
     imageType: vk::IMAGE_TYPE_2D,
-    format: vk::FORMAT_R8G8B8A8_UNORM,
+    format: format,
     extent: image_extent,
     mipLevels: 1,
     arrayLayers: 1,
@@ -191,6 +192,137 @@ fn end_one_time_command(
 
   Ok(())
 }
+
+#[allow(non_snake_case)]
+pub fn transition_image_layout(
+  device: &vkl::LDevice,
+  transfer_command_pool: &vk::CommandPool,
+  transfer_queue: &vk::Queue,
+  image: &vk::Image,
+  old_image_layout: vk::ImageLayout,
+  new_image_layout: vk::ImageLayout,
+) -> vkl::RawResult<()> {
+  let command_buffer = try!(begin_one_time_command(device, transfer_command_pool));
+
+  let (srcAccessMask, dstAccessMask, srcStageMask, dstStageMask) =
+    match (old_image_layout, new_image_layout) {
+      (vk::IMAGE_LAYOUT_UNDEFINED, vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) => (
+        0,
+        vk::ACCESS_TRANSFER_WRITE_BIT,
+        vk::PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        vk::PIPELINE_STAGE_TRANSFER_BIT,
+      ),
+      (vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) => (
+        vk::ACCESS_TRANSFER_WRITE_BIT,
+        vk::ACCESS_SHADER_READ_BIT,
+        vk::PIPELINE_STAGE_TRANSFER_BIT,
+        vk::PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+      ),
+      _ => {
+        panic!(
+          "Vulkan Unsupported image transition {} -> {}",
+          old_image_layout,
+          new_image_layout
+        );
+      },
+    };
+
+  let image_memory_barrier = vk::ImageMemoryBarrier {
+    sType: vk::STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    pNext: ptr::null(),
+    srcAccessMask: srcAccessMask,
+    dstAccessMask: dstAccessMask,
+    oldLayout: old_image_layout,
+    newLayout: new_image_layout,
+    srcQueueFamilyIndex: vk::QUEUE_FAMILY_IGNORED,
+    dstQueueFamilyIndex: vk::QUEUE_FAMILY_IGNORED,
+    image: *image,
+    subresourceRange: vk::ImageSubresourceRange {
+      aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
+      baseMipLevel: 0,
+      levelCount: 1,
+      baseArrayLayer: 0,
+      layerCount: 1,
+    },
+  };
+
+  unsafe {
+    let device_ptrs = device.ptrs();
+
+    device_ptrs.CmdPipelineBarrier(
+      command_buffer,
+      srcStageMask, /* srcStageMask */
+      dstStageMask, /* dstStageMask */
+      0,            /* dependencyFlags */
+      0,            /* memoryBarrierCount */
+      ptr::null(),
+      0, /* bufferMemoryBarrierCount */
+      ptr::null(),
+      1, /* imageBarrierCount */
+      &image_memory_barrier,
+    );
+  }
+
+  end_one_time_command(
+    device,
+    command_buffer,
+    transfer_command_pool,
+    transfer_queue,
+  )
+}
+
+pub fn copy_buffer_into_image(
+  device: &vkl::LDevice,
+  buffer: &vk::Buffer,
+  image: &vk::Image,
+  width: u32,
+  height: u32,
+  transfer_command_pool: &vk::CommandPool,
+  transfer_queue: &vk::Queue,
+) -> vkl::RawResult<()> {
+  let command_buffer = try!(begin_one_time_command(device, transfer_command_pool));
+
+
+  let region = vk::BufferImageCopy {
+    bufferOffset: 0,
+    bufferRowLength: 0,
+    bufferImageHeight: 0,
+    imageSubresource: vk::ImageSubresourceLayers {
+      aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
+      mipLevel: 0,
+      baseArrayLayer: 0,
+      layerCount: 1,
+    },
+    imageOffset: vk::Offset3D { x: 0, y: 0, z: 0 },
+    imageExtent: vk::Extent3D {
+      width: width,
+      height: height,
+      depth: 1,
+    },
+  };
+
+  unsafe {
+    let device_ptrs = device.ptrs();
+
+    device_ptrs.CmdCopyBufferToImage(
+      command_buffer,
+      *buffer,
+      *image,
+      vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      1, /* regionCount */
+      &region,
+    );
+  }
+
+
+  end_one_time_command(
+    device,
+    command_buffer,
+    transfer_command_pool,
+    transfer_queue,
+  )
+}
+
 
 pub fn copy_buffer(
   device: &vkl::LDevice,
