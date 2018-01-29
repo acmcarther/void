@@ -333,6 +333,7 @@ pub fn make_texture_image(
     &command_pool,
     &queue,
     &image,
+    vk::FORMAT_R8G8B8A8_UNORM,
     vk::IMAGE_LAYOUT_UNDEFINED,
     vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
   ));
@@ -352,6 +353,7 @@ pub fn make_texture_image(
     &command_pool,
     &queue,
     &image,
+    vk::FORMAT_R8G8B8A8_UNORM,
     vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
     vk::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
   ));
@@ -363,98 +365,6 @@ pub fn make_texture_image(
 
   Ok(TextureImageDetails {
     image: vkbs::PreparedImage(image, image_device_memory),
-    image_view: image_view,
-  })
-}
-
-pub struct DepthImageDetails {
-  image: vkbs::PreparedImage,
-  image_view: vk::ImageView,
-}
-
-pub fn select_supported_format(
-  instance: &vkl::LInstance,
-  device_spec: &vkds::SelectedPhysicalDeviceSpec,
-  candidates: Vec<vk::Format>,
-  tiling: vk::ImageTiling,
-  features: vk::FormatFeatureFlags,
-) -> vk::Format {
-  for candidate in candidates.iter() {
-    let format_properties =
-      instance.get_physical_device_format_properties(device_spec.physical_device, candidate);
-    let linear_tiling_features_matches =
-      format_properties.linearTilingFeatures & features == features;
-    let optimal_tiling_features_matches =
-      format_properties.optimalTilingFeatures & features == features;
-
-    if tiling == vk::IMAGE_TILING_LINEAR && linear_tiling_features_matches {
-      return *candidate;
-    }
-
-    if tiling == vk::IMAGE_TILING_OPTIMAL && optimal_tiling_features_matches {
-      return *candidate;
-    }
-  }
-
-  panic!("Vulkan detected no viable candidate for depth buffer formatting.");
-}
-
-pub fn format_includes_stencil(format: vk::Format) -> bool {
-  format == vk::FORMAT_D32_SFLOAT_S8_UINT || format == vk::FORMAT_D24_UNORM_S8_UINT
-}
-
-pub fn select_supported_depth_format(
-  instance: &vkl::LInstance,
-  device_spec: &vkds::SelectedPhysicalDeviceSpec,
-) -> vk::Format {
-  select_supported_format(
-    instance,
-    device_spec,
-    vec![
-      vk::FORMAT_D32_SFLOAT,
-      vk::FORMAT_D32_SFLOAT_S8_UINT,
-      vk::FORMAT_D24_UNORM_S8_UINT,
-    ],
-    vk::IMAGE_TILING_OPTIMAL,
-    vk::FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
-  )
-}
-
-pub fn make_depth_image(
-  device: &vkl::LDevice,
-  swapchain: &vkss::LoadedSwapchain,
-  depth_format: vk::Format,
-  memory_properties: &vk::PhysicalDeviceMemoryProperties,
-) -> vkl::RawResult<DepthImageDetails> {
-  let prepared_image = try!(vkbs::make_image(
-    device,
-    vk::Extent3D {
-      width: swapchain.surface_extent.width,
-      height: swapchain.surface_extent.height,
-      depth: 1,
-    },
-    depth_format,
-    vk::IMAGE_TILING_OPTIMAL,
-    vk::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-    vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-    memory_properties
-  ));
-  unsafe {
-    try!(device.bind_image_memory(
-      &prepared_image.0, /* image */
-      &prepared_image.1, /* deviceMemory */
-      0
-    ));
-  }
-
-  let image_view = try!(vkss::make_image_view(
-    device,
-    &prepared_image.0, /* image */
-    depth_format,
-    vk::IMAGE_ASPECT_DEPTH_BIT,
-  ));
-  Ok(DepthImageDetails {
-    image: prepared_image,
     image_view: image_view,
   })
 }
@@ -494,6 +404,108 @@ pub fn make_texture_sampler(device: &vkl::LDevice) -> vkl::RawResult<vk::Sampler
   };
 
   device.create_sampler(&sampler_create_info)
+}
+
+
+pub struct DepthImageDetails {
+  image: vkbs::PreparedImage,
+  image_view: vk::ImageView,
+}
+
+pub fn select_supported_format(
+  instance: &vkl::LInstance,
+  device_spec: &vkds::SelectedPhysicalDeviceSpec,
+  candidates: Vec<vk::Format>,
+  tiling: vk::ImageTiling,
+  features: vk::FormatFeatureFlags,
+) -> vk::Format {
+  for candidate in candidates.iter() {
+    let format_properties =
+      instance.get_physical_device_format_properties(device_spec.physical_device, candidate);
+    let linear_tiling_features_matches =
+      format_properties.linearTilingFeatures & features == features;
+    let optimal_tiling_features_matches =
+      format_properties.optimalTilingFeatures & features == features;
+
+    if tiling == vk::IMAGE_TILING_LINEAR && linear_tiling_features_matches {
+      return *candidate;
+    }
+
+    if tiling == vk::IMAGE_TILING_OPTIMAL && optimal_tiling_features_matches {
+      return *candidate;
+    }
+  }
+
+  panic!("Vulkan detected no viable candidate for depth buffer formatting.");
+}
+
+pub fn select_supported_depth_format(
+  instance: &vkl::LInstance,
+  device_spec: &vkds::SelectedPhysicalDeviceSpec,
+) -> vk::Format {
+  select_supported_format(
+    instance,
+    device_spec,
+    vec![
+      vk::FORMAT_D32_SFLOAT,
+      vk::FORMAT_D32_SFLOAT_S8_UINT,
+      vk::FORMAT_D24_UNORM_S8_UINT,
+    ],
+    vk::IMAGE_TILING_OPTIMAL,
+    vk::FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
+  )
+}
+
+pub fn make_depth_image(
+  device: &vkl::LDevice,
+  swapchain: &vkss::LoadedSwapchain,
+  depth_format: vk::Format,
+  command_pool: &vk::CommandPool,
+  queue: &vk::Queue,
+  memory_properties: &vk::PhysicalDeviceMemoryProperties,
+) -> vkl::RawResult<DepthImageDetails> {
+  let prepared_image = try!(vkbs::make_image(
+    device,
+    vk::Extent3D {
+      width: swapchain.surface_extent.width,
+      height: swapchain.surface_extent.height,
+      depth: 1,
+    },
+    depth_format,
+    vk::IMAGE_TILING_OPTIMAL,
+    vk::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+    vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    memory_properties
+  ));
+  unsafe {
+    try!(device.bind_image_memory(
+      &prepared_image.0, /* image */
+      &prepared_image.1, /* deviceMemory */
+      0
+    ));
+  }
+
+  let image_view = try!(vkss::make_image_view(
+    device,
+    &prepared_image.0, /* image */
+    depth_format,
+    vk::IMAGE_ASPECT_DEPTH_BIT,
+  ));
+
+  try!(vkbs::transition_image_layout(
+    &device,
+    &command_pool,
+    &queue,
+    &prepared_image.0, /* image */
+    depth_format,
+    vk::IMAGE_LAYOUT_UNDEFINED,
+    vk::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+  ));
+
+  Ok(DepthImageDetails {
+    image: prepared_image,
+    image_view: image_view,
+  })
 }
 
 #[repr(C, packed)]
@@ -563,6 +575,13 @@ pub fn record_command_buffers(
           float32: [0.0f32, 0.0f32, 0.0f32, 1.0f32],
         },
       };
+      let clear_depth = vk::ClearValue {
+        depthStencil: vk::ClearDepthStencilValue {
+          depth: 1.0f32,
+          stencil: 0u32,
+        },
+      };
+      let all_clears = [clear_color, clear_depth];
       let render_pass_begin_info = vk::RenderPassBeginInfo {
         sType: vk::STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         pNext: ptr::null(),
@@ -575,8 +594,8 @@ pub fn record_command_buffers(
             height: swapchain.surface_extent.height,
           },
         },
-        clearValueCount: 1,
-        pClearValues: &clear_color,
+        clearValueCount: all_clears.len() as u32,
+        pClearValues: all_clears.as_ptr(),
       };
 
       unsafe {
@@ -723,7 +742,9 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     &swapchain
   ));
 
-  let render_pass = do_or_die!(vkps::make_render_pass(&device, &swapchain));
+  let depth_format = select_supported_depth_format(&instance, &device_spec);
+
+  let render_pass = do_or_die!(vkps::make_render_pass(&device, depth_format, &swapchain));
   let descriptor_set_layouts = do_or_die!(vkdrs::make_descriptor_set_layouts(&device));
   let pipeline_layout = do_or_die!(vkps::make_pipeline_layout(&device, &descriptor_set_layouts));
 
@@ -783,12 +804,12 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
       &device_spec.memory_properties
     ));
 
-    let depth_format = select_supported_depth_format(&instance, &device_spec);
-
     let depth_buffer_details = do_or_die!(make_depth_image(
       &device,
       &swapchain,
       depth_format,
+      &gfx_command_pool,
+      &gfx_queue,
       &device_spec.memory_properties
     ));
 
@@ -844,6 +865,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
   let framebuffers = do_or_die!(vkbs::make_framebuffers(
     &device,
     &image_views,
+    &depth_buffer_details.image_view,
     &swapchain,
     &render_pass
   ));

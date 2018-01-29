@@ -11,6 +11,7 @@ use std::ptr;
 /** Configures a render pass with one subpass and default fixed function pipeline settings. */
 pub fn make_render_pass(
   device: &vkl::LDevice,
+  depth_format: vk::Format,
   swapchain: &vkss::LoadedSwapchain,
 ) -> vkl::RawResult<vk::RenderPass> {
   let color_attachment_description = vk::AttachmentDescription {
@@ -30,6 +31,23 @@ pub fn make_render_pass(
     layout: vk::IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
   };
 
+  let depth_attachment_description = vk::AttachmentDescription {
+    flags: 0,
+    format: depth_format,
+    samples: vk::SAMPLE_COUNT_1_BIT,
+    loadOp: vk::ATTACHMENT_LOAD_OP_CLEAR,
+    storeOp: vk::ATTACHMENT_STORE_OP_STORE,
+    stencilLoadOp: vk::ATTACHMENT_LOAD_OP_DONT_CARE,
+    stencilStoreOp: vk::ATTACHMENT_STORE_OP_DONT_CARE,
+    initialLayout: vk::IMAGE_LAYOUT_UNDEFINED,
+    finalLayout: vk::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+  };
+
+  let depth_attachment_reference = vk::AttachmentReference {
+    attachment: 1,
+    layout: vk::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+  };
+
   let subpass_description = vk::SubpassDescription {
     flags: 0,
     pipelineBindPoint: vk::PIPELINE_BIND_POINT_GRAPHICS,
@@ -38,7 +56,7 @@ pub fn make_render_pass(
     colorAttachmentCount: 1,
     pColorAttachments: &color_attachment_reference,
     pResolveAttachments: ptr::null(),
-    pDepthStencilAttachment: ptr::null(),
+    pDepthStencilAttachment: &depth_attachment_reference,
     preserveAttachmentCount: 0,
     pPreserveAttachments: ptr::null(),
   };
@@ -55,12 +73,14 @@ pub fn make_render_pass(
 
   info!("Vulkan creating render pass");
 
+  let all_attachments = [color_attachment_description, depth_attachment_description];
+
   let render_pass_create_info = vk::RenderPassCreateInfo {
     sType: vk::STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
     pNext: ptr::null(),
     flags: 0,
-    attachmentCount: 1,
-    pAttachments: &color_attachment_description,
+    attachmentCount: all_attachments.len() as u32,
+    pAttachments: all_attachments.as_ptr(),
     subpassCount: 1,
     pSubpasses: &subpass_description,
     dependencyCount: 1,
@@ -243,6 +263,37 @@ pub fn make_graphics_pipeline(
     frag_pipeline_shader_stage_create_info,
   ];
 
+  let pipeline_depth_stencil_state_create_info = vk::PipelineDepthStencilStateCreateInfo {
+    sType: vk::STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+    pNext: ptr::null(),
+    flags: 0,
+    depthTestEnable: vk::TRUE,
+    depthWriteEnable: vk::TRUE,
+    depthCompareOp: vk::COMPARE_OP_LESS,
+    depthBoundsTestEnable: vk::FALSE,
+    stencilTestEnable: vk::FALSE,
+    front: vk::StencilOpState {
+      failOp: 0,
+      passOp: 0,
+      depthFailOp: 0,
+      compareOp: 0,
+      compareMask: 0,
+      writeMask: 0,
+      reference: 0,
+    },
+    back: vk::StencilOpState {
+      failOp: 0,
+      passOp: 0,
+      depthFailOp: 0,
+      compareOp: 0,
+      compareMask: 0,
+      writeMask: 0,
+      reference: 0,
+    },
+    minDepthBounds: 0.0f32,
+    maxDepthBounds: 1.0f32,
+  };
+
   let graphics_pipeline_create_info = vk::GraphicsPipelineCreateInfo {
     sType: vk::STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
     pNext: ptr::null(),
@@ -255,7 +306,7 @@ pub fn make_graphics_pipeline(
     pViewportState: &pipeline_viewport_state_create_info,
     pRasterizationState: &pipeline_rasterization_state_create_info,
     pMultisampleState: &pipeline_multisample_state_create_info,
-    pDepthStencilState: ptr::null(),
+    pDepthStencilState: &pipeline_depth_stencil_state_create_info,
     pColorBlendState: &pipeline_color_blend_state_create_info,
     pDynamicState: ptr::null(),
     layout: *pipeline_layout,

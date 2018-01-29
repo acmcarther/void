@@ -194,30 +194,50 @@ fn end_one_time_command(
   Ok(())
 }
 
+pub fn format_includes_stencil(format: vk::Format) -> bool {
+  format == vk::FORMAT_D32_SFLOAT_S8_UINT || format == vk::FORMAT_D24_UNORM_S8_UINT
+}
+
 #[allow(non_snake_case)]
 pub fn transition_image_layout(
   device: &vkl::LDevice,
   transfer_command_pool: &vk::CommandPool,
   transfer_queue: &vk::Queue,
   image: &vk::Image,
+  format: vk::Format,
   old_image_layout: vk::ImageLayout,
   new_image_layout: vk::ImageLayout,
 ) -> vkl::RawResult<()> {
   let command_buffer = try!(begin_one_time_command(device, transfer_command_pool));
 
-  let (srcAccessMask, dstAccessMask, srcStageMask, dstStageMask) =
-    match (old_image_layout, new_image_layout) {
+  let (srcAccessMask, dstAccessMask, srcStageMask, dstStageMask, aspectMask) = match (old_image_layout, new_image_layout) {
       (vk::IMAGE_LAYOUT_UNDEFINED, vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) => (
         0,
         vk::ACCESS_TRANSFER_WRITE_BIT,
         vk::PIPELINE_STAGE_TOP_OF_PIPE_BIT,
         vk::PIPELINE_STAGE_TRANSFER_BIT,
+        vk::IMAGE_ASPECT_COLOR_BIT,
+      ),
+      (vk::IMAGE_LAYOUT_UNDEFINED, vk::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) if format_includes_stencil(format) => (
+        0,
+        vk::ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | vk::ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        vk::PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        vk::PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        vk::IMAGE_ASPECT_DEPTH_BIT | vk::IMAGE_ASPECT_STENCIL_BIT,
+      ),
+      (vk::IMAGE_LAYOUT_UNDEFINED, vk::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) /* no stencil */ => (
+        0,
+        vk::ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | vk::ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        vk::PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        vk::PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        vk::IMAGE_ASPECT_DEPTH_BIT,
       ),
       (vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) => (
         vk::ACCESS_TRANSFER_WRITE_BIT,
         vk::ACCESS_SHADER_READ_BIT,
         vk::PIPELINE_STAGE_TRANSFER_BIT,
         vk::PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        vk::IMAGE_ASPECT_COLOR_BIT,
       ),
       _ => {
         panic!(
@@ -239,7 +259,7 @@ pub fn transition_image_layout(
     dstQueueFamilyIndex: vk::QUEUE_FAMILY_IGNORED,
     image: *image,
     subresourceRange: vk::ImageSubresourceRange {
-      aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
+      aspectMask: aspectMask,
       baseMipLevel: 0,
       levelCount: 1,
       baseArrayLayer: 0,
@@ -364,18 +384,20 @@ pub fn copy_buffer(
 pub fn make_framebuffers(
   device: &vkl::LDevice,
   image_views: &Vec<vk::ImageView>,
+  depth_image_view: &vk::ImageView,
   swapchain: &vkss::LoadedSwapchain,
   render_pass: &vk::RenderPass,
 ) -> vkl::RawResult<Vec<vk::Framebuffer>> {
   let mut framebuffers = Vec::with_capacity(image_views.len());
   for swapchain_image_view in image_views.iter() {
+    let all_attachments = [*swapchain_image_view, *depth_image_view];
     let framebuffer_create_info = vk::FramebufferCreateInfo {
       sType: vk::STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
       pNext: ptr::null(),
       flags: 0,
       renderPass: *render_pass,
-      attachmentCount: 1,
-      pAttachments: swapchain_image_view,
+      attachmentCount: all_attachments.len() as u32,
+      pAttachments: all_attachments.as_ptr(),
       width: swapchain.surface_extent.width,
       height: swapchain.surface_extent.height,
       layers: 1,
