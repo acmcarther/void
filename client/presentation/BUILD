@@ -8,15 +8,6 @@ load(
 )
 
 rust_library(
-    name = "vulkan",
-    srcs = ["vulkan.rs"],
-    deps = [
-        "//cargo:dylib",
-        "//cargo:vk_sys",
-    ],
-)
-
-rust_library(
     name = "vk_lite",
     srcs = ["vk_lite.rs"],
     deps = [
