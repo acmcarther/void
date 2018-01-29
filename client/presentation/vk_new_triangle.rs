@@ -4,6 +4,7 @@ extern crate chrono;
 extern crate log;
 #[macro_use]
 extern crate memoffset;
+extern crate png;
 extern crate vk_buffer_support as vkbs;
 extern crate vk_device_support as vkds;
 extern crate vk_instance_support as vkis;

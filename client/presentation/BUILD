@@ -86,20 +86,6 @@ rust_library(
 )
 
 rust_library(
-    name = "vk_triangle",
-    srcs = ["vk_triangle.rs"],
-    data = [
-        ":triangle_frag_shader",
-        ":triangle_vert_shader",
-    ],
-    deps = [
-        "//cargo:vk_sys",
-        "//cargo:memoffset",
-        ":vk_lite",
-    ],
-)
-
-rust_library(
     name = "vk_new_triangle",
     srcs = ["vk_new_triangle.rs"],
     data = [
@@ -118,6 +104,7 @@ rust_library(
         "//cargo:log",
         "//cargo:cgmath",
         "//cargo:chrono",
+        "//cargo:png",
     ],
 )
 
