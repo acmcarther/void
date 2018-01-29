@@ -178,6 +178,7 @@ pub fn make_image_view(
   device: &vkl::LDevice,
   image: &vk::Image,
   format: vk::Format,
+  aspect_mask: vk::ImageAspectFlags,
 ) -> vkl::RawResult<vk::ImageView> {
   let image_create_info = vk::ImageViewCreateInfo {
     sType: vk::STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -193,7 +194,7 @@ pub fn make_image_view(
       a: vk::COMPONENT_SWIZZLE_IDENTITY,
     },
     subresourceRange: vk::ImageSubresourceRange {
-      aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
+      aspectMask: aspect_mask,
       baseMipLevel: 0,
       levelCount: 1,
       baseArrayLayer: 0,
@@ -215,7 +216,8 @@ pub fn make_image_views(
     image_views.push(try!(make_image_view(
       device,
       swapchain_image,
-      swapchain.surface_format.format
+      swapchain.surface_format.format,
+      vk::IMAGE_ASPECT_COLOR_BIT
     )));
   }
 

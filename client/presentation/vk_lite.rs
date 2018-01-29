@@ -474,6 +474,22 @@ impl LInstance {
     })
   }
 
+  pub fn get_physical_device_format_properties(
+    &self,
+    physical_device: vk::PhysicalDevice,
+    format: &vk::Format,
+  ) -> vk::FormatProperties {
+    unsafe {
+      let mut format_properties: vk::FormatProperties = std::mem::uninitialized();
+      self.instance_ptrs.GetPhysicalDeviceFormatProperties(
+        physical_device,
+        *format,
+        &mut format_properties,
+      );
+      format_properties
+    }
+  }
+
   pub fn list_physical_device_present_modes(
     &self,
     physical_device: vk::PhysicalDevice,
