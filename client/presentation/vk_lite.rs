@@ -932,6 +932,18 @@ impl LDevice {
     }
   }
 
+  pub fn get_image_memory_requirements(&self, image: &vk::Image) -> vk::MemoryRequirements {
+    unsafe {
+      let mut memory_requirements = std::mem::uninitialized();
+      self.device_ptrs.GetImageMemoryRequirements(
+        self.logical_device,
+        *image,
+        &mut memory_requirements,
+      );
+      memory_requirements
+    }
+  }
+
   pub fn allocate_memory(
     &self,
     memory_allocate_info: &vk::MemoryAllocateInfo,
@@ -1118,6 +1130,44 @@ impl LDevice {
       );
     }
   }
+
+  pub fn create_image(&self, image_create_info: &vk::ImageCreateInfo) -> RawResult<vk::Image> {
+    util::loady("create image", &|a| unsafe {
+      self
+        .device_ptrs
+        .CreateImage(self.logical_device, image_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn destroy_image(&self, image: vk::Image) {
+    unsafe {
+      self
+        .device_ptrs
+        .DestroyImage(self.logical_device, image, ptr::null())
+    }
+  }
+
+  pub fn create_sampler(
+    &self,
+    sampler_create_info: &vk::SamplerCreateInfo,
+  ) -> RawResult<vk::Sampler> {
+    util::loady("create image", &|a| unsafe {
+      self
+        .device_ptrs
+        .CreateSampler(self.logical_device, sampler_create_info, ptr::null(), a)
+    })
+  }
+
+  pub fn destroy_sampler(&self, sampler: vk::Sampler) {
+    unsafe {
+      self
+        .device_ptrs
+        .DestroySampler(self.logical_device, sampler, ptr::null())
+    }
+  }
+  // TODO(acmcarther): CreateSampler
+  // TODO(acmcarther): DestroySampler
+
   // TODO(acmcarther): ResetFences
   // TODO(acmcarther): GetFenceStatus
   // TODO(acmcarther): WaitForFences
@@ -1129,13 +1179,9 @@ impl LDevice {
   // TODO(acmcarther): CreateQueryPool
   // TODO(acmcarther): DestroyQueryPool
   // TODO(acmcarther): GetQueryPoolResults
-  // TODO(acmcarther): CreateImage
-  // TODO(acmcarther): DestroyImage
   // TODO(acmcarther): GetImageSubresourceLayout
   // TODO(acmcarther): CreatePipelineCache
   // TODO(acmcarther): DestroyPipelineCache
-  // TODO(acmcarther): CreateSampler
-  // TODO(acmcarther): DestroySampler
   // TODO(acmcarther): GetRenderAreaGranularity
   // TODO(acmcarther): TrimCommandPoolKHR
 

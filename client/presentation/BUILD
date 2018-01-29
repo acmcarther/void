@@ -91,6 +91,7 @@ rust_library(
     data = [
         ":triangle_frag_shader",
         ":triangle_vert_shader",
+        ":texture.png",
     ],
     deps = [
         "//cargo:vk_sys",

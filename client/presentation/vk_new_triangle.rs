@@ -18,6 +18,7 @@ use cgmath::Angle;
 use cgmath::BaseFloat;
 use cgmath::Transform;
 use cgmath::Zero;
+use std::io::Read;
 use std::ptr;
 use std::time::Duration;
 use std::time::Instant;
@@ -112,7 +113,7 @@ pub fn make_vertex_buffer(
     device,
     buffer_size,
     vk::BUFFER_USAGE_TRANSFER_DST_BIT | vk::BUFFER_USAGE_VERTEX_BUFFER_BIT,
-    vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     memory_properties
   ));
   unsafe {
@@ -207,7 +208,7 @@ pub fn make_index_buffer(
     device,
     buffer_size,
     vk::BUFFER_USAGE_TRANSFER_DST_BIT | vk::BUFFER_USAGE_INDEX_BUFFER_BIT,
-    vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     memory_properties
   ));
   unsafe {
@@ -230,6 +231,47 @@ pub fn make_index_buffer(
     num_indexes: indexes.len() as u32,
     buffer: vkbs::PreparedBuffer(buffer, device_memory),
   })
+}
+
+pub fn make_texture_image(
+  device: &vkl::LDevice,
+  command_pool: &vk::CommandPool,
+  queue: &vk::Queue,
+  memory_properties: &vk::PhysicalDeviceMemoryProperties,
+) -> vkl::RawResult<()> {
+  let png_bytes = include_bytes!("texture.png");
+  let img_decoder = png::Decoder::new(png_bytes as &[u8]);
+  let (img_info, mut img_reader) = img_decoder.read_info().unwrap();
+  let mut img_buf: Vec<u8> = vec![0; img_info.buffer_size()];
+  img_reader.next_frame(&mut img_buf).unwrap();
+
+  let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) = try!(vkbs::make_buffer(
+    device,
+    img_info.buffer_size() as u64,
+    vk::BUFFER_USAGE_TRANSFER_DST_BIT,
+    vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    memory_properties
+  ));
+
+  unsafe {
+    try!(device.bind_buffer_memory(&transfer_buffer, &transfer_device_memory));
+    try!(device.map_vec_data_to_memory(&transfer_device_memory, &img_buf));
+  }
+
+  let image_extent = vk::Extent3D {
+    width: img_info.width,
+    height: img_info.height,
+    depth: 1,
+  };
+  let vkbs::PreparedImage(image, image_device_memory) = try!(vkbs::make_image(
+    device,
+    image_extent,
+    vk::IMAGE_USAGE_TRANSFER_DST_BIT | vk::IMAGE_USAGE_SAMPLED_BIT,
+    vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    memory_properties
+  ));
+
+  Ok(())
 }
 
 #[repr(C, packed)]
@@ -562,7 +604,7 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
   } else {
     None
   };
-  let (vertex_buffer_details, index_buffer_details, uniform_buffer_details) = {
+  let (vertex_buffer_details, index_buffer_details, uniform_buffer_details, texture_buffer_details) = {
     let copy_command_pool = transfer_command_pool_opt
       .as_ref()
       .unwrap_or(&gfx_command_pool);
@@ -587,10 +629,18 @@ pub fn vulkan_triangle<'a, W: vkl::WindowSystemPlugin>(
     let uniform_buffer_details =
       do_or_die!(make_uniform_buffer(&device, &device_spec.memory_properties));
 
+    let texture_buffer_details = do_or_die!(make_texture_image(
+      &device,
+      &copy_command_pool,
+      &queue,
+      &device_spec.memory_properties
+    ));
+
     (
       vertex_buffer_details,
       index_buffer_details,
       uniform_buffer_details,
+      texture_buffer_details
     )
   };
 
