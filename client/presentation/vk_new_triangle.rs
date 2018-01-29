@@ -55,7 +55,7 @@ fn x11_related_layer_spec() -> vkl::FeatureSpec {
 
 #[repr(C, packed)]
 struct TriangleData {
-  pos: [f32; 2],
+  pos: [f32; 3],
   color: [f32; 3],
   tex: [f32; 2],
 }
@@ -80,23 +80,51 @@ pub fn make_vertex_buffer(
 ) -> vkl::RawResult<VertexBufferDetails> {
   let vertices = vec![
     TriangleData {
-      pos: [-0.5f32, -0.5f32],
-      color: [1.0f32, 0.0f32, 0.0f32],
+      pos: [-0.5f32, -0.5f32, 0.0f32],
+      color: [1.0f32, 1.0f32, 1.0f32],
+      //color: [1.0f32, 0.0f32, 0.0f32],
       tex: [1.0f32, 0.0f32],
     },
     TriangleData {
-      pos: [0.5f32, -0.5f32],
-      color: [0.0f32, 1.0f32, 0.0f32],
+      pos: [0.5f32, -0.5f32, 0.0f32],
+      color: [1.0f32, 1.0f32, 1.0f32],
+      //color: [0.0f32, 1.0f32, 0.0f32],
       tex: [0.0f32, 0.0f32],
     },
     TriangleData {
-      pos: [0.5f32, 0.5f32],
-      color: [0.0f32, 0.0f32, 1.0f32],
+      pos: [0.5f32, 0.5f32, 0.0f32],
+      color: [1.0f32, 1.0f32, 1.0f32],
+      //color: [0.0f32, 0.0f32, 1.0f32],
       tex: [0.0f32, 1.0f32],
     },
     TriangleData {
-      pos: [-0.5f32, 0.5f32],
+      pos: [-0.5f32, 0.5f32, 0.0f32],
       color: [1.0f32, 1.0f32, 1.0f32],
+      //color: [1.0f32, 1.0f32, 1.0f32],
+      tex: [1.0f32, 1.0f32],
+    },
+    TriangleData {
+      pos: [-0.5f32, -0.5f32, -0.5f32],
+      color: [1.0f32, 1.0f32, 1.0f32],
+      //color: [1.0f32, 0.0f32, 0.0f32],
+      tex: [1.0f32, 0.0f32],
+    },
+    TriangleData {
+      pos: [0.5f32, -0.5f32, -0.5f32],
+      color: [1.0f32, 1.0f32, 1.0f32],
+      //color: [0.0f32, 1.0f32, 0.0f32],
+      tex: [0.0f32, 0.0f32],
+    },
+    TriangleData {
+      pos: [0.5f32, 0.5f32, -0.5f32],
+      color: [1.0f32, 1.0f32, 1.0f32],
+      //color: [0.0f32, 0.0f32, 1.0f32],
+      tex: [0.0f32, 1.0f32],
+    },
+    TriangleData {
+      pos: [-0.5f32, 0.5f32, -0.5f32],
+      color: [1.0f32, 1.0f32, 1.0f32],
+      //color: [1.0f32, 1.0f32, 1.0f32],
       tex: [1.0f32, 1.0f32],
     },
   ];
@@ -130,7 +158,7 @@ pub fn make_vertex_buffer(
   let pos_attr_desc = vk::VertexInputAttributeDescription {
     binding: 0,
     location: 0,
-    format: vk::FORMAT_R32G32_SFLOAT,
+    format: vk::FORMAT_R32G32B32_SFLOAT,
     offset: offset_of!(TriangleData, pos) as u32,
   };
 
@@ -198,13 +226,12 @@ pub fn make_index_buffer(
     2u16,
     3u16,
     0u16,
-    // Make double sided
-    //0u16,
-    //3u16,
-    //2u16,
-    //2u16,
-    //1u16,
-    //0u16,
+    4u16,
+    5u16,
+    6u16,
+    6u16,
+    7u16,
+    4u16,
   ];
 
   let buffer_size = (std::mem::size_of::<u16>() * indexes.len()) as u64;
