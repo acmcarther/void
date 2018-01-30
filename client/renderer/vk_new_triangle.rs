@@ -941,7 +941,7 @@ impl VulkanTriangle {
     let millis_to_quarter_rotation = 1000000.0;
     // Cgmath appears to lack a scaling operation for radians for some reason
     let rotation_fraction =
-      cgmath::Rad::<f32>::turn_div_4() * (dt_millis / millis_to_quarter_rotation);
+      cgmath::Rad::<f32>::full_turn() * (dt_millis / millis_to_quarter_rotation);
     let axis_of_rotation = cgmath::Vector3::<f32>::unit_z();
     let model = cgmath::Matrix4::<f32>::from_axis_angle(axis_of_rotation, rotation_fraction);
     let view = cgmath::Matrix4::<f32>::look_at(
