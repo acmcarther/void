@@ -90,18 +90,24 @@ pub fn make_render_pass(
   device.create_render_pass(&render_pass_create_info)
 }
 
-pub fn make_pipeline_layout(
+pub fn make_pipeline_layout<T>(
   device: &vkl::LDevice,
   descriptor_set_layouts: &Vec<vk::DescriptorSetLayout>,
 ) -> vkl::RawResult<vk::PipelineLayout> {
+  let push_constant_range = vk::PushConstantRange {
+    stageFlags: vk::SHADER_STAGE_VERTEX_BIT,
+    offset: 0,
+    size: std::mem::size_of::<T>() as u32,
+  };
+  let all_push_constant_ranges = [push_constant_range];
   let pipeline_layout_create_info = vk::PipelineLayoutCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     pNext: ptr::null(),
     flags: 0,
     setLayoutCount: descriptor_set_layouts.len() as u32,
     pSetLayouts: descriptor_set_layouts.as_ptr(),
-    pushConstantRangeCount: 0,
-    pPushConstantRanges: ptr::null(),
+    pushConstantRangeCount: all_push_constant_ranges.len() as u32,
+    pPushConstantRanges: all_push_constant_ranges.as_ptr(),
   };
 
   device.create_pipeline_layout(&pipeline_layout_create_info)
@@ -112,9 +118,7 @@ pub fn make_graphics_pipeline(
   device: &vkl::LDevice,
   vert_shader_module: &vk::ShaderModule,
   frag_shader_module: &vk::ShaderModule,
-  pos_attr_desc: vk::VertexInputAttributeDescription,
-  color_attr_desc: vk::VertexInputAttributeDescription,
-  tex_attr_desc: vk::VertexInputAttributeDescription,
+  all_attr_desc: &Vec<vk::VertexInputAttributeDescription>,
   binding_description: vk::VertexInputBindingDescription,
   render_pass: &vk::RenderPass,
   swapchain: &vkss::LoadedSwapchain,
@@ -143,15 +147,14 @@ pub fn make_graphics_pipeline(
   };
 
   let all_vertex_binding_descriptions = [binding_description];
-  let all_vertex_attribute_descriptions = [pos_attr_desc, color_attr_desc, tex_attr_desc];
   let pipeline_vertex_input_state_create_info = vk::PipelineVertexInputStateCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
     pNext: ptr::null(),
     flags: 0,
     vertexBindingDescriptionCount: 1,
     pVertexBindingDescriptions: all_vertex_binding_descriptions.as_ptr(),
-    vertexAttributeDescriptionCount: 3,
-    pVertexAttributeDescriptions: all_vertex_attribute_descriptions.as_ptr(),
+    vertexAttributeDescriptionCount: all_attr_desc.len() as u32,
+    pVertexAttributeDescriptions: all_attr_desc.as_ptr(),
   };
 
   let pipeline_input_assembly_state_create_info = vk::PipelineInputAssemblyStateCreateInfo {

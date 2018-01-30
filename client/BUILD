@@ -6,23 +6,43 @@ load(
     "rust_binary",
 )
 
-rust_library(
-    name = "client",
-    srcs = ["client.rs"],
+rust_binary(
+    name = "galaxy_toy",
+    srcs = ["galaxy_toy.rs"],
+    data = [
+        ":star_frag_shader",
+        ":star_vert_shader",
+        ":explosion.png",
+    ],
     deps = [
-        "//cargo:lazy_static",
+        "//cargo:cgmath",
+        "//cargo:chrono",
+        "//cargo:fern",
         "//cargo:log",
-        "//cargo:vulkano",
-        "//cargo:vulkano_win",
-        "//cargo:winit",
+        "//cargo:memoffset",
+        "//cargo:png",
+        "//cargo:sdl2",
+        "//cargo:vk_sys",
+        "//client/renderer:sdl2_vulkan_interop",
+        "//client/renderer:vk_buffer_support",
+        "//client/renderer:vk_descriptor_support",
+        "//client/renderer:vk_device_support",
+        "//client/renderer:vk_instance_support",
+        "//client/renderer:vk_pipeline_support",
+        "//client/renderer:vk_swapchain_support",
+        "//client/renderer:vk_lite",
+        "//server:cosmic_physics",
     ],
 )
 
-rust_binary(
-    name = "launcher",
-    srcs = ["launcher.rs"],
-    deps = [
-        ":client",
-        "//common:init",
-    ],
+load("//tools:glslang.bzl", "compile_spirv_shader")
+
+compile_spirv_shader(
+    name = "star_vert_shader",
+    src = ":star.vert",
+)
+
+compile_spirv_shader(
+    name = "star_frag_shader",
+    src = ":star.frag",
 )

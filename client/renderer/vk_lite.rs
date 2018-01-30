@@ -169,7 +169,7 @@ pub mod builtins {
     let command_pool_create_info = vk::CommandPoolCreateInfo {
       sType: vk::STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
       pNext: ptr::null(),
-      flags: 0,
+      flags: vk::COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
       queueFamilyIndex: queue_family_idx,
     };
 
@@ -183,6 +183,15 @@ pub mod builtins {
       flags: 0,
     };
     device.create_semaphore(&semaphore_create_info)
+  }
+
+  pub fn make_fence(device: &LDevice) -> RawResult<vk::Fence> {
+    let fence_create_info = vk::FenceCreateInfo {
+      sType: vk::STRUCTURE_TYPE_FENCE_CREATE_INFO,
+      pNext: ptr::null(),
+      flags: 0,
+    };
+    device.create_fence(&fence_create_info)
   }
 }
 
