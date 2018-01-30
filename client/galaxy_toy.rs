@@ -7,6 +7,7 @@ extern crate log;
 #[macro_use]
 extern crate memoffset;
 extern crate png;
+extern crate rand;
 extern crate sdl2;
 extern crate sdl2_vulkan_interop;
 extern crate vk_buffer_support as vkbs;
@@ -20,11 +21,9 @@ extern crate vk_swapchain_support as vkss;
 extern crate vk_sys as vk;
 
 use cgmath::Angle;
-use cgmath::Matrix;
-use cgmath::Transform;
+use rand::Rng;
 use std::os::raw::c_void;
 use std::ptr;
-use std::time::Instant;
 
 mod x11 {
   use vkl;
@@ -905,9 +904,9 @@ impl VulkanContext {
     }
   }
 
-  pub fn update_uniform_buffer(&mut self, pos: cgmath::Vector3<f32>) {
+  pub fn update_uniform_buffer(&self) {
     let view = cgmath::Matrix4::<f32>::look_at(
-      cgmath::Point3::<f32>::new(50.0f32, 50.0f32, 50.0f32),
+      cgmath::Point3::<f32>::new(100.0f32, 100.0f32, 100.0f32),
       cgmath::Point3::<f32>::new(0.0f32, 0.0f32, 0.0f32),
       cgmath::Vector3::<f32>::new(0.0f32, 0.0f32, 1.0f32),
     );
@@ -934,9 +933,9 @@ impl VulkanContext {
     }
   }
 
-  pub fn draw_demo_frame(&mut self) {
+  pub fn draw_demo_frame(&mut self, locs: &Vec<[f64; 4]>) {
     unsafe {
-      self.update_uniform_buffer(cgmath::Vector3::<f32>::new(0.0f32, 0.0f32, 0.0f32));
+      self.update_uniform_buffer();
       let image_index = do_or_die!(vkl::util::loady("next image", &|a| {
         self.device.ptrs().AcquireNextImageKHR(
           self.device.logical_device,
@@ -953,23 +952,16 @@ impl VulkanContext {
         .command_buffer_fences
         .get(image_index as usize)
         .unwrap();
-      let model_matrices = vec![
-        cgmath::Matrix4::<f32>::from_translation(
-          cgmath::Vector3::<f32>::new(0.0f32, 0.0f32, 0.0f32),
-        ),
-        cgmath::Matrix4::<f32>::from_translation(
-          cgmath::Vector3::<f32>::new(2.0f32, 0.0f32, 0.0f32),
-        ),
-        cgmath::Matrix4::<f32>::from_translation(
-          cgmath::Vector3::<f32>::new(0.0f32, 2.0f32, 0.0f32),
-        ),
-        cgmath::Matrix4::<f32>::from_translation(
-          cgmath::Vector3::<f32>::new(-2.0f32, 0.0f32, 0.0f32),
-        ),
-        cgmath::Matrix4::<f32>::from_translation(
-          cgmath::Vector3::<f32>::new(0.0f32, -2.0f32, 0.0f32),
-        ),
-      ];
+      let mut model_matrices = Vec::new();
+      for loc in locs {
+        model_matrices.push(
+          cgmath::Matrix4::<f32>::from_translation(cgmath::Vector3::<f32>::new(
+            loc[0] as f32,
+            loc[1] as f32,
+            loc[2] as f32,
+          )) * cgmath::Matrix4::<f32>::from_scale((loc[3] / 10.0) as f32),
+        );
+      }
 
       {
         let first_frame_for_idx = *self.first_frame_for_idxs.get(image_index as usize).unwrap();
@@ -993,7 +985,7 @@ impl VulkanContext {
             }));
           }
         } else {
-          let mut first_frame_for_idx = self
+          let first_frame_for_idx = self
             .first_frame_for_idxs
             .get_mut(image_index as usize)
             .unwrap();
@@ -1138,11 +1130,6 @@ impl Drop for VulkanContext {
   }
 }
 
-struct GalaxySim {
-  vulkan_context: VulkanContext,
-  galaxy_state: cp::CelestialGrid,
-}
-
 fn main() {
   fern::Dispatch::new()
     // Perform allocation-free log formatting
@@ -1163,6 +1150,10 @@ fn main() {
     .apply()
     .unwrap();
 
+  const POSITION_CEILING: f64 = 100.0;
+  const VELOCITY_CEILING: f64 = 5.0;
+  const STAR_MASS: f64 = 50.0f64;
+  const PLANET_MASS: f64 = 5.0f64;
 
   let sdl_context = sdl2::init().unwrap();
   let video_subsystem = sdl_context.video().unwrap();
@@ -1177,8 +1168,102 @@ fn main() {
   let vulkan = vkl::Vulkan::new("libvulkan.so.1");
   let mut vulkan_context = VulkanContext::create(&vulkan, &mut sdl_window_system_plugin);
 
+  let (state_send, state_recv) = std::sync::mpsc::channel();
+
+  std::thread::spawn(move || {
+    let mut grid = cp::CelestialGrid::new();
+    let mut rng = rand::thread_rng();
+    let cosmic_params = cp::CosmicParams {
+      gravitational_constant: 10.0,
+    };
+
+    for _ in 0..30 {
+      grid.insert_system(
+        cp::CelestialVector {
+          x: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
+          y: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
+          z: 0.0f64,
+        },
+        cp::CelestialVector {
+          x: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
+          y: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
+          z: 0.0f64,
+        },
+        STAR_MASS,
+      );
+    }
+
+    for _ in 0..100 {
+      grid.insert_system(
+        cp::CelestialVector {
+          x: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
+          y: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
+          z: 0.0f64,
+        },
+        cp::CelestialVector {
+          x: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
+          y: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
+          z: 0.0f64,
+        },
+        PLANET_MASS,
+      );
+    }
+
+
+    for tick in 0..100000000 {
+      grid.tick_celestial_grid(&cosmic_params, 900u64);
+
+      let mut snap_ents = Vec::new();
+      for id in grid.get_system_ids().iter() {
+        if let Some(system_details) = grid.get_system_details(id.clone()) {
+          snap_ents.push([
+            system_details.coords.x.clone(),
+            system_details.coords.y.clone(),
+            system_details.coords.z.clone(),
+            system_details.mass.clone(),
+          ]);
+        }
+      }
+      state_send.send(snap_ents).unwrap();
+
+      if tick % 10 == 0 {
+        for id in grid.get_system_ids().iter() {
+          let mut remove_system = false;
+          let mut system_mass = 0.0;
+          if let Some(system_details) = grid.get_system_details(id.clone()) {
+            if system_details.coords.x > 2_000.0 || system_details.coords.x < -2_000.0 {
+              remove_system = true;
+              system_mass = *system_details.mass;
+            } else if system_details.coords.y > 2_000.0 || system_details.coords.y < -2_000.0 {
+              remove_system = true;
+              system_mass = *system_details.mass;
+            }
+          }
+          if remove_system {
+            println!("removing system: {}", id);
+            grid.remove_system(id.clone());
+            grid.insert_system(
+              cp::CelestialVector {
+                x: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
+                y: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
+                z: 0.0f64,
+              },
+              cp::CelestialVector {
+                x: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
+                y: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
+                z: 0.0f64,
+              },
+              system_mass,
+            );
+          }
+        }
+      }
+    }
+  });
+
   let mut event_pump = sdl_context.event_pump().unwrap();
 
+  let mut last_recv = None;
   'running: loop {
     for event in event_pump.poll_iter() {
       match event {
@@ -1190,6 +1275,25 @@ fn main() {
         _ => {},
       }
     }
-    vulkan_context.draw_demo_frame();
+
+    loop {
+      let rcv = state_recv.try_recv();
+
+      let exit_state_poll = match rcv {
+        Ok(state) => {
+          last_recv = Some(state);
+          false
+        },
+        Err(std::sync::mpsc::TryRecvError::Empty) => true,
+        Err(std::sync::mpsc::TryRecvError::Disconnected) => panic!("main thread hung up!"),
+      };
+      if exit_state_poll {
+        break;
+      }
+    }
+
+    if last_recv.is_some() {
+      vulkan_context.draw_demo_frame(last_recv.as_ref().unwrap());
+    }
   }
 }

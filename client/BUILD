@@ -17,6 +17,7 @@ rust_binary(
     deps = [
         "//cargo:cgmath",
         "//cargo:chrono",
+        "//cargo:rand",
         "//cargo:fern",
         "//cargo:log",
         "//cargo:memoffset",

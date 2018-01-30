@@ -6,9 +6,9 @@ use std::collections::HashMap;
 /** The complete cosmos, containing point masses representing system masses */
 pub type SystemId = u64;
 /** 1 -> 1_000_000_000_000_000_000 terestrial masses */
-pub type CeleplanetaryMass = i64;
+pub type CeleplanetaryMass = f64;
 /** 1 -> 1 terestrial length */
-pub type CeleterestrialLength = i64;
+pub type CeleterestrialLength = f64;
 
 pub struct CosmicParams {
   pub gravitational_constant: f64,
@@ -17,9 +17,9 @@ pub struct CosmicParams {
 /** A spatial vector in Celestrial units. */
 #[derive(Clone, Debug)]
 pub struct CelestialVector {
-  pub x: i64,
-  pub y: i64,
-  pub z: i64,
+  pub x: f64,
+  pub y: f64,
+  pub z: f64,
 }
 
 /** A spatial vector in Celestrial units. */
@@ -61,7 +61,12 @@ impl CelestialGrid {
     self.system_ids.clone()
   }
 
-  pub fn insert_system(&mut self, coords: CelestialVector, trajectory: CelestialVector, mass: CeleplanetaryMass) -> SystemId {
+  pub fn insert_system(
+    &mut self,
+    coords: CelestialVector,
+    trajectory: CelestialVector,
+    mass: CeleplanetaryMass,
+  ) -> SystemId {
     let system_id = self.next_system_id;
     self.next_system_id = self.next_system_id + 1;
 
@@ -75,7 +80,7 @@ impl CelestialGrid {
 
   pub fn remove_system(&mut self, system_id: SystemId) {
     if !self.system_coordinates.contains_key(&system_id) {
-      return
+      return;
     }
 
     self.system_coordinates.remove(&system_id);
@@ -85,7 +90,7 @@ impl CelestialGrid {
 
   pub fn get_system_details<'a>(&'a self, system_id: SystemId) -> Option<SystemDetails<'a>> {
     if !self.system_coordinates.contains_key(&system_id) {
-      return None
+      return None;
     }
 
     Some(SystemDetails {
@@ -101,7 +106,7 @@ impl CelestialGrid {
     {
       let mut force_sets: HashMap<SystemId, CelestialVectorF> = HashMap::new();
       for id_idx_1 in 0..self.system_ids.len() {
-        for id_idx_2 in (id_idx_1+1)..self.system_ids.len() {
+        for id_idx_2 in (id_idx_1 + 1)..self.system_ids.len() {
           let id_1 = self.system_ids.get(id_idx_1).unwrap();
           let id_2 = self.system_ids.get(id_idx_2).unwrap();
 
@@ -113,13 +118,11 @@ impl CelestialGrid {
             continue;
           }
 
-          let mass_product = {
-            self.system_masses.get(id_1).unwrap()
-              * self.system_masses.get(id_2).unwrap()
-          };
+          let mass_product =
+            { self.system_masses.get(id_1).unwrap() * self.system_masses.get(id_2).unwrap() };
 
-          if mass_product == 0 {
-            continue
+          if mass_product < 0.001 {
+            continue;
           }
 
           let (distance_unit_vector, distance) = {
@@ -131,10 +134,9 @@ impl CelestialGrid {
               y: id_1_coords.y - id_2_coords.y,
               z: id_1_coords.z - id_2_coords.z,
             };
-            let distance =
-              ((distance_vector.x.pow(2)
-                + distance_vector.y.pow(2)
-                + distance_vector.z.pow(2)) as f64).sqrt();
+            let distance = ((distance_vector.x.powi(2) + distance_vector.y.powi(2)
+              + distance_vector.z.powi(2)) as f64)
+              .sqrt();
 
             let distance_unit_vector = CelestialVectorF {
               x: (distance_vector.x as f64) / distance,
@@ -144,8 +146,8 @@ impl CelestialGrid {
             (distance_unit_vector, distance)
           };
 
-          let force_magnitude = cosmic_params.gravitational_constant
-                                * (mass_product as f64) / (distance * distance);
+          let force_magnitude =
+            cosmic_params.gravitational_constant * (mass_product as f64) / (distance * distance);
 
           let force_vector = {
             CelestialVectorF {
@@ -186,9 +188,9 @@ impl CelestialGrid {
 
         let mut trajectory = self.system_trajectories.get_mut(&id).unwrap();
 
-        trajectory.x = trajectory.x + (force_vector.x / mass) as i64;
-        trajectory.y = trajectory.y + (force_vector.y / mass) as i64;
-        trajectory.z = trajectory.z + (force_vector.z / mass) as i64;
+        trajectory.x = trajectory.x + (force_vector.x / mass) as f64;
+        trajectory.y = trajectory.y + (force_vector.y / mass) as f64;
+        trajectory.z = trajectory.z + (force_vector.z / mass) as f64;
       }
     }
 
@@ -201,9 +203,9 @@ impl CelestialGrid {
         }
         let system_trajectory = self.system_trajectories.get(id).unwrap();
         let mut system_coordinates = self.system_coordinates.get_mut(id).unwrap();
-        system_coordinates.x = system_coordinates.x + (system_trajectory.x as f64 * dt_s) as i64;
-        system_coordinates.y = system_coordinates.y + (system_trajectory.y as f64 * dt_s) as i64;
-        system_coordinates.z = system_coordinates.z + (system_trajectory.z as f64 * dt_s) as i64;
+        system_coordinates.x = system_coordinates.x + (system_trajectory.x as f64 * dt_s) as f64;
+        system_coordinates.y = system_coordinates.y + (system_trajectory.y as f64 * dt_s) as f64;
+        system_coordinates.z = system_coordinates.z + (system_trajectory.z as f64 * dt_s) as f64;
       }
     }
   }
@@ -221,21 +223,21 @@ mod tests {
 
     let mut grid = CelestialGrid::new();
     let system_1 = grid.insert_system(
-      CelestialVector { x: 0, y: 0, z: 0, },
-      CelestialVector { x: 0, y: 0, z: 0, },
-      100i64
+      CelestialVector { x: 0, y: 0, z: 0 },
+      CelestialVector { x: 0, y: 0, z: 0 },
+      100f64,
     );
 
     grid.tick_celestial_grid(&cosmic_params, 1_000_000u64);
 
     let system_details = grid.get_system_details(system_1).unwrap();
 
-    assert_eq!(system_details.coords.x, 0i64);
-    assert_eq!(system_details.coords.y, 0i64);
-    assert_eq!(system_details.coords.z, 0i64);
-    assert_eq!(system_details.trajectory.x, 0i64);
-    assert_eq!(system_details.trajectory.y, 0i64);
-    assert_eq!(system_details.trajectory.z, 0i64);
+    assert_eq!(system_details.coords.x, 0f64);
+    assert_eq!(system_details.coords.y, 0f64);
+    assert_eq!(system_details.coords.z, 0f64);
+    assert_eq!(system_details.trajectory.x, 0f64);
+    assert_eq!(system_details.trajectory.y, 0f64);
+    assert_eq!(system_details.trajectory.z, 0f64);
   }
 
   #[test]
@@ -246,21 +248,21 @@ mod tests {
 
     let mut grid = CelestialGrid::new();
     let system_1 = grid.insert_system(
-      CelestialVector { x: 0, y: 0, z: 0, },
-      CelestialVector { x: 1, y: -1, z: 5, },
-      100i64
+      CelestialVector { x: 0, y: 0, z: 0 },
+      CelestialVector { x: 1, y: -1, z: 5 },
+      100f64,
     );
 
     grid.tick_celestial_grid(&cosmic_params, 2_000_000u64);
 
     let system_details = grid.get_system_details(system_1).unwrap();
 
-    assert_eq!(system_details.coords.x, 2i64);
-    assert_eq!(system_details.coords.y, -2i64);
-    assert_eq!(system_details.coords.z, 10i64);
-    assert_eq!(system_details.trajectory.x, 1i64);
-    assert_eq!(system_details.trajectory.y, -1i64);
-    assert_eq!(system_details.trajectory.z, 5i64);
+    assert_eq!(system_details.coords.x, 2f64);
+    assert_eq!(system_details.coords.y, -2f64);
+    assert_eq!(system_details.coords.z, 10f64);
+    assert_eq!(system_details.trajectory.x, 1f64);
+    assert_eq!(system_details.trajectory.y, -1f64);
+    assert_eq!(system_details.trajectory.z, 5f64);
   }
 
   #[test]
@@ -271,20 +273,35 @@ mod tests {
 
     let mut grid = CelestialGrid::new();
     let system_1 = grid.insert_system(
-      CelestialVector { x: -10000, y: 0, z: 0, },
-      CelestialVector { x: 0, y: -1000, z: 0, },
-      100_000_000i64
+      CelestialVector {
+        x: -10000,
+        y: 0,
+        z: 0,
+      },
+      CelestialVector {
+        x: 0,
+        y: -1000,
+        z: 0,
+      },
+      100_000_000f64,
     );
 
     let system_2 = grid.insert_system(
-      CelestialVector { x: 10000, y: 0, z: 0, },
-      CelestialVector { x: 0, y: 1000, z: 0, },
-      100_000_000i64
+      CelestialVector {
+        x: 10000,
+        y: 0,
+        z: 0,
+      },
+      CelestialVector {
+        x: 0,
+        y: 1000,
+        z: 0,
+      },
+      100_000_000f64,
     );
 
     for _ in 0..9000 {
       grid.tick_celestial_grid(&cosmic_params, 50_000u64);
-
     }
 
     let system_details_1 = grid.get_system_details(system_1).unwrap();
