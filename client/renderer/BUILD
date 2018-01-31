@@ -20,10 +20,10 @@ rust_library(
     name = "vk_device_support",
     srcs = ["vk_device_support.rs"],
     deps = [
-        "//cargo:derive_builder",
-        "//cargo:vk_sys",
         ":vk_lite",
+        "//cargo:derive_builder",
         "//cargo:log",
+        "//cargo:vk_sys",
     ],
 )
 
@@ -31,10 +31,10 @@ rust_library(
     name = "vk_instance_support",
     srcs = ["vk_instance_support.rs"],
     deps = [
-        "//cargo:derive_builder",
-        "//cargo:vk_sys",
         ":vk_lite",
+        "//cargo:derive_builder",
         "//cargo:log",
+        "//cargo:vk_sys",
     ],
 )
 
@@ -42,11 +42,11 @@ rust_library(
     name = "vk_swapchain_support",
     srcs = ["vk_swapchain_support.rs"],
     deps = [
-        "//cargo:derive_builder",
-        "//cargo:vk_sys",
-        ":vk_lite",
         ":vk_device_support",
+        ":vk_lite",
+        "//cargo:derive_builder",
         "//cargo:log",
+        "//cargo:vk_sys",
     ],
 )
 
@@ -54,12 +54,12 @@ rust_library(
     name = "vk_pipeline_support",
     srcs = ["vk_pipeline_support.rs"],
     deps = [
-        "//cargo:derive_builder",
-        "//cargo:vk_sys",
-        ":vk_lite",
         ":vk_device_support",
+        ":vk_lite",
         ":vk_swapchain_support",
+        "//cargo:derive_builder",
         "//cargo:log",
+        "//cargo:vk_sys",
     ],
 )
 
@@ -67,12 +67,12 @@ rust_library(
     name = "vk_buffer_support",
     srcs = ["vk_buffer_support.rs"],
     deps = [
-        "//cargo:derive_builder",
-        "//cargo:vk_sys",
-        ":vk_lite",
         ":vk_device_support",
+        ":vk_lite",
         ":vk_swapchain_support",
+        "//cargo:derive_builder",
         "//cargo:log",
+        "//cargo:vk_sys",
     ],
 )
 
@@ -80,38 +80,12 @@ rust_library(
     name = "vk_descriptor_support",
     srcs = ["vk_descriptor_support.rs"],
     deps = [
+        ":vk_lite",
         "//cargo:derive_builder",
-        "//cargo:vk_sys",
-        ":vk_lite",
         "//cargo:log",
+        "//cargo:vk_sys",
     ],
 )
-
-rust_library(
-    name = "vk_new_triangle",
-    srcs = ["vk_new_triangle.rs"],
-    data = [
-        ":triangle_frag_shader",
-        ":triangle_vert_shader",
-        ":texture.png",
-    ],
-    deps = [
-        "//cargo:vk_sys",
-        "//cargo:memoffset",
-        ":vk_lite",
-        ":vk_device_support",
-        ":vk_instance_support",
-        ":vk_swapchain_support",
-        ":vk_pipeline_support",
-        ":vk_buffer_support",
-        ":vk_descriptor_support",
-        "//cargo:log",
-        "//cargo:cgmath",
-        "//cargo:chrono",
-        "//cargo:png",
-    ],
-)
-
 
 rust_library(
     name = "sdl2_vulkan_interop",
@@ -122,30 +96,4 @@ rust_library(
         "//cargo:vk_sys",
         "//cargo/overrides/sdl2-sys:sdl2_sys",
     ],
-)
-
-rust_binary(
-    name = "toy",
-    srcs = ["toy.rs"],
-    deps = [
-        ":sdl2_vulkan_interop",
-        ":vk_lite",
-        ":vk_new_triangle",
-        "//cargo:sdl2",
-        "//cargo:fern",
-        "//cargo:chrono",
-        "//cargo:log",
-    ],
-)
-
-load("//tools:glslang.bzl", "compile_spirv_shader")
-
-compile_spirv_shader(
-    name = "triangle_vert_shader",
-    src = ":triangle.vert",
-)
-
-compile_spirv_shader(
-    name = "triangle_frag_shader",
-    src = ":triangle.frag",
 )
