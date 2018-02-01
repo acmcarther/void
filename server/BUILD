@@ -8,26 +8,6 @@ load(
 )
 
 rust_library(
-    name = "server",
-    srcs = ["server.rs"],
-    deps = [
-        "//cargo:chrono",
-        "//cargo:log",
-        "//common:service_spec",
-        "//common/service:srv_physics",
-    ],
-)
-
-rust_binary(
-    name = "launcher",
-    srcs = ["launcher.rs"],
-    deps = [
-        ":server",
-        "//common:init",
-    ],
-)
-
-rust_library(
     name = "space",
     srcs = ["space.rs"],
     deps = [
@@ -54,12 +34,6 @@ rust_library(
     ],
 )
 
-rust_library(
-    name = "space_partitioning",
-    srcs = ["space_partitioning.rs"],
-    deps = [],
-)
-
 rust_binary(
     name = "cosmic_toy",
     srcs = ["cosmic_toy.rs"],
@@ -75,13 +49,5 @@ rust_test(
     name = "cosmic_physics_test",
     deps = [
         ":cosmic_physics",
-    ],
-)
-
-rust_binary(
-    name = "sdl2_toy",
-    srcs = ["sdl2_toy.rs"],
-    deps = [
-        "//cargo:sdl2",
     ],
 )
