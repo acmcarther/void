@@ -29,6 +29,9 @@ memoffset = "0.2.1"
 derive_builder = "0.5.1"
 cgmath = "0.16.0"
 png = "0.11.0"
+grpcio = "0.2.0"
+protobuf = "1.4.3"
+grpcio-proto = "0.2.0"
 
 [lib]
 path = "fake_lib.rs"
@@ -70,3 +73,8 @@ additional_deps = [
 [raze.crates.cgmath.'0.16.0']
 # Generates some functions or something
 gen_buildrs = true
+
+[raze.crates.grpcio-sys.'0.2.0']
+additional_deps = [
+  "@com_github_grpc_grpc//:grpc"
+]

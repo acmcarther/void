@@ -48,6 +48,14 @@ alias(
     actual = "@raze__gnuplot__0_0_24//:gnuplot",
 )
 alias(
+    name = "grpcio",
+    actual = "@raze__grpcio__0_2_0//:grpcio",
+)
+alias(
+    name = "grpcio_proto",
+    actual = "@raze__grpcio_proto__0_2_0//:grpcio_proto",
+)
+alias(
     name = "hyper",
     actual = "@raze__hyper__0_11_14//:hyper",
 )
@@ -74,6 +82,10 @@ alias(
 alias(
     name = "png",
     actual = "@raze__png__0_11_0//:png",
+)
+alias(
+    name = "protobuf",
+    actual = "@raze__protobuf__1_4_3//:protobuf",
 )
 alias(
     name = "rand",
