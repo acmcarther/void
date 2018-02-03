@@ -6,7 +6,7 @@ load(
     "rust_doc",
     "rust_doc_test",
 )
-load("@org_pubref_rules_protobuf//protobuf:rules.bzl", "proto_compile")
+load("@org_pubref_rules_protobuf//protobuf:rules.bzl", "proto_language", "proto_compile")
 
 def build_librs_cmd(deps):
   lib_rs = "echo \"extern crate protobuf;\" > $@"
@@ -29,34 +29,11 @@ def build_librs_cmd(deps):
 
   return lib_rs
 
-def rust_proto_library(
-    name,
-    protos = [],
-    srcs = [],
-    proto_deps = [],
-    proto_dep_crates = []):
 
-  proto_dep_uses = ["use {};".format(dep) for dep in proto_dep_crates]
-
-  proto_compile(
-    name = name + ".pb",
-    # Pass in a list of proto_language rules
-    langs = ["//tools/bazel-ext/proto:rust"],
-    deps = [dep + ".pb" for dep in proto_deps],
-    protos = protos
-  )
-
-  native.genrule(
-    name = name + "lib_rs",
-    srcs = [name + ".pb"],
-    outs = [name + "_lib.rs"],
-    # This is a pretty naive soln
-    cmd = build_librs_cmd(proto_dep_crates)
-  )
-
-  rust_library(
-    name = name,
-    srcs = [name + "lib_rs"],
-    crate_root = name + "_lib.rs",
-    deps = ["@protoc_gen_rust//:protobuf",] + proto_deps,
-  )
+proto_language(
+    name = "rust",
+    pb_plugin = "//cargo:cargo_bin_protoc_gen_rust",
+    pb_file_extension = ["_lib.rs"],
+    supports_grpc = True,
+    grpc_plugin = "//cargo:cargo_bin_grpc_rust_plugin",
+)

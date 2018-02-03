@@ -21,7 +21,6 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__libc__0_2_36//:libc",
-        "@com_github_grpc_grpc//:grpc",
     ],
     rustc_flags = [
         "--cap-lints allow",

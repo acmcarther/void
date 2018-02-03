@@ -22,7 +22,7 @@ rust_binary(
     deps = [
         # Binaries get an implicit dependency on their lib
         ":grpcio_compiler",
-        "@raze__protobuf__1_4_3//:protobuf",
+        "@custom_rust_protobuf//:protobuf",
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -39,7 +39,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__protobuf__1_4_3//:protobuf",
+        "@custom_rust_protobuf//:protobuf",
     ],
     rustc_flags = [
         "--cap-lints allow",

@@ -7,7 +7,7 @@ load(
     "rust_binary",
 )
 
-rust_library(
+rust_binary(
     name = "server",
     srcs = ["server.rs"],
     deps = [
@@ -16,4 +16,28 @@ rust_library(
         "//cargo:grpcio_proto",
         "//cargo:log",
     ],
+)
+
+load("@org_pubref_rules_protobuf//protobuf:rules.bzl", "proto_language", "proto_compile")
+
+proto_language(
+    name = "rust",
+    pb_plugin = "//cargo:cargo_bin_protoc_gen_rust",
+    pb_file_extensions = [".rs"],
+    #supports_grpc = True,
+    #grpc_plugin = "//cargo:cargo_bin_grpc_rust_plugin",
+    pb_options = [],
+    pb_imports = [],
+    output_to_workspace = True,
+)
+
+proto_compile(
+    name = "helloworld_rs",
+    langs = [
+        ":rust",
+    ],
+    with_grpc = True,
+    protos = [
+        ":helloworld.proto",
+    ]
 )

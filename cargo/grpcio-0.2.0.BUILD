@@ -24,10 +24,10 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__futures__0_1_17//:futures",
-        "@raze__grpcio_sys__0_2_0//:grpcio_sys",
         "@raze__libc__0_2_36//:libc",
         "@raze__log__0_3_9//:log",
-        "@raze__protobuf__1_4_3//:protobuf",
+        "@//cargo/overrides/grpcio-sys-0.2.0:grpcio_sys",
+        "@custom_rust_protobuf//:protobuf",
     ],
     rustc_flags = [
         "--cap-lints allow",
