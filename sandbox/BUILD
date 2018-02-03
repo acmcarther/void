@@ -1,9 +1,17 @@
 package(default_visibility = ["//visibility:public"])
 
+load("//tools/bazel-ext/proto:rust.bzl", "rust_proto_library")
+
+rust_proto_library(
+    name = "helloworld",
+    protos = [
+        "helloworld.proto",
+    ],
+    with_grpc = True)
+
+
 load(
     "@io_bazel_rules_rust//rust:rust.bzl",
-    "rust_library",
-    "rust_test",
     "rust_binary",
 )
 
@@ -13,33 +21,23 @@ rust_binary(
     deps = [
         "//cargo:futures",
         "//cargo:grpcio",
-        "//cargo:grpcio_proto",
         "//cargo:log",
+        "//cargo:fern",
+        "//cargo:chrono",
+        ":helloworld",
     ],
 )
 
-load("@org_pubref_rules_protobuf//protobuf:rules.bzl", "proto_language", "proto_compile")
-
-proto_language(
-    name = "rust",
-    pb_plugin = "@custom_rust_protobuf//:cargo_bin_protoc_gen_rust",
-    pb_file_extensions = [".rs"],
-    supports_grpc = True,
-    grpc_file_extensions = ["_grpc.rs"],
-    grpc_plugin = "@custom_rust_grpc_compiler//:cargo_bin_grpc_rust_plugin",
-    pb_imports = [],
-    output_to_workspace = True,
+rust_binary(
+    name = "client",
+    srcs = ["client.rs"],
+    deps = [
+        "//cargo:futures",
+        "//cargo:grpcio",
+        "//cargo:log",
+        "//cargo:fern",
+        "//cargo:chrono",
+        ":helloworld",
+    ],
 )
 
-proto_compile(
-    name = "helloworld_rs",
-    langs = [
-        ":rust",
-    ],
-    with_grpc = True,
-    args = [],
-    protos = [
-        ":helloworld.proto",
-    ],
-    verbose = 3
-)
