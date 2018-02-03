@@ -1,3 +1,7 @@
+## Fetch overrides for cargo crates
+
+# Override rust protobuf to fix generated file directory
+# https://github.com/stepancheg/rust-protobuf/issues/189
 new_git_repository(
     name = "custom_rust_protobuf",
     commit = "1cd65f58202fd5ab66c9bf60e8194692d8a59313",
@@ -5,6 +9,7 @@ new_git_repository(
     build_file = "custom_rust_protobuf.BUILD"
 )
 
+# Override rust grpc compiler for the same reason
 new_git_repository(
     name = "custom_rust_grpc_compiler",
     commit = "121cd4534004fa8d80845f6629698a6032e38d49",
@@ -12,106 +17,17 @@ new_git_repository(
     build_file = "custom_rust_grpc_compiler.BUILD"
 )
 
+## Fetch GRPC (old version, due to rust grpc incompat)
+# https://github.com/pingcap/grpc-rs/issues/110
 new_git_repository(
     name = "com_github_grpc_grpc",
     tag = "v1.7.2",
     remote = "https://github.com/grpc/grpc",
     build_file = "third_party/grpc.BUILD",
 )
-bind(
-    name = "nanopb",
-    actual = "//third_party/nanopb",
-)
 
-bind(
-    name = "libssl",
-    actual = "@boringssl//:ssl",
-)
-
-bind(
-    name = "zlib",
-    actual = "@submodule_zlib//:z",
-)
-
-bind(
-    name = "protobuf",
-    actual = "@com_google_protobuf//:protobuf",
-)
-
-bind(
-    name = "protobuf_clib",
-    actual = "@com_google_protobuf//:protoc_lib",
-)
-
-bind(
-    name = "protocol_compiler",
-    actual = "@com_google_protobuf//:protoc",
-)
-
-bind(
-    name = "cares",
-    actual = "@submodule_cares//:ares",
-)
-
-bind(
-    name = "gtest",
-    actual = "@submodule_gtest//:gtest",
-)
-
-bind(
-    name = "gmock",
-    actual = "@submodule_gtest//:gmock",
-)
-
-bind(
-    name = "benchmark",
-    actual = "@submodule_benchmark//:benchmark",
-)
-
-bind(
-    name = "gflags",
-    actual = "@com_github_gflags_gflags//:gflags",
-)
-
-local_repository(
-    name = "boringssl",
-    path = "third_party/boringssl-with-bazel",
-)
-
-new_local_repository(
-    name = "submodule_zlib",
-    build_file = "third_party/zlib.BUILD",
-    path = "third_party/zlib",
-)
-
-new_local_repository(
-    name = "com_google_protobuf",
-    build_file = "third_party/protobuf/BUILD",
-    path = "third_party/protobuf",
-)
-
-new_local_repository(
-    name = "submodule_gtest",
-    build_file = "third_party/gtest.BUILD",
-    path = "third_party/googletest",
-)
-
-local_repository(
-    name = "com_github_gflags_gflags",
-    path = "third_party/gflags",
-)
-
-new_local_repository(
-    name = "submodule_benchmark",
-    path = "third_party/benchmark",
-    build_file = "third_party/benchmark.BUILD",
-)
-
-new_local_repository(
-    name = "submodule_cares",
-    path = "third_party/cares",
-    build_file = "third_party/cares/cares.BUILD",
-)
+load("//tools/bazel-ext:grpc.bzl", "old_grpc_repositories")
+old_grpc_repositories()
 
 git_repository(
     name = "org_pubref_rules_protobuf",
@@ -120,7 +36,6 @@ git_repository(
 )
 
 load("@org_pubref_rules_protobuf//protobuf:rules.bzl", "proto_repositories")
-
 proto_repositories()
 
 git_repository(
@@ -130,11 +45,9 @@ git_repository(
 )
 
 load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repositories")
-
 rust_repositories()
 
 load("//cargo:crates.bzl", "raze_fetch_remote_crates")
-
 raze_fetch_remote_crates()
 
 # TODO(acmcarther): Bring into repo
