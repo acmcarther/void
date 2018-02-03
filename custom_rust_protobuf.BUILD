@@ -1,3 +1,10 @@
+"""
+Overridded version of the rust proto compiler plugin.
+
+This fixes the output path of generated files, which in the original version are not relative to the proto file itself. This does not match up with other languages and makes using them in bazel a nuisance
+
+See https://github.com/stepancheg/rust-protobuf/issues/189
+"""
 package(default_visibility = ["//visibility:public"])
 
 load(

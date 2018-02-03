@@ -20,9 +20,8 @@ rust_binary(
       "*"
     ]),
     deps = [
-        "@raze__grpcio_compiler__0_2_0//:grpcio_compiler",
-        # Patch: Bug in raze causes overrides not to apply to build_scripts
         "@custom_rust_protobuf//:protobuf",
+        "@custom_rust_grpc_compiler//:grpcio_compiler",
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -59,6 +58,7 @@ rust_library(
         "@raze__futures__0_1_17//:futures",
         "@raze__grpcio__0_2_0//:grpcio",
         "@custom_rust_protobuf//:protobuf",
+        "@custom_rust_grpc_compiler//:grpcio_compiler",
     ],
     rustc_flags = [
         "--cap-lints allow",

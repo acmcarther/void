@@ -86,10 +86,12 @@ additional_deps = [
 
 [raze.crates.grpcio-proto.'0.2.0']
 skipped_deps = [
-  "protobuf-1.4.3"
+  "protobuf-1.4.3",
+  "grpcio-compiler-0.2.0"
 ]
 additional_deps = [
-  "@custom_rust_protobuf//:protobuf"
+  "@custom_rust_protobuf//:protobuf",
+  "@custom_rust_grpc_compiler//:grpcio_compiler",
 ]
 gen_buildrs = true
 

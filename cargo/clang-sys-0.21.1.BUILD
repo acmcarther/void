@@ -21,6 +21,7 @@ rust_binary(
     ]),
     deps = [
         "@raze__glob__0_2_11//:glob",
+        "@llvm//:clang",
     ],
     rustc_flags = [
         "--cap-lints allow",

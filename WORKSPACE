@@ -6,6 +6,13 @@ new_git_repository(
 )
 
 new_git_repository(
+    name = "custom_rust_grpc_compiler",
+    commit = "121cd4534004fa8d80845f6629698a6032e38d49",
+    remote = "https://github.com/acmcarther/grpc-rs.git",
+    build_file = "custom_rust_grpc_compiler.BUILD"
+)
+
+new_git_repository(
     name = "com_github_grpc_grpc",
     tag = "v1.7.2",
     remote = "https://github.com/grpc/grpc",
