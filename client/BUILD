@@ -6,8 +6,8 @@ load(
 )
 
 rust_binary(
-    name = "server",
-    srcs = ["server.rs"],
+    name = "client",
+    srcs = ["client.rs"],
     deps = [
         "//init",
         "//interconnect",
