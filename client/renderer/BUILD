@@ -10,6 +10,9 @@ load(
 rust_library(
     name = "vk_lite",
     srcs = ["vk_lite.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
     deps = [
         "//cargo:dylib",
         "//cargo:vk_sys",
@@ -19,6 +22,9 @@ rust_library(
 rust_library(
     name = "vk_device_support",
     srcs = ["vk_device_support.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
     deps = [
         ":vk_lite",
         "//cargo:derive_builder",
@@ -30,6 +36,9 @@ rust_library(
 rust_library(
     name = "vk_instance_support",
     srcs = ["vk_instance_support.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
     deps = [
         ":vk_lite",
         "//cargo:derive_builder",
@@ -41,6 +50,9 @@ rust_library(
 rust_library(
     name = "vk_swapchain_support",
     srcs = ["vk_swapchain_support.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
     deps = [
         ":vk_device_support",
         ":vk_lite",
@@ -53,6 +65,9 @@ rust_library(
 rust_library(
     name = "vk_pipeline_support",
     srcs = ["vk_pipeline_support.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
     deps = [
         ":vk_device_support",
         ":vk_lite",
@@ -66,6 +81,9 @@ rust_library(
 rust_library(
     name = "vk_buffer_support",
     srcs = ["vk_buffer_support.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
     deps = [
         ":vk_device_support",
         ":vk_lite",
@@ -79,6 +97,9 @@ rust_library(
 rust_library(
     name = "vk_descriptor_support",
     srcs = ["vk_descriptor_support.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
     deps = [
         ":vk_lite",
         "//cargo:derive_builder",
@@ -90,6 +111,9 @@ rust_library(
 rust_library(
     name = "sdl2_vulkan_interop",
     srcs = ["sdl2_vulkan_interop.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
     deps = [
         ":vk_lite",
         "//cargo:sdl2",

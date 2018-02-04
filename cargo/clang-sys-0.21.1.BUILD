@@ -21,11 +21,12 @@ rust_binary(
     ]),
     deps = [
         "@raze__glob__0_2_11//:glob",
-        "@llvm//:clang",
+        #"@llvm//:clang",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
+        "-C opt-level=2",
     ],
     crate_features = [
       "clang_3_9",
@@ -76,6 +77,7 @@ rust_library(
     ],
     rustc_flags = [
         "--cap-lints allow",
+        "-C opt-level=2",
         "--target=x86_64-unknown-linux-gnu",
     ],
     out_dir_tar = ":clang_sys_build_script_executor",

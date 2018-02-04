@@ -49,19 +49,20 @@ fn main() {
   let mut req = ConnectToServerRequest::new();
   let response = gateway_client.connect_to_server(&req).unwrap();
 
-  if response.has_success() {
-    let success = response.get_success();
-    let connection = success.get_connection();
-    info!(
-      "Successfully connected as {}, with suggested server {}",
-      connection.get_client_id(),
-      success.get_session_addr()
-    );
-  } else {
+  if response.has_rejected() {
     let rejected = response.get_rejected();
-    info!(
+    error!(
       "Failed to connect with explanation {}",
       rejected.get_explanation()
     );
+    return;
   }
+
+  let success = response.get_success();
+  let connection = success.get_connection();
+  info!(
+    "Successfully connected as {}, with suggested server {}",
+    connection.get_client_id(),
+    success.get_session_addr()
+  );
 }

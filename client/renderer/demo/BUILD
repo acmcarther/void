@@ -14,6 +14,9 @@ rust_binary(
         ":star_frag_shader",
         ":star_vert_shader",
     ],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
     deps = [
         "//cargo:cgmath",
         "//cargo:chrono",
@@ -32,7 +35,7 @@ rust_binary(
         "//client/renderer:vk_lite",
         "//client/renderer:vk_pipeline_support",
         "//client/renderer:vk_swapchain_support",
-        "//server:cosmic_physics",
+        "//server/experimental:cosmic_physics",
     ],
 )
 

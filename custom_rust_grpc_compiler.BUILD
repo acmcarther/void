@@ -25,6 +25,7 @@ rust_binary(
         "@custom_rust_protobuf//:protobuf",
     ],
     rustc_flags = [
+        "-C opt-level=2",
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
@@ -42,6 +43,7 @@ rust_library(
         "@custom_rust_protobuf//:protobuf",
     ],
     rustc_flags = [
+        "-C opt-level=2",
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],

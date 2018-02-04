@@ -24,6 +24,7 @@ rust_binary(
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
+        "-C opt-level=2",
     ],
     crate_features = [
       "cargo-fmt",
@@ -81,6 +82,7 @@ rust_binary(
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
+        "-C opt-level=2",
     ],
     out_dir_tar = ":rustfmt_nightly_build_script_executor",
     crate_features = [
@@ -119,6 +121,7 @@ rust_binary(
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
+        "-C opt-level=2",
     ],
     out_dir_tar = ":rustfmt_nightly_build_script_executor",
     crate_features = [
@@ -157,6 +160,7 @@ rust_binary(
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
+        "-C opt-level=2",
     ],
     out_dir_tar = ":rustfmt_nightly_build_script_executor",
     crate_features = [
@@ -195,6 +199,7 @@ rust_binary(
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
+        "-C opt-level=2",
     ],
     out_dir_tar = ":rustfmt_nightly_build_script_executor",
     crate_features = [
@@ -230,6 +235,7 @@ rust_library(
     ],
     rustc_flags = [
         "--cap-lints allow",
+        "-C opt-level=2",
         "--target=x86_64-unknown-linux-gnu",
     ],
     out_dir_tar = ":rustfmt_nightly_build_script_executor",
