@@ -29,6 +29,9 @@ memoffset = "0.2.1"
 derive_builder = "0.5.1"
 cgmath = "0.16.0"
 png = "0.11.0"
+grpcio = "0.2.0"
+protobuf = "1.4.3"
+grpcio-proto = "0.2.0"
 
 [lib]
 path = "fake_lib.rs"
@@ -70,3 +73,40 @@ additional_deps = [
 [raze.crates.cgmath.'0.16.0']
 # Generates some functions or something
 gen_buildrs = true
+
+[raze.crates.grpcio.'0.2.0']
+skipped_deps = [
+  "grpcio-sys-0.2.0",
+  "protobuf-1.4.3"
+]
+additional_deps = [
+  "@//cargo/overrides/grpcio-sys-0.2.0:grpcio_sys",
+  "@custom_rust_protobuf//:protobuf"
+]
+
+[raze.crates.grpcio-proto.'0.2.0']
+skipped_deps = [
+  "protobuf-1.4.3",
+  "grpcio-compiler-0.2.0"
+]
+additional_deps = [
+  "@custom_rust_protobuf//:protobuf",
+  "@custom_rust_grpc_compiler//:grpcio_compiler",
+]
+gen_buildrs = true
+
+[raze.crates.grpcio-compiler.'0.2.0']
+skipped_deps = [
+  "protobuf-1.4.3"
+]
+additional_deps = [
+  "@custom_rust_protobuf//:protobuf"
+]
+extra_aliased_targets = [
+  "cargo_bin_grpc_rust_plugin"
+]
+
+[raze.crates.protobuf.'1.4.3']
+extra_aliased_targets = [
+    "cargo_bin_protoc_gen_rust"
+]

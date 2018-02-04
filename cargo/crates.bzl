@@ -503,6 +503,38 @@ def raze_fetch_remote_crates():
     )
 
     native.new_http_archive(
+        name = "raze__grpcio__0_2_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/grpcio/grpcio-0.2.0.crate",
+        type = "tar.gz",
+        strip_prefix = "grpcio-0.2.0",
+        build_file = "//cargo:grpcio-0.2.0.BUILD"
+    )
+
+    native.new_http_archive(
+        name = "raze__grpcio_compiler__0_2_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/grpcio-compiler/grpcio-compiler-0.2.0.crate",
+        type = "tar.gz",
+        strip_prefix = "grpcio-compiler-0.2.0",
+        build_file = "//cargo:grpcio-compiler-0.2.0.BUILD"
+    )
+
+    native.new_http_archive(
+        name = "raze__grpcio_proto__0_2_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/grpcio-proto/grpcio-proto-0.2.0.crate",
+        type = "tar.gz",
+        strip_prefix = "grpcio-proto-0.2.0",
+        build_file = "//cargo:grpcio-proto-0.2.0.BUILD"
+    )
+
+    native.new_http_archive(
+        name = "raze__grpcio_sys__0_2_0",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/grpcio-sys/grpcio-sys-0.2.0.crate",
+        type = "tar.gz",
+        strip_prefix = "grpcio-sys-0.2.0",
+        build_file = "//cargo:grpcio-sys-0.2.0.BUILD"
+    )
+
+    native.new_http_archive(
         name = "raze__heatmap__0_6_6",
         url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/heatmap/heatmap-0.6.6.crate",
         type = "tar.gz",
@@ -916,6 +948,14 @@ def raze_fetch_remote_crates():
         type = "tar.gz",
         strip_prefix = "png-0.7.0",
         build_file = "//cargo:png-0.7.0.BUILD"
+    )
+
+    native.new_http_archive(
+        name = "raze__protobuf__1_4_3",
+        url = "https://crates-io.s3-us-west-1.amazonaws.com/crates/protobuf/protobuf-1.4.3.crate",
+        type = "tar.gz",
+        strip_prefix = "protobuf-1.4.3",
+        build_file = "//cargo:protobuf-1.4.3.BUILD"
     )
 
     native.new_http_archive(
