@@ -28,8 +28,8 @@ impl zcfg::ConfigParseable for LogLevelParsable {
   }
 }
 
-define_cfg!(
-  fern_log_level,
+define_pub_cfg!(
+  log_level,
   ::LogLevelParsable,
   ::LogLevelParsable(::log::LogLevelFilter::Debug),
   "What log level to emit logs to"
@@ -39,7 +39,7 @@ pub fn init_void() {
   zcfg_flag_parser::FlagParser::new()
     .parse_from_args(env::args().skip(1))
     .unwrap();
-  let LogLevelParsable(log_level) = fern_log_level::CONFIG.get_value();
+  let LogLevelParsable(log_level) = log_level::CONFIG.get_value();
   fern::Dispatch::new()
     // Perform allocation-free log formatting
     .format(|out, message, record| {
