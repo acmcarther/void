@@ -53,17 +53,23 @@ raze_fetch_remote_crates()
 # TODO(acmcarther): Bring into repo
 new_local_repository(
     name = "llvm",
-    build_file = "llvm.BUILD",
+    build_file = "//third_party:llvm.BUILD",
     path = "/usr/lib",
 )
 
 # TODO(acmcarther): Bring into repo
 new_local_repository(
     name = "clang",
-    build_file = "clang.BUILD",
+    build_file = "//third_party:clang.BUILD",
     path = "/usr/lib",
 )
 
+# TODO(acmcarther): Bring into repo
+new_local_repository(
+    name = "libsodium",
+    build_file = "//third_party:libsodium.BUILD",
+    path = "/usr/lib",
+)
 
 new_http_archive(
     name = "glslang",
@@ -71,3 +77,11 @@ new_http_archive(
     type = "zip",
     url = "https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip",
 )
+
+new_git_repository(
+    name = "netcode_io",
+    build_file = "//third_party:netcode_io.BUILD",
+    commit = "b261a1da3ac6eac9a7df53ca2de95959c24de158",
+    remote = "https://github.com/networkprotocol/netcode.io",
+)
+
