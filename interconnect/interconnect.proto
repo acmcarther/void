@@ -4,20 +4,20 @@ package interconnect;
 
 // A request to receive a downstream server to connect to
 // NextId: 1
-message ConnectToServerRequest {
+message FindServerRequest {
 }
 
 // A respose indicating success with a downstream server, or a rejection with details
 // NextId: 3
-message ConnectToServerResponse {
+message FindServerResponse {
   oneof outcome {
-    SuccessfulConnection success = 1;
-    RejectedConnection rejected = 2;
+    ServerSuggestion suggestion = 1;
+    ServerRejection rejection = 2;
   }
 
   // NextId: 2
-  message SuccessfulConnection {
-    Connection connection = 1;
+  message ServerSuggestion {
+    uint64 client_id = 1;
     string session_addr = 2;
   }
 
@@ -34,67 +34,6 @@ message ConnectToServerResponse {
   }
 }
 
-message Connection {
-  uint64 client_id = 1;
-  bool active = 2;
-}
-
-message GetConnectionStatusRequest {
-  uint64 client_id = 1;
-}
-
-// NextId: 4
-message GetConnectionStatusResponse {
-  oneof outcome {
-    Connection connection = 1;
-    StatusError error = 3;
-  }
-
-  // NextId: 2
-  message StatusError {
-    string explanation = 1;
-  }
-}
-
 service GatewayService {
-  rpc ConnectToServer(ConnectToServerRequest) returns (ConnectToServerResponse) {}
-  rpc GetConnectionStatus(GetConnectionStatusRequest) returns (GetConnectionStatusResponse) {}
-}
-
-// NextId: 4
-message RelayInputsRequest {
-  oneof event {
-    ConnectionOpening connection_opening = 1;
-    UpdateMetadata update_metadata = 2;
-    ConnectionClosing connection_closing = 3;
-  }
-
-  message ConnectionOpening {
-  }
-
-  message UpdateMetadata {
-  }
-
-  message ConnectionClosing {
-  }
-}
-
-// Not intended to be yielded: RelayInput is a long running RPC
-// NextId: 2
-message RelayInputsResponse {
-  string explanation = 1;
-}
-
-// NextId: 1
-message ReceiveStateRequest {}
-
-// NextId: 1
-message ReceiveStateResponse {
-}
-
-service SessionService {
-  // Not secure -- uses only a client id
-  rpc RelayInputs(stream RelayInputsRequest) returns (RelayInputsResponse) {}
-  // Not secure -- uses only a client id
-  rpc ReceiveState(ReceiveStateRequest) returns (stream ReceiveStateResponse) {}
+  rpc FindServer(FindServerRequest) returns (FindServerResponse) {}
 }

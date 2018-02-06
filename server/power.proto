@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package server;
+
+message PowerDefinition {
+  string name = 1;
+  repeated Capability capabilities = 2;
+  float halflife = 3;
+
+  extensions 1000 to 5000;
+}
+
+message Capability {
+  string name = 1;
+  float level = 2;
+}

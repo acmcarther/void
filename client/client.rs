@@ -13,20 +13,14 @@ extern crate zcfg;
 
 use grpcio::ChannelBuilder;
 use grpcio::EnvBuilder;
-use interconnect::interconnect::ConnectToServerRequest;
-use interconnect::interconnect::ConnectToServerResponse;
-use interconnect::interconnect::ConnectToServerResponse_SuccessfulConnection;
-use interconnect::interconnect::Connection;
-use interconnect::interconnect::ConnectToServerResponse_RejectedConnection;
-use interconnect::interconnect::ConnectToServerResponse_RejectedConnection_RejectionKind;
-//use interconnect::interconnect::GetConnectionStatusRequest;
-//use interconnect::interconnect::GetConnectionStatusResponse;
-//use interconnect::interconnect::GetConnectionStatusResponse_StatusError;
-//use interconnect::interconnect::ReceiveStateRequest;
-//use interconnect::interconnect::ReceiveStateResponse;
-//use interconnect::interconnect::RelayInputsRequest;
-//use interconnect::interconnect::RelayInputsResponse;
-use interconnect::interconnect_grpc;
+use grpcio::Environment;
+use grpcio::ClientCStreamReceiver;
+use grpcio::ClientSStreamReceiver;
+use grpcio::WriteFlags;
+use grpcio::ClientCStreamSender;
+use futures::Sink;
+use interconnect::interconnect::FindServerRequest;
+use interconnect::interconnect::FindServerResponse_RejectedConnection;
 use interconnect::interconnect_grpc::GatewayServiceClient;
 use std::sync::Arc;
 
@@ -37,32 +31,50 @@ define_pub_cfg!(
   "Configured address for the gateway"
 );
 
-fn main() {
-  init::init_void();
+struct SessionServerDetails {
+  own_client_id: u64,
+  suggested_server: String,
+}
 
-  let env = Arc::new(EnvBuilder::new().build());
-  let gateway_addr = gateway_address::CONFIG.get_value();
-  info!("Using gateway address: {}", gateway_addr);
-  let ch = ChannelBuilder::new(env).connect(&gateway_addr);
+fn find_server_details(
+  env: Arc<Environment>,
+  gateway_addr: &str,
+) -> Result<SessionServerDetails, FindServerResponse_RejectedConnection> {
+  let ch = ChannelBuilder::new(env).connect(gateway_addr);
   let gateway_client = GatewayServiceClient::new(ch);
 
-  let mut req = ConnectToServerRequest::new();
-  let response = gateway_client.connect_to_server(&req).unwrap();
+  let req = FindServerRequest::new();
+  let mut response = gateway_client.find_server(&req).unwrap();
 
   if response.has_rejected() {
-    let rejected = response.get_rejected();
+    let rejected = response.take_rejected();
     error!(
-      "Failed to connect with explanation {}",
+      "Failed to find server with explanation {}",
       rejected.get_explanation()
     );
-    return;
+    return Err(rejected);
   }
 
   let success = response.get_success();
   let connection = success.get_connection();
   info!(
-    "Successfully connected as {}, with suggested server {}",
+    "Successfully found server as client Id {}, with suggested server {}",
     connection.get_client_id(),
     success.get_session_addr()
   );
+
+  Ok(SessionServerDetails {
+    own_client_id: connection.get_client_id(),
+    suggested_server: success.get_session_addr().to_owned(),
+  })
+}
+
+fn main() {
+  init::init_void();
+
+  let env = Arc::new(EnvBuilder::new().cq_count(4).build());
+  let gateway_addr = gateway_address::CONFIG.get_value();
+  info!("Using gateway address: {}", gateway_addr);
+  let server_details =
+    find_server_details(env.clone(), &gateway_addr).expect("to have been given a suggested server");
 }

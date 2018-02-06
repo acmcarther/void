@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package server;
+
+message ControlledInfo {
+  uint64 controller_id = 1;
+}
+
+message ControllerInfo {
+  uint64 controller_id = 1;
+}

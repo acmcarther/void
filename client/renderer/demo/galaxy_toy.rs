@@ -1152,13 +1152,13 @@ fn main() {
 
   const POSITION_CEILING: f64 = 100.0;
   const VELOCITY_CEILING: f64 = 5.0;
-  const STAR_MASS: f64 = 50.0f64;
+  const STAR_MASS: f64 = 100.0f64;
   const PLANET_MASS: f64 = 5.0f64;
 
   let sdl_context = sdl2::init().unwrap();
   let video_subsystem = sdl_context.video().unwrap();
   let mut window = video_subsystem
-    .window("rust-sdl2 demo", 800, 600)
+    .window("rust-sdl2 demo", 1920, 1080)
     .position_centered()
     .vulkan()
     .build()
@@ -1177,12 +1177,12 @@ fn main() {
       gravitational_constant: 10.0,
     };
 
-    for _ in 0..30 {
+    for _ in 0..1 {
       grid.insert_system(
         cp::CelestialVector {
           x: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
           y: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
-          z: 0.0f64,
+          z: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
         },
         cp::CelestialVector {
           x: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
@@ -1193,12 +1193,12 @@ fn main() {
       );
     }
 
-    for _ in 0..100 {
+    for _ in 0..40 {
       grid.insert_system(
         cp::CelestialVector {
           x: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
           y: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
-          z: 0.0f64,
+          z: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
         },
         cp::CelestialVector {
           x: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
