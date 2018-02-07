@@ -7,6 +7,5 @@ rust_proto_library(
     protos = [
         "interconnect.proto",
     ],
-    with_grpc = True
+    with_grpc = False,
 )
-

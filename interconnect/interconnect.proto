@@ -2,38 +2,77 @@ syntax = "proto3";
 
 package interconnect;
 
-// A request to receive a downstream server to connect to
-// NextId: 1
-message FindServerRequest {
+message Vec3f {
+  // GEN_DIFFING = MINUS
+  float x = 1;
+  // GEN_DIFFING = MINUS
+  float y = 2;
+  // GEN_DIFFING = MINUS
+  float z = 3;
 }
 
-// A respose indicating success with a downstream server, or a rejection with details
-// NextId: 3
-message FindServerResponse {
-  oneof outcome {
-    ServerSuggestion suggestion = 1;
-    ServerRejection rejection = 2;
-  }
+enum ComponentChangeKind {
+  UNKNOWN = 0;
+  ADD_OR_CHANGE = 1;
+  REMOVE = 3;
+}
 
-  // NextId: 2
-  message ServerSuggestion {
+message PhysicsComponent {
+  uint64 entity_id = 1;
+  Vec3f pos = 2;
+  Vec3f vel = 3;
+  bool is_static = 4;
+}
+
+message PhysicsComponentDelta {
+  uint64 entity_id = 1;
+  ComponentChangeKind kind = 2;
+  PhysicsComponent component = 3;
+}
+
+message StateFrame {
+  oneof frame_contents {
+    KeyFrame key_frame = 1;
+    DeltaFrame delta_frame = 2;
+  }
+}
+
+message KeyFrame {
+  uint32 keyframe_id = 1;
+  GlobalKeystate global_keystate = 2;
+  EntityKeystate entity_keystate = 3;
+  ComponentKeystate component_keystate = 4;
+
+  message GlobalKeystate {
     uint64 client_id = 1;
-    string session_addr = 2;
   }
 
-  // NextId: 2
-  message RejectedConnection {
-    RejectionKind kind = 1;
-    string explanation = 2;
+  message EntityKeystate {
+    repeated uint64 entity_ids = 1;
+  }
 
-    enum RejectionKind {
-      UNKNOWN = 0;
-      RETRIABLE = 1;
-      FATAL = 2;
-    }
+  message ComponentKeystate {
+    repeated PhysicsComponent physics_components = 1;
   }
 }
 
-service GatewayService {
-  rpc FindServer(FindServerRequest) returns (FindServerResponse) {}
+message DeltaFrame {
+  uint32 reference_keyframe_id = 1;
+  GlobalKeystateDelta global_keystate_delta = 2;
+  EntityKeystateDelta entity_keystate_delta = 3;
+  ComponentKeystateDelta component_keystate_delta = 4;
+
+  message GlobalKeystateDelta {
+    // Does not change
+    // uint64 client_id = 1;
+  }
+
+  message EntityKeystateDelta {
+    repeated uint64 added_entity_ids = 1;
+    repeated uint64 removed_entity_ids = 2;
+  }
+
+  message ComponentKeystateDelta {
+    repeated PhysicsComponentDelta physics_components = 1;
+  }
 }
