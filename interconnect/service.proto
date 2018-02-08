@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package interconnect;
+
+message WritePermission {
+  string component_name = 1;
+}
+
+message ReadPermission {
+  string component_name = 1;
+  bool push_everything = 2;
+}
+
+message ServiceDefinition {
+  string name = 1;
+  repeated WritePermission write_permissions = 2;
+  repeated ReadPermission read_permissions = 3;
+}
+
+enum ReturnCode {
+  UNKNOWN = 0,
+  OK = 1,
+  NOT_AUTHORIZED = 2,
+  RETRIABLE_ERROR = 3,
+  SERIOUS_ERROR = 4,
+}
+
+message RegisterWorker {
+  uint32 service_name = 2;
+}
+
+message ReserveEntityIdsResponse {
+  ReturnCode return_code = 1;
+  repeated uint64 ids = 2
+  ReserveEntityIdsError error_details = 3;
+
+  message ReserveEntityIdsError {
+    uint32 unreserved_count = 1;
+    string explanation = 2;
+  }
+}
+
+
+message ReserveEntityIdsRequest {
+  uint32 worker_id = 1;
+  uint32 entity_count = 2;
+}
+
+message ReserveEntityIdsResponse {
+  ReturnCode return_code = 1;
+  repeated uint64 ids = 2
+  ReserveEntityIdsError error_details = 3;
+
+  message ReserveEntityIdsError {
+    uint32 unreserved_count = 1;
+    string explanation = 2;
+  }
+}
+
+message CreateEntitiesRequest {
+  uint32 worker_id = 1;
+  repeated uint64 ids = 2;
+}
+
+message CreateEntitiesResponse {
+  ReturnCode return_code = 1;
+  repeated uint64 ids = 2;
+  repeated CreateEntitiesResponse error_details_list = 3;
+
+  message CreateEntitiesResponse {
+    uint64 id = 1;
+    string explanation = 2;
+  }
+}
+
+message DeleteEntitiesRequest {
+  uint32 worker_id = 1;
+  repeated uint64 ids = 2;
+}
+
+message DeleteEntitiesResponse {
+  ReturnCode return_code = 1;
+  repeated uint64 ids = 2;
+  repeated CreateEntitiesResponse error_details_list = 3;
+
+  message CreateEntitiesResponse {
+    uint64 id = 1;
+    string explanation = 2;
+  }
+}

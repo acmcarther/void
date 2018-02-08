@@ -9,3 +9,21 @@ rust_proto_library(
     ],
     with_grpc = False,
 )
+
+load(
+    "@io_bazel_rules_rust//rust:rust.bzl",
+    "rust_library",
+)
+
+rust_library(
+    name = "store",
+    srcs = ["store.rs"],
+    deps = [
+        ":interconnect",
+        "//cargo:futures",
+        "//cargo:lazy_static",
+        "//cargo:log",
+        "//cargo:zcfg",
+        "//init",
+    ],
+)
