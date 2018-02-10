@@ -62,5 +62,4 @@ trait StateStore {
   fn reserve_entity_ids(&self, request: ReserveEntityIdsRequest) -> ReserveEntityIdsResponse;
   fn create_entities(&self, request: CreateEntitiesRequest) -> CreateEntitiesResponse;
   fn delete_entities(&self, request: DeleteEntitiesRequest) -> DeleteEntitiesResponse;
-  fn add_physics_component(&self, request: DeleteEntitiesRequest) -> DeleteEntitiesResponse;
 }
