@@ -85,3 +85,10 @@ new_git_repository(
     remote = "https://github.com/networkprotocol/netcode.io",
 )
 
+new_git_repository(
+    name = "reliable_io",
+    build_file = "//third_party:reliable_io.BUILD",
+    commit = "129451dd65853065076a4a606b0844d53859605e",
+    remote = "https://github.com/networkprotocol/reliable.io",
+)
+

@@ -51,20 +51,6 @@ rust_binary(
     ],
 )
 
-rust_binary(
-    name = "nio_server",
-    srcs = ["nio_server.rs"],
-    deps = [
-        "//init",
-        "//cargo:log",
-        "//cargo:lazy_static",
-        "//cargo:zcfg",
-        "//cargo:libc",
-        "@netcode_io//:netcode_io_sys"
-    ],
-)
-
-
 rust_test(
     name = "cosmic_physics_test",
     deps = [
