@@ -36,6 +36,7 @@ pub type ClientSlot = usize;
 
 pub trait NetcodeServer {
   fn get_connected_clients(&self) -> Vec<ClientId>;
+  fn disconnect_client(&self, client_id: &ClientId);
   fn send_packet(&mut self, client_id: &ClientId, payload_bytes: Vec<u8>);
   fn update(&mut self);
   fn retrieve_packets(&mut self, client_id: &ClientId) -> Vec<Vec<u8>>;

@@ -313,6 +313,39 @@ impl NetcodeServer for Server {
     self.context.slot_to_client_id.values().cloned().collect()
   }
 
+  fn disconnect_client(&self, client_id: &ClientId) {
+    // Untested function
+    // TODO(acmcarther): Verify that this works as expected
+
+    if !self.context.client_details.contains_key(client_id) {
+      warn!("Tried to disconnect a non-existent client {}", client_id);
+      return;
+    }
+
+    let slot_opt = self
+      .context
+      .slot_to_client_id
+      .iter()
+      .find(|&(_, client_id)| client_id == client_id)
+      .map(|(slot, _)| slot.clone());
+
+    if slot_opt.is_none() {
+      warn!("Tried to disconnect a client that was not connected to any slot");
+      return;
+    }
+
+    let slot = slot_opt.unwrap() as i32;
+    debug!(
+      "Disconnecting client {} from slot {} (takes effect next update)",
+      client_id,
+      slot
+    );
+
+    unsafe {
+      nio::netcode_server_disconnect_client(self.context.nio_server, slot);
+    }
+  }
+
   fn send_packet(&mut self, client_id: &ClientId, mut payload_bytes: Vec<u8>) {
     if !self.context.client_details.contains_key(client_id) {
       warn!(

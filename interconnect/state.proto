@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package interconnect;
+
+enum ComponentType {
+  UNKNOWN = 0;
+}
+
+message ComponentUpdates {
+  uint32 keyframe_id = 1;
+  ComponentType component_type = 2;
+  oneof update_content {
+    KeyFrameContent key_frame = 3;
+    DeltaFrameContent delta_frame = 4;
+  }
+}
+
+message KeyFrameContent {
+  repeated KeyComponentState key_component_states = 1;
+}
+
+message KeyComponentState {
+  uint32 entity_id = 1;
+  // TODO(acmcarther): Implement component authority
+  //bool authoritative = 2;
+  bytes data = 3;
+}
+
+message DeltaFrameContent {
+  repeated DeltaComponentState delta_component_states = 1;
+}
+
+message DeltaComponentState {
+  uint64 entity_id = 1;
+  // TODO(acmcarther): Implement component authority
+  //bool authoritative = 2;
+  bool removed = 3;
+  oneof change_payload {
+    bytes component_add_data = 4;
+    bytes component_change_data = 5;
+  }
+}

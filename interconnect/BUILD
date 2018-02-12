@@ -10,6 +10,15 @@ rust_proto_library(
     with_grpc = True
 )
 
+rust_proto_library(
+    name = "state_proto",
+    protos = [
+        "state.proto",
+    ],
+    with_grpc = False
+)
+
+
 load(
     "@io_bazel_rules_rust//rust:rust.bzl",
     "rust_library",
@@ -17,39 +26,42 @@ load(
 )
 
 rust_library(
-    name = "client",
-    srcs = ["client.rs"],
+    name = "state",
+    srcs = ["state.rs"],
     deps = [
-        "//cargo:lazy_static",
-        "//cargo:log",
-        "//init:init",
-        "//cargo:zcfg",
-        "//cargo:zcfg_flag_parser",
-        "@netcode_io//:netcode_io_sys",
-        "@reliable_io//:reliable_io_sys",
-    ],
+        ":state_proto",
+        "@custom_rust_protobuf//:protobuf",
+    ]
 )
 
 rust_library(
-    name = "server",
-    srcs = ["server.rs"],
+    name = "state_acceptor_api",
+    srcs = ["state_acceptor_api.rs"],
     deps = [
-        "//cargo:lazy_static",
-        "//cargo:log",
-        "//init:init",
-        "//cargo:zcfg",
-        "//cargo:zcfg_flag_parser",
-        "@netcode_io//:netcode_io_sys",
-        "@reliable_io//:reliable_io_sys",
-    ],
+        ":state",
+        ":state_proto",
+        "@custom_rust_protobuf//:protobuf",
+    ]
 )
 
 rust_library(
-    name = "netcode_api",
-    srcs = ["netcode_api.rs"],
+    name = "state_relay_api",
+    srcs = ["state_relay_api.rs"],
     deps = [
-        "@netcode_io//:netcode_io_sys",
-        "@reliable_io//:reliable_io_sys",
-    ],
+        ":state",
+        ":state_proto",
+        "@custom_rust_protobuf//:protobuf",
+    ]
 )
 
+rust_library(
+    name = "state_relay",
+    srcs = ["state_relay.rs"],
+    deps = [
+        ":state",
+        ":state_relay_api",
+        ":state_proto",
+        "@custom_rust_protobuf//:protobuf",
+        "//cargo:log",
+    ]
+)
