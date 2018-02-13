@@ -27,5 +27,5 @@ reorder_extern_crates = true
 space_after_colon = true
 space_before_colon = false
 struct_lit_single_line = false
-blank_lines_lower_bound = 1
+blank_lines_lower_bound = 0
 blank_lines_upper_bound = 1

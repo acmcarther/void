@@ -21,7 +21,9 @@ bindgen(
         "--rustified-enum \".*\"",
     ],
     hdr = ":wrapper.h",
-    includes = ["//third_party/SDL2:sdl2_headers"],
+    includes = [
+        "//third_party/SDL2:sdl2_headers",
+    ],
 )
 
 load("@io_bazel_rules_rust//rust:rust.bzl", "rust_library")
