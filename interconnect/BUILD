@@ -7,7 +7,7 @@ rust_proto_library(
     protos = [
         "interconnect.proto",
     ],
-    with_grpc = True
+    with_grpc = True,
 )
 
 rust_proto_library(
@@ -15,9 +15,8 @@ rust_proto_library(
     protos = [
         "state.proto",
     ],
-    with_grpc = False
+    with_grpc = False,
 )
-
 
 load(
     "@io_bazel_rules_rust//rust:rust.bzl",
@@ -31,7 +30,7 @@ rust_library(
     deps = [
         ":state_proto",
         "@custom_rust_protobuf//:protobuf",
-    ]
+    ],
 )
 
 rust_library(
@@ -41,27 +40,27 @@ rust_library(
         ":state",
         ":state_proto",
         "@custom_rust_protobuf//:protobuf",
-    ]
+    ],
 )
 
 rust_library(
-    name = "state_relay_api",
-    srcs = ["state_relay_api.rs"],
+    name = "state_transmitter_api",
+    srcs = ["state_transmitter_api.rs"],
     deps = [
         ":state",
         ":state_proto",
         "@custom_rust_protobuf//:protobuf",
-    ]
+    ],
 )
 
 rust_library(
-    name = "state_relay",
-    srcs = ["state_relay.rs"],
+    name = "state_transmitter",
+    srcs = ["state_transmitter.rs"],
     deps = [
         ":state",
-        ":state_relay_api",
         ":state_proto",
-        "@custom_rust_protobuf//:protobuf",
+        ":state_transmitter_api",
         "//cargo:log",
-    ]
+        "@custom_rust_protobuf//:protobuf",
+    ],
 )

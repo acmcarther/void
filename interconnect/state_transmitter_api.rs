@@ -10,7 +10,7 @@ use state_proto::state::ComponentType;
 use state_proto::state::ComponentUpdates;
 use std::collections::HashMap;
 
-pub trait StateRelay {
+pub trait StateTransmitter {
   fn add_node(&mut self, node_id: NodeId);
   fn remove_node(&mut self, node_id: &NodeId);
 

@@ -3,7 +3,7 @@ extern crate log;
 extern crate protobuf;
 extern crate state;
 extern crate state_proto;
-extern crate state_relay_api;
+extern crate state_transmitter_api;
 
 use state::KeyFrameId;
 use state::NodeId;
@@ -12,10 +12,10 @@ use state_proto::state::ComponentType;
 use state_proto::state::ComponentUpdates;
 use state_proto::state::KeyComponentState;
 use state_proto::state::KeyFrameContent;
-use state_relay_api::StateRelay;
+use state_transmitter_api::StateTransmitter;
 use std::collections::HashMap;
 
-pub struct StateRelayConfig {
+pub struct StateTransmitterConfig {
   pub component_configs: HashMap<ComponentType, ComponentConfig>,
 }
 
@@ -28,8 +28,8 @@ pub struct Interests {
   pub global_component_interests: Vec<ComponentType>,
 }
 
-pub struct StateRelayImpl {
-  config: StateRelayConfig,
+pub struct StateTransmitterImpl {
+  config: StateTransmitterConfig,
   node_details: HashMap<NodeId, NodeDetails>,
 }
 
@@ -44,7 +44,7 @@ pub struct ComponentDetails {
   last_keyframe_time_s: f64,
 }
 
-impl StateRelay for StateRelayImpl {
+impl StateTransmitter for StateTransmitterImpl {
   fn add_node(&mut self, node_id: NodeId) {
     if self.node_details.contains_key(&node_id) {
       warn!("Tried to add node {} that already existed.", node_id);
