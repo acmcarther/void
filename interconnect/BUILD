@@ -34,6 +34,18 @@ rust_library(
 )
 
 rust_library(
+    name = "state_acceptor",
+    srcs = ["state_acceptor.rs"],
+    deps = [
+        ":state",
+        ":state_acceptor_api",
+        ":state_proto",
+        "//cargo:log",
+        "@custom_rust_protobuf//:protobuf",
+    ],
+)
+
+rust_library(
     name = "state_acceptor_api",
     srcs = ["state_acceptor_api.rs"],
     deps = [

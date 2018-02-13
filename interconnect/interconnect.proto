@@ -22,7 +22,7 @@ message FindServerResponse {
   }
 
   // NextId: 2
-  message RejectedConnection {
+  message ServerRejection {
     RejectionKind kind = 1;
     string explanation = 2;
 

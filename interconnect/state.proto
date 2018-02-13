@@ -6,6 +6,22 @@ enum ComponentType {
   UNKNOWN = 0;
 }
 
+message StateUpdate {
+  repeated EntityUpdate entity_update = 1;
+  repeated ComponentUpdates component_updates = 2;
+}
+
+message EntityUpdate {
+  uint64 entity_id = 1;
+  UpdateStatus update_status = 2;
+
+  enum UpdateStatus {
+    UNKNOWN = 0;
+    ADDED = 1;
+    REMOVED = 2;
+  }
+}
+
 message ComponentUpdates {
   uint32 keyframe_id = 1;
   ComponentType component_type = 2;

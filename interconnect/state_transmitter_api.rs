@@ -7,7 +7,7 @@ use state::KeyFrameId;
 use state::NodeId;
 use state::StateBlob;
 use state_proto::state::ComponentType;
-use state_proto::state::ComponentUpdates;
+use state_proto::state::StateUpdate;
 use std::collections::HashMap;
 
 pub trait StateTransmitter {
@@ -29,5 +29,5 @@ pub trait StateTransmitter {
     node_id: &NodeId,
     state_blob: &T,
     current_time_s: f64,
-  ) -> Vec<(ComponentType, ComponentUpdates)>;
+  ) -> StateUpdate;
 }
