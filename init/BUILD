@@ -10,11 +10,11 @@ rust_library(
     name = "init",
     srcs = ["init.rs"],
     deps = [
-        "//cargo:chrono",
-        "//cargo:fern",
-        "//cargo:lazy_static",
-        "//cargo:log",
-        "//cargo:zcfg",
-        "//cargo:zcfg_flag_parser",
+        "//third_party/cargo:chrono",
+        "//third_party/cargo:fern",
+        "//third_party/cargo:lazy_static",
+        "//third_party/cargo:log",
+        "//third_party/cargo:zcfg",
+        "//third_party/cargo:zcfg_flag_parser",
     ],
 )

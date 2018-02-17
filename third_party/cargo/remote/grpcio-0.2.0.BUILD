@@ -30,7 +30,7 @@ rust_library(
         "@raze__futures__0_1_17//:futures",
         "@raze__libc__0_2_36//:libc",
         "@raze__log__0_3_9//:log",
-        "@//cargo/overrides/grpcio-sys-0.2.0:grpcio_sys",
+        "@//third_party/cargo/overrides/grpcio-sys-0.2.0:grpcio_sys",
         "@custom_rust_protobuf//:protobuf",
     ],
     rustc_flags = [

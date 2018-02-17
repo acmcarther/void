@@ -19,9 +19,9 @@ def bindgen(name, hdr, includes=[], formatted=True, blacklist_types=[], flags = 
           hdr,
       ],
       outs = [bindgen_out_name + ".rs"],
-      cmd = "RUST_BACKTRACE=1 $(location @//cargo:cargo_bin_bindgen) " + flags + " $(location " + hdr + ") > $(location " + bindgen_out_name + ".rs) -- " + clang_args,
+      cmd = "RUST_BACKTRACE=1 $(location @//third_party/cargo:cargo_bin_bindgen) " + flags + " $(location " + hdr + ") > $(location " + bindgen_out_name + ".rs) -- " + clang_args,
       tools = [
-          "@//cargo:cargo_bin_bindgen",
+          "@//third_party/cargo:cargo_bin_bindgen",
       ])
 
   if formatted:
@@ -29,5 +29,5 @@ def bindgen(name, hdr, includes=[], formatted=True, blacklist_types=[], flags = 
         name = name,
           srcs = [bindgen_out_name],
         outs = [name + ".rs"],
-        cmd = "$(location @//cargo/overrides/rustfmt-0.3.6:cargo_bin_rustfmt) --write-mode=plain $(location " + bindgen_out_name + ") > $@",
-        tools = ["@//cargo/overrides/rustfmt-0.3.6:cargo_bin_rustfmt"])
+        cmd = "$(location @//third_party/cargo/overrides/rustfmt-0.3.6:cargo_bin_rustfmt) --write-mode=plain $(location " + bindgen_out_name + ") > $@",
+        tools = ["@//third_party/cargo/overrides/rustfmt-0.3.6:cargo_bin_rustfmt"])

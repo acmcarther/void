@@ -14,9 +14,9 @@ rust_library(
         "-C opt-level=2",
     ],
     deps = [
-        "//cargo:chrono",
-        "//cargo:log",
-        "//cargo:rand",
+        "//third_party/cargo:chrono",
+        "//third_party/cargo:log",
+        "//third_party/cargo:rand",
     ],
 )
 
@@ -34,9 +34,9 @@ rust_library(
         "-C opt-level=2",
     ],
     deps = [
-        "//cargo:chrono",
-        "//cargo:log",
-        "//cargo:rand",
+        "//third_party/cargo:chrono",
+        "//third_party/cargo:log",
+        "//third_party/cargo:rand",
     ],
 )
 
@@ -45,9 +45,9 @@ rust_binary(
     srcs = ["cosmic_toy.rs"],
     deps = [
         ":cosmic_physics",
-        "//cargo:gnuplot",
-        "//cargo:rand",
-        "//cargo:vk_sys",
+        "//third_party/cargo:gnuplot",
+        "//third_party/cargo:rand",
+        "//third_party/cargo:vk_sys",
     ],
 )
 

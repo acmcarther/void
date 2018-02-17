@@ -10,9 +10,9 @@ rust_binary(
     name = "server",
     srcs = ["server.rs"],
     deps = [
-        "//cargo:lazy_static",
-        "//cargo:log",
-        "//cargo:zcfg",
+        "//third_party/cargo:lazy_static",
+        "//third_party/cargo:log",
+        "//third_party/cargo:zcfg",
         "//init",
         ":physics",
         ":base_server",
@@ -26,10 +26,10 @@ rust_library(
     name = "base_server",
     srcs = ["base_server.rs"],
     deps = [
-        "//cargo:chrono",
-        "//cargo:log",
-        "//cargo:zcfg",
-        "//cargo:lazy_static",
+        "//third_party/cargo:chrono",
+        "//third_party/cargo:log",
+        "//third_party/cargo:zcfg",
+        "//third_party/cargo:lazy_static",
     ]
 )
 
@@ -37,10 +37,10 @@ rust_library(
     name = "physics",
     srcs = ["physics.rs"],
     deps = [
-        "//cargo:chrono",
-        "//cargo:log",
-        "//cargo:zcfg",
-        "//cargo:lazy_static",
+        "//third_party/cargo:chrono",
+        "//third_party/cargo:log",
+        "//third_party/cargo:zcfg",
+        "//third_party/cargo:lazy_static",
         ":physics_proto",
         ":base_server",
         ":stores",
@@ -52,10 +52,10 @@ rust_library(
     name = "stores",
     srcs = ["stores.rs"],
     deps = [
-        "//cargo:chrono",
-        "//cargo:log",
-        "//cargo:zcfg",
-        "//cargo:lazy_static",
+        "//third_party/cargo:chrono",
+        "//third_party/cargo:log",
+        "//third_party/cargo:zcfg",
+        "//third_party/cargo:lazy_static",
         ":physics_proto",
         ":control_proto",
         ":base_server",

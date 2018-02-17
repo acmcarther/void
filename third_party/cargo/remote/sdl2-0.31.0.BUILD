@@ -55,7 +55,7 @@ rust_library(
         "@raze__libc__0_2_36//:libc",
         "@raze__num__0_1_41//:num",
         "@raze__rand__0_3_20//:rand",
-        "@//cargo/overrides/sdl2-sys:sdl2_sys",
+        "@//third_party/cargo/overrides/sdl2-sys:sdl2_sys",
     ],
     rustc_flags = [
         "--cap-lints allow",

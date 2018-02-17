@@ -11,10 +11,10 @@ rust_binary(
     deps = [
         "//init",
         "//interconnect",
-        "//cargo:log",
-        "//cargo:futures",
-        "//cargo:grpcio",
-        "//cargo:zcfg",
-        "//cargo:lazy_static",
+        "//third_party/cargo:log",
+        "//third_party/cargo:futures",
+        "//third_party/cargo:grpcio",
+        "//third_party/cargo:zcfg",
+        "//third_party/cargo:lazy_static",
     ]
 )

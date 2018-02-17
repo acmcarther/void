@@ -4,7 +4,7 @@ let
   pkgs = import <nixpkgs> {};
 in pkgs.stdenv.mkDerivation rec {
   name = "space_coop";
-  propagatedBuildInputs = [ pkgs.vulkan-loader pkgs.inotify-tools pkgs.bash pkgs.patchelf pkgs.openssl.dev pkgs.pkgconfig pkgs.zlib pkgs.cmake] ;
+  propagatedBuildInputs = [ pkgs.vulkan-loader pkgs.inotify-tools pkgs.bash pkgs.patchelf pkgs.openssl.dev pkgs.pkgconfig pkgs.zlib.dev pkgs.cmake] ;
   shellHook = ''
     # Allow my shell to add custom snippet
     export IS_NIX_SHELL=1

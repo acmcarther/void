@@ -37,7 +37,7 @@ grpcio-proto = "0.2.0"
 path = "fake_lib.rs"
 
 [raze]
-workspace_path = "//cargo"
+workspace_path = "//third_party/cargo"
 target = "x86_64-unknown-linux-gnu"
 genmode = "Remote"
 
@@ -55,7 +55,7 @@ skipped_deps = [
   "sdl2-sys-0.31.0"
 ]
 additional_deps = [
-  "@//cargo/overrides/sdl2-sys:sdl2_sys"
+  "@//third_party/cargo/overrides/sdl2-sys:sdl2_sys"
 ]
 
 [raze.crates.bindgen.'0.32.2']
@@ -80,7 +80,7 @@ skipped_deps = [
   "protobuf-1.4.3"
 ]
 additional_deps = [
-  "@//cargo/overrides/grpcio-sys-0.2.0:grpcio_sys",
+  "@//third_party/cargo/overrides/grpcio-sys-0.2.0:grpcio_sys",
   "@custom_rust_protobuf//:protobuf"
 ]
 

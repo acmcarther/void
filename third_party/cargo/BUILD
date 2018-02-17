@@ -5,6 +5,11 @@ DO NOT EDIT! Replaced on runs of cargo-raze
 """
 package(default_visibility = ["//visibility:public"])
 
+licenses([
+  "notice" # See individual crates for specific licenses
+])
+
+
 alias(
     name = "bindgen",
     actual = "@raze__bindgen__0_32_2//:bindgen",

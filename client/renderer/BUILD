@@ -14,8 +14,8 @@ rust_library(
         "-C opt-level=2",
     ],
     deps = [
-        "//cargo:dylib",
-        "//cargo:vk_sys",
+        "//third_party/cargo:dylib",
+        "//third_party/cargo:vk_sys",
     ],
 )
 
@@ -27,9 +27,9 @@ rust_library(
     ],
     deps = [
         ":vk_lite",
-        "//cargo:derive_builder",
-        "//cargo:log",
-        "//cargo:vk_sys",
+        "//third_party/cargo:derive_builder",
+        "//third_party/cargo:log",
+        "//third_party/cargo:vk_sys",
     ],
 )
 
@@ -41,9 +41,9 @@ rust_library(
     ],
     deps = [
         ":vk_lite",
-        "//cargo:derive_builder",
-        "//cargo:log",
-        "//cargo:vk_sys",
+        "//third_party/cargo:derive_builder",
+        "//third_party/cargo:log",
+        "//third_party/cargo:vk_sys",
     ],
 )
 
@@ -56,9 +56,9 @@ rust_library(
     deps = [
         ":vk_device_support",
         ":vk_lite",
-        "//cargo:derive_builder",
-        "//cargo:log",
-        "//cargo:vk_sys",
+        "//third_party/cargo:derive_builder",
+        "//third_party/cargo:log",
+        "//third_party/cargo:vk_sys",
     ],
 )
 
@@ -72,9 +72,9 @@ rust_library(
         ":vk_device_support",
         ":vk_lite",
         ":vk_swapchain_support",
-        "//cargo:derive_builder",
-        "//cargo:log",
-        "//cargo:vk_sys",
+        "//third_party/cargo:derive_builder",
+        "//third_party/cargo:log",
+        "//third_party/cargo:vk_sys",
     ],
 )
 
@@ -88,9 +88,9 @@ rust_library(
         ":vk_device_support",
         ":vk_lite",
         ":vk_swapchain_support",
-        "//cargo:derive_builder",
-        "//cargo:log",
-        "//cargo:vk_sys",
+        "//third_party/cargo:derive_builder",
+        "//third_party/cargo:log",
+        "//third_party/cargo:vk_sys",
     ],
 )
 
@@ -102,9 +102,9 @@ rust_library(
     ],
     deps = [
         ":vk_lite",
-        "//cargo:derive_builder",
-        "//cargo:log",
-        "//cargo:vk_sys",
+        "//third_party/cargo:derive_builder",
+        "//third_party/cargo:log",
+        "//third_party/cargo:vk_sys",
     ],
 )
 
@@ -116,8 +116,8 @@ rust_library(
     ],
     deps = [
         ":vk_lite",
-        "//cargo:sdl2",
-        "//cargo:vk_sys",
-        "//cargo/overrides/sdl2-sys:sdl2_sys",
+        "//third_party/cargo:sdl2",
+        "//third_party/cargo:vk_sys",
+        "//third_party/cargo/overrides/sdl2-sys:sdl2_sys",
     ],
 )

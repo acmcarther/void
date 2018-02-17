@@ -70,7 +70,7 @@ def rust_proto_library(
 
   builtin_deps = ["@custom_rust_protobuf//:protobuf"]
   if with_grpc:
-    builtin_deps = builtin_deps + ["//cargo:grpcio", "//cargo:futures"]
+    builtin_deps = builtin_deps + ["//third_party/cargo:grpcio", "//third_party/cargo:futures"]
 
   rust_library(
     name = name,

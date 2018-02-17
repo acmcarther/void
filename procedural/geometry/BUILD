@@ -11,6 +11,6 @@ rust_library(
     name = "icosphere",
     srcs = ["icosphere.rs"],
     deps = [
-        "//cargo:itertools",
+        "//third_party/cargo:itertools",
     ],
 )

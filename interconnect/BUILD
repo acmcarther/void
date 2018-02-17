@@ -40,7 +40,7 @@ rust_library(
         ":state",
         ":state_acceptor_api",
         ":state_proto",
-        "//cargo:log",
+        "//third_party/cargo:log",
         "@custom_rust_protobuf//:protobuf",
     ],
 )
@@ -72,7 +72,7 @@ rust_library(
         ":state",
         ":state_proto",
         ":state_transmitter_api",
-        "//cargo:log",
+        "//third_party/cargo:log",
         "@custom_rust_protobuf//:protobuf",
     ],
 )

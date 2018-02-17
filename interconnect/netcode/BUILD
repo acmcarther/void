@@ -12,7 +12,7 @@ rust_library(
     name = "netcode_global",
     srcs = ["netcode_global.rs"],
     deps = [
-        "//cargo:log",
+        "//third_party/cargo:log",
         "//init:init",
         "@netcode_io//:netcode_io_sys",
         "@reliable_io//:reliable_io_sys",
@@ -23,8 +23,8 @@ rust_library(
     name = "netcode_api",
     srcs = ["netcode_api.rs"],
     deps = [
-        "//cargo:lazy_static",
-        "//cargo:zcfg",
+        "//third_party/cargo:lazy_static",
+        "//third_party/cargo:zcfg",
         "@netcode_io//:netcode_io_sys",
     ],
 )
@@ -35,11 +35,11 @@ rust_library(
     deps = [
         ":netcode_api",
         ":netcode_terrible_constants",
-        "//cargo:lazy_static",
-        "//cargo:log",
-        "//cargo:libc",
-        "//cargo:zcfg",
-        "//cargo:zcfg_flag_parser",
+        "//third_party/cargo:lazy_static",
+        "//third_party/cargo:log",
+        "//third_party/cargo:libc",
+        "//third_party/cargo:zcfg",
+        "//third_party/cargo:zcfg_flag_parser",
         "//init:init",
         "@netcode_io//:netcode_io_sys",
         "@reliable_io//:reliable_io_sys",
@@ -58,11 +58,11 @@ rust_library(
     deps = [
         ":netcode_api",
         ":netcode_terrible_constants",
-        "//cargo:lazy_static",
-        "//cargo:log",
-        "//cargo:libc",
-        "//cargo:zcfg",
-        "//cargo:zcfg_flag_parser",
+        "//third_party/cargo:lazy_static",
+        "//third_party/cargo:log",
+        "//third_party/cargo:libc",
+        "//third_party/cargo:zcfg",
+        "//third_party/cargo:zcfg_flag_parser",
         "//init:init",
         "@netcode_io//:netcode_io_sys",
         "@reliable_io//:reliable_io_sys",
@@ -80,7 +80,7 @@ rust_binary(
         ":netcode_api",
         ":netcode_global",
         "@netcode_io//:netcode_io_sys",
-        "//cargo:log",
+        "//third_party/cargo:log",
     ]
 )
 
