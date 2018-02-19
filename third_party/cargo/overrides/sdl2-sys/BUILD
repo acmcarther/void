@@ -2,6 +2,10 @@ package(default_visibility = ["//visibility:public"])
 
 load("//tools/rust:bindgen.bzl", "bindgen")
 
+licenses([
+    "notice" # not actually third party
+])
+
 bindgen(
     name = "SDL_bindgen",
     blacklist_types = [

@@ -5,6 +5,10 @@ DO NOT EDIT! Replaced on runs of cargo-raze
 """
 package(default_visibility = ["//visibility:public"])
 
+licenses([
+  "notice", # "Apache-2.0,MIT"
+])
+
 load(
     "@io_bazel_rules_rust//rust:rust.bzl",
     "rust_library",
