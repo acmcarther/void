@@ -318,7 +318,6 @@ mod util {
     }
 
     let client = context as *mut ::Client;
-    debug!("Client config {:?}", (*client).config);
     assert!((*client).nio_client != std::ptr::null_mut());
     nio::netcode_client_send_packet((*client).nio_client, packet_data, packet_byte_count);
   }
@@ -346,6 +345,7 @@ mod util {
       packet_data as *const libc::c_void,
       packet_byte_count as usize,
     );
+    payload.set_len(packet_byte_count as usize);
 
     (*client).unprocessed_inbound_packets.push(payload);
     1

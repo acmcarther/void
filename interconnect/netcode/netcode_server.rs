@@ -485,6 +485,7 @@ mod util {
       packet_data as *const libc::c_void,
       packet_byte_count as usize,
     );
+    payload.set_len(packet_byte_count as usize);
 
     assert!((*server_context).slot_to_client_id.contains_key(&slot));
     let client_id = (*server_context).slot_to_client_id.get(&slot).unwrap();

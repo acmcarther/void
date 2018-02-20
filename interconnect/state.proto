@@ -2,20 +2,16 @@ syntax = "proto3";
 
 package interconnect;
 
-enum ComponentType {
-  UNKNOWN = 0;
-}
-
 message StateUpdate {
-  repeated EntityUpdate entity_update = 1;
+  repeated EntityUpdates entity_updates = 1;
   repeated ComponentUpdates component_updates = 2;
 }
 
-message EntityUpdate {
-  uint64 entity_id = 1;
-  UpdateStatus update_status = 2;
+message EntityUpdates {
+  repeated uint64 entity_ids = 1;
+  UpdateType update_type = 2;
 
-  enum UpdateStatus {
+  enum UpdateType {
     UNKNOWN = 0;
     ADDED = 1;
     REMOVED = 2;
@@ -24,10 +20,10 @@ message EntityUpdate {
 
 message ComponentUpdates {
   uint32 keyframe_id = 1;
-  ComponentType component_type = 2;
+  uint32 component_type_id = 2;
   oneof update_content {
-    KeyFrameContent key_frame = 3;
-    DeltaFrameContent delta_frame = 4;
+    KeyFrameContent key_frame_content = 3;
+    DeltaFrameContent delta_frame_content = 4;
   }
 }
 
@@ -36,7 +32,7 @@ message KeyFrameContent {
 }
 
 message KeyComponentState {
-  uint32 entity_id = 1;
+  uint64 entity_id = 1;
   // TODO(acmcarther): Implement component authority
   //bool authoritative = 2;
   bytes data = 3;

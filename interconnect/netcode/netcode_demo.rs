@@ -50,6 +50,9 @@ fn run_demo() {
       }
       let client_packets = server.retrieve_packets(&client_id);
       debug!("Got {} packets from client", client_packets.len());
+      for packet in client_packets {
+        debug!("packet: {:#?}", packet);
+      }
     }
 
     // Do client stuff
@@ -62,6 +65,9 @@ fn run_demo() {
       }
       let server_packets = client_1.retrieve_packets();
       info!("Got {} packets from server", server_packets.len());
+      for packet in server_packets {
+        debug!("packet: {:#?}", packet);
+      }
     }
     {
       client_2.update();
@@ -72,6 +78,9 @@ fn run_demo() {
       }
       let server_packets = client_2.retrieve_packets();
       debug!("Got {} packets from server", server_packets.len());
+      for packet in server_packets {
+        debug!("packet: {:#?}", packet);
+      }
     }
 
     unsafe {

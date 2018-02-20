@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package interconnect.demo;
+
+message PositionComponent {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+message ColorComponent {
+  float r = 1;
+  float g = 2;
+  float b = 3;
+  float a = 4;
+}
+
+message ClientMessage {
+}
+
+message ServerMessage {
+  bytes data = 1;
+}
