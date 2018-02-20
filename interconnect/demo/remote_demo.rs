@@ -68,6 +68,7 @@ mod server {
   use netcode_server::ServerConfig;
   use nio;
   use protobuf::Message;
+  use state_transmitter::ComponentConfig;
   use state_transmitter::StateTransmitterConfig;
   use state_transmitter::StateTransmitterImpl;
   use state_transmitter_api::StateTransmitter;
@@ -84,13 +85,30 @@ mod server {
 
   pub fn be_a_server() {
     info!("I'll be a server!");
-    let config = ServerConfig::default();
-    let server = Server::start_from_config(config);
+    let server = Server::start_from_config(ServerConfig::default());
+    let mut state_transmitter_config = StateTransmitterConfig::default();
+    {
+      state_transmitter_config.component_configs.insert(
+        POSITION_COMPONENT_ID,
+        ComponentConfig {
+          s_between_frames: 0.01,
+          delta_frames_per_keyframe: 0,
+        },
+      );
+      state_transmitter_config.component_configs.insert(
+        COLOR_COMPONENT_ID,
+        ComponentConfig {
+          s_between_frames: 3.00,
+          delta_frames_per_keyframe: 0,
+        },
+      );
+    }
+    let state_transmitter = StateTransmitterImpl::from_config(state_transmitter_config);
 
     let mut demo_server = DemoServer {
       server: server,
       client_ids: HashSet::new(),
-      state_transmitter: StateTransmitterImpl::from_config(StateTransmitterConfig::default()),
+      state_transmitter: state_transmitter,
       state: State::new(),
       start_time: Instant::now(),
     };
@@ -117,7 +135,7 @@ mod server {
       }
     }
 
-    let sleep_duration = 1.0 / 1200.0;
+    let sleep_duration = 1.0 / 12000.0;
 
     loop {
       let current_time_s = {
@@ -229,7 +247,7 @@ mod client {
       state: State::new(),
       state_acceptor: StateAcceptorImpl::from_config(StateAcceptorConfig::default()),
     };
-    let sleep_duration = 1.0 / 1200.0;
+    let sleep_duration = 1.0 / 12000.0;
 
     loop {
       let current_time_s = {
