@@ -10,8 +10,6 @@ use state_api::KeyFrameId;
 use state_api::NodeId;
 use state_api::StateBlob;
 use state_proto::state::ComponentUpdates;
-use state_proto::state::EntityUpdates;
-use state_proto::state::EntityUpdates_UpdateType;
 use state_proto::state::KeyComponentState;
 use state_proto::state::KeyFrameContent;
 use state_proto::state::StateUpdate;
@@ -45,6 +43,7 @@ pub struct NodeDetails {
 pub struct ComponentDetails {
   last_keyframe_id: KeyFrameId,
   last_keyframe_time_s: f64,
+  last_keyframe_id_acked: KeyFrameId,
 }
 
 impl Default for StateTransmitterConfig {
@@ -128,6 +127,7 @@ impl StateTransmitter for StateTransmitterImpl {
         // N.B: This is technically not correct, but whatever.
         // It'll trigger a keyframe on next update, which is probably the right thing to do.
         last_keyframe_time_s: 0.0,
+        last_keyframe_id_acked: 0,
       },
     );
   }
@@ -173,7 +173,21 @@ impl StateTransmitter for StateTransmitterImpl {
     component_type_id: &ComponentTypeId,
     keyframe_id: KeyFrameId,
   ) {
-    // TODO(acmcarther): Implement
+    let node_details_opt = self.node_details.get_mut(node_id);
+    if node_details_opt.is_none() {
+      warn!("Tried to add a keyframe id ack for an unknown node.");
+      return;
+    }
+    let node_details = node_details_opt.unwrap();
+
+    let component_details_opt = node_details.component_details.get_mut(component_type_id);
+    if component_details_opt.is_none() {
+      warn!("Tried to add a keyframe id ack for a known node without a component details entry.");
+      return;
+    }
+    let component_details = component_details_opt.unwrap();
+
+    component_details.last_keyframe_id_acked = keyframe_id;
   }
 
   fn produce_update(
@@ -193,23 +207,6 @@ impl StateTransmitter for StateTransmitterImpl {
     let node_details = self.node_details.get_mut(node_id).unwrap();
 
     let mut state_update = StateUpdate::new();
-
-    // Update Entities
-    // TODO(acmcarther): Implement delta frames
-    // N.B. The current implementation reports all known entities as "added", and never yields
-    // "removed", since we are not retaining keyframe ack information at this time.
-    {
-      let mut entity_updates_list = state_update.mut_entity_updates();
-      let mut entity_updates = EntityUpdates::new();
-      entity_updates.set_update_type(EntityUpdates_UpdateType::ADDED);
-      {
-        let mut added_entity_ids = entity_updates.mut_entity_ids();
-        for entity_id in state_blob.list_entities() {
-          added_entity_ids.push(entity_id);
-        }
-      }
-      entity_updates_list.push(entity_updates)
-    }
 
     // Update components
     {

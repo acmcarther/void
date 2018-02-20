@@ -21,25 +21,6 @@ extern crate state_transmitter_api;
 #[macro_use]
 extern crate zcfg;
 
-use demo_proto::demo::ColorComponent;
-use demo_proto::demo::PositionComponent;
-use demo_state::COLOR_COMPONENT_ID;
-use demo_state::POSITION_COMPONENT_ID;
-use demo_state::State;
-use protobuf::Message;
-use state_acceptor::StateAcceptorConfig;
-use state_acceptor::StateAcceptorImpl;
-use state_acceptor_api::StateAcceptor;
-use state_api::ComponentTypeId;
-use state_api::EntityId;
-use state_api::StateBlob;
-use state_api::UpdateErr;
-use state_transmitter::StateTransmitterConfig;
-use state_transmitter::StateTransmitterImpl;
-use state_transmitter_api::StateTransmitter;
-use std::collections::HashMap;
-use std::collections::HashSet;
-
 pub mod flags {
   define_pub_cfg!(
     demo_remote_role,
@@ -87,7 +68,6 @@ mod server {
   use netcode_server::ServerConfig;
   use nio;
   use protobuf::Message;
-  use state_api::StateBlob;
   use state_transmitter::StateTransmitterConfig;
   use state_transmitter::StateTransmitterImpl;
   use state_transmitter_api::StateTransmitter;
@@ -105,7 +85,7 @@ mod server {
   pub fn be_a_server() {
     info!("I'll be a server!");
     let config = ServerConfig::default();
-    let mut server = Server::start_from_config(config);
+    let server = Server::start_from_config(config);
 
     let mut demo_server = DemoServer {
       server: server,
@@ -116,7 +96,6 @@ mod server {
     };
 
     {
-      demo_server.state.add_entity(1);
       {
         let mut color_data = ColorComponent::new();
         color_data.set_r(1.0);
@@ -146,6 +125,19 @@ mod server {
         let duration = now.duration_since(demo_server.start_time);
         (duration.as_secs() as f64) + ((duration.subsec_nanos()) as f64 / 1_000_000_000.0)
       };
+
+      {
+        demo_server
+          .state
+          .mut_position(&1 /* entity_id */)
+          .unwrap()
+          .set_x(current_time_s as f32);
+        demo_server
+          .state
+          .mut_color(&1 /* entity_id */)
+          .unwrap()
+          .set_r((current_time_s as f32).fract());
+      }
 
       demo_server.server.update();
 
@@ -182,9 +174,8 @@ mod server {
         } else {
         }
 
-        for client_packet in demo_server.server.retrieve_packets(&client_id) {
-          // TODO: Do something with client packets?
-        }
+        // Dump client packets
+        demo_server.server.retrieve_packets(&client_id);
       }
 
       for removed_client_id in removed_client_ids.into_iter() {
@@ -230,7 +221,7 @@ mod client {
   pub fn be_a_client() {
     info!("I'll be a client!");
     let config = ClientConfig::default();
-    let mut client = Client::start_from_config(config);
+    let client = Client::start_from_config(config);
 
     let mut demo_client = DemoClient {
       client: client,
@@ -251,8 +242,6 @@ mod client {
 
       if demo_client.client.is_connected() {
         for server_packet in demo_client.client.retrieve_packets().into_iter() {
-          debug!("raw server packet {:?}", server_packet);
-
           let msg_result = protobuf::parse_from_bytes::<ServerMessage>(server_packet.as_slice());
           if msg_result.is_err() {
             error!("Could not parse payload from server!");

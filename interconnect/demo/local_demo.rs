@@ -69,9 +69,6 @@ fn main() {
   demo.add_fancy_entity();
   demo.push_update(0.0 /* current_time_s */);
 
-  demo.add_bare_entity();
-  demo.push_update(0.1 /* current_time_s */);
-
   demo.update_fancy_entity();
   demo.push_update(0.2 /* current_time_s */);
 
@@ -86,7 +83,6 @@ fn main() {
 
 impl<'a> Demo<'a> {
   pub fn add_fancy_entity(&mut self) {
-    self.server_state.add_entity(1);
     {
       let mut color_data = ColorComponent::new();
       color_data.set_r(1.0);
@@ -108,9 +104,6 @@ impl<'a> Demo<'a> {
     }
   }
 
-  pub fn add_bare_entity(&mut self) {
-    self.server_state.add_entity(2);
-  }
 
   pub fn update_fancy_entity(&mut self) {
     {

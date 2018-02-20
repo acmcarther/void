@@ -3,19 +3,7 @@ syntax = "proto3";
 package interconnect;
 
 message StateUpdate {
-  repeated EntityUpdates entity_updates = 1;
   repeated ComponentUpdates component_updates = 2;
-}
-
-message EntityUpdates {
-  repeated uint64 entity_ids = 1;
-  UpdateType update_type = 2;
-
-  enum UpdateType {
-    UNKNOWN = 0;
-    ADDED = 1;
-    REMOVED = 2;
-  }
 }
 
 message ComponentUpdates {
@@ -51,4 +39,13 @@ message DeltaComponentState {
     bytes component_add_data = 4;
     bytes component_change_data = 5;
   }
+}
+
+message StateUpdateResponse {
+  repeated ComponentAck component_acks = 1;
+}
+
+message ComponentAck {
+  uint32 keyframe_id = 1;
+  uint32 component_type_id = 2;
 }

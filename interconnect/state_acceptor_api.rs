@@ -10,10 +10,11 @@ use state_api::NodeId;
 use state_api::StateBlob;
 use state_proto::state::ComponentUpdates;
 use state_proto::state::StateUpdate;
+use state_proto::state::StateUpdateResponse;
 use std::collections::HashMap;
 
 pub trait StateAcceptor {
-  fn take_keyframe_id_acks(&mut self) -> Vec<ComponentAck>;
+  fn produce_update_response(&mut self) -> StateUpdateResponse;
 
   fn integrate_update(
     &mut self,

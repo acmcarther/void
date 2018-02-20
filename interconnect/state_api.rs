@@ -24,8 +24,6 @@ pub enum UpdateErr {
 
 // TODO(acmcarther): Move this elsewhere
 pub trait StateBlob {
-  fn add_entity(&mut self, entity_id: EntityId);
-  fn remove_entity(&mut self, entity_id: EntityId);
   fn list_entities(&self) -> Vec<EntityId>;
 
   fn get_entities_with_component(&self, component_type_id: &ComponentTypeId) -> HashSet<EntityId>;

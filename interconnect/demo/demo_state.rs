@@ -33,8 +33,16 @@ impl State {
     }
   }
 
+  pub fn mut_color(&mut self, entity_id: &EntityId) -> Option<&mut ColorComponent> {
+    self.color_components.get_mut(entity_id)
+  }
+
   pub fn update_color(&mut self, entity_id: EntityId, data: ColorComponent) {
     self.color_components.insert(entity_id, data);
+  }
+
+  pub fn mut_position(&mut self, entity_id: &EntityId) -> Option<&mut PositionComponent> {
+    self.position_components.get_mut(entity_id)
   }
 
   pub fn update_position(&mut self, entity_id: EntityId, data: PositionComponent) {
@@ -63,14 +71,6 @@ impl State {
 }
 
 impl StateBlob for State {
-  fn add_entity(&mut self, entity_id: EntityId) {
-    self.entities.insert(entity_id);
-  }
-
-  fn remove_entity(&mut self, entity_id: EntityId) {
-    self.entities.remove(&entity_id);
-  }
-
   fn list_entities(&self) -> Vec<EntityId> {
     self.entities.iter().cloned().collect()
   }
