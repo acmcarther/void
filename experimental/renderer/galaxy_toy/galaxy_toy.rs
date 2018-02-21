@@ -724,12 +724,6 @@ impl VulkanContext {
     let depth_format = select_supported_depth_format(&instance, &device_spec);
 
     let render_pass = do_or_die!(vkps::make_render_pass(&device, depth_format, &swapchain));
-    let descriptor_set_layouts = do_or_die!(vkdrs::make_descriptor_set_layouts(&device));
-    let pipeline_layout = do_or_die!(vkps::make_pipeline_layout::<PushConstant>(
-      &device,
-      &descriptor_set_layouts
-    ));
-
     let gfx_command_pool = do_or_die!(vkl::builtins::make_command_pool(
       &device,
       device_spec.gfx_queue_family_idx
@@ -746,6 +740,13 @@ impl VulkanContext {
     } else {
       None
     };
+
+    let descriptor_set_layouts = do_or_die!(vkdrs::make_descriptor_set_layouts(&device));
+    let pipeline_layout = do_or_die!(vkps::make_pipeline_layout::<PushConstant>(
+      &device,
+      &descriptor_set_layouts
+    ));
+
     let (
       vertex_buffer_details,
       index_buffer_details,
@@ -825,13 +826,13 @@ impl VulkanContext {
     let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(
       &device,
       include_bytes!(
-        "../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/star_vert_shader.spv"
+        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/galaxy_toy/star_vert_shader.spv"
       ),
     ));
     let frag_shader_module = do_or_die!(vkl::builtins::make_shader_module(
       &device,
       include_bytes!(
-        "../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/star_frag_shader.spv"
+        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/galaxy_toy/star_frag_shader.spv"
       ),
     ));
 

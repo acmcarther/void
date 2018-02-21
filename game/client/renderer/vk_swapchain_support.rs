@@ -211,7 +211,7 @@ pub fn make_image_views(
   swapchain: &LoadedSwapchain,
 ) -> vkl::RawResult<Vec<vk::ImageView>> {
   let mut image_views = Vec::with_capacity(swapchain_images.len());
-  println!("Vulkan creating image view for each image.");
+  debug!("Vulkan creating image view for each image.");
   for swapchain_image in swapchain_images.iter() {
     image_views.push(try!(make_image_view(
       device,

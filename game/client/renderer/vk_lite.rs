@@ -1,4 +1,6 @@
 extern crate dylib;
+#[macro_use]
+extern crate log;
 extern crate vk_sys as vk;
 
 use std::ffi::CStr;
@@ -132,7 +134,7 @@ pub mod builtins {
     user_data: *mut c_void,
   ) -> vk::Bool32 {
     unsafe {
-      println!(
+      debug!(
         "validation layer: {}",
         CStr::from_ptr(msg).to_str().unwrap()
       );
@@ -195,9 +197,9 @@ pub mod builtins {
   }
 }
 
-pub trait WindowSystemPlugin {
+pub trait WindowSystemPlugin<'window> {
   /** Creates a LSurface object using foreign window system internals */
-  fn create_surface(&mut self, instance: &LInstance) -> RawResult<vk::SurfaceKHR>;
+  unsafe fn create_surface(&mut self, instance: &LInstance) -> RawResult<vk::SurfaceKHR>;
 }
 
 /** The wrapped vulkan return code, plus call context */
@@ -242,11 +244,11 @@ impl Vulkan {
         .into_iter()
         .filter(|e| {
           let extension_as_str = CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap();
-          println!("Vulkan Extension found: {}", extension_as_str);
+          debug!("Vulkan Extension found: {}", extension_as_str);
           let should_enable =
             spec.required.contains(&extension_as_str) || spec.wanted.contains(&extension_as_str);
           if should_enable {
-            println!("       Extension enabled: {}", extension_as_str);
+            debug!("       Extension enabled: {}", extension_as_str);
           }
 
           should_enable
@@ -284,11 +286,11 @@ impl Vulkan {
         .into_iter()
         .filter(|l| {
           let layer_as_str = CStr::from_ptr(l.layerName.as_ptr()).to_str().unwrap();
-          println!("Vulkan Layer found: {}", layer_as_str);
+          debug!("Vulkan Layer found: {}", layer_as_str);
           let should_enable =
             spec.required.contains(&layer_as_str) || spec.wanted.contains(&layer_as_str);
           if should_enable {
-            println!("       Layer enabled: {}", layer_as_str);
+            debug!("       Layer enabled: {}", layer_as_str);
           }
 
           should_enable
@@ -423,7 +425,7 @@ impl LInstance {
         ptr::null_mut(),
       );
 
-      println!(
+      debug!(
         "Vulkan Physical Queue Family Properties: {} found",
         num_queue_family_properties
       );
@@ -437,7 +439,7 @@ impl LInstance {
         queue_family_properties_list.as_mut_ptr(),
       );
 
-      println!("populated queue family properties list");
+      debug!("populated queue family properties list");
 
       queue_family_properties_list.set_len(num_queue_family_properties as usize);
 

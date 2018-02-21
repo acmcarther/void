@@ -1,23 +1,21 @@
 extern crate sdl2;
 extern crate sdl2_sys;
-extern crate vk_sys as vk;
 extern crate vk_lite as vkl;
+extern crate vk_sys as vk;
 
 use std::ffi::CStr;
 
-pub struct SdlWindowSystemPlugin<'a> {
-  window: &'a mut sdl2::video::Window,
+pub struct SdlWindowSystemPlugin<'window> {
+  window: &'window mut sdl2::video::Window,
 }
 
-impl <'a> SdlWindowSystemPlugin<'a> {
+impl<'window> SdlWindowSystemPlugin<'window> {
   pub fn new(window: &mut sdl2::video::Window) -> SdlWindowSystemPlugin {
-    SdlWindowSystemPlugin {
-      window: window
-    }
+    SdlWindowSystemPlugin { window: window }
   }
 }
 
-impl <'a> vkl::WindowSystemPlugin for SdlWindowSystemPlugin<'a> {
+impl<'window> vkl::WindowSystemPlugin<'window> for SdlWindowSystemPlugin<'window> {
   /**
    * Creates a crossplat vulkan surface object by extracting the underlying X11 display.
    *
@@ -25,7 +23,7 @@ impl <'a> vkl::WindowSystemPlugin for SdlWindowSystemPlugin<'a> {
    * This method disregards the lifetime of the SDL2 window.
    * TODO(acmcarther): fix ^
    */
-  fn create_surface(&mut self, instance: &vkl::LInstance) -> vkl::RawResult<vk::SurfaceKHR> {
+  unsafe fn create_surface(&mut self, instance: &vkl::LInstance) -> vkl::RawResult<vk::SurfaceKHR> {
     unsafe {
       let mut sys_wm_info = sdl2_sys::SDL_SysWMinfo {
         version: sdl2_sys::SDL_version {
@@ -36,10 +34,18 @@ impl <'a> vkl::WindowSystemPlugin for SdlWindowSystemPlugin<'a> {
         subsystem: sdl2_sys::SDL_SYSWM_TYPE::SDL_SYSWM_UNKNOWN,
         info: std::mem::uninitialized(),
       };
-      if sdl2_sys::SDL_GetWindowWMInfo(self.window.raw(), &mut sys_wm_info) != sdl2_sys::SDL_bool::SDL_TRUE {
-        panic!("SDL2: {}", CStr::from_ptr(sdl2_sys::SDL_GetError()).to_str().unwrap());
+      if sdl2_sys::SDL_GetWindowWMInfo(self.window.raw(), &mut sys_wm_info)
+        != sdl2_sys::SDL_bool::SDL_TRUE
+      {
+        panic!(
+          "SDL2: {}",
+          CStr::from_ptr(sdl2_sys::SDL_GetError()).to_str().unwrap()
+        );
       }
-      assert_eq!(sys_wm_info.subsystem, sdl2_sys::SDL_SYSWM_TYPE::SDL_SYSWM_X11);
+      assert_eq!(
+        sys_wm_info.subsystem,
+        sdl2_sys::SDL_SYSWM_TYPE::SDL_SYSWM_X11
+      );
 
       let xlib_surface_create_info_khr = vk::XlibSurfaceCreateInfoKHR {
         sType: vk::STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
