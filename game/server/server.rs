@@ -30,7 +30,7 @@ define_cfg!(
 );
 
 pub fn main() {
-  init::init_void();
+  init::init();
   let config = NodeConfig {
     services: enabled_services::CONFIG.get_value(),
   };

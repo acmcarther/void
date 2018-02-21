@@ -35,7 +35,7 @@ define_pub_cfg!(
   "What log level to emit logs to"
 );
 
-pub fn init_void() {
+pub fn init() {
   zcfg_flag_parser::FlagParser::new()
     .parse_from_args(env::args().skip(1))
     .unwrap();

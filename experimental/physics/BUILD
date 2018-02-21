@@ -8,26 +8,6 @@ load(
 )
 
 rust_library(
-    name = "space",
-    srcs = ["space.rs"],
-    rustc_flags = [
-        "-C opt-level=2",
-    ],
-    deps = [
-        "//third_party/cargo:chrono",
-        "//third_party/cargo:log",
-        "//third_party/cargo:rand",
-    ],
-)
-
-rust_test(
-    name = "space_test",
-    deps = [
-        ":space",
-    ],
-)
-
-rust_library(
     name = "cosmic_physics",
     srcs = ["cosmic_physics.rs"],
     rustc_flags = [

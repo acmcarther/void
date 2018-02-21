@@ -31,7 +31,7 @@ pub mod flags {
 }
 
 fn main() {
-  init::init_void();
+  init::init();
   unsafe {
     netcode_global::init_network();
   }

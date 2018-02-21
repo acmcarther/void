@@ -1,5 +1,5 @@
 package(default_visibility = [
-    "//interconnect:__subpackages__"
+    "//game/net:__subpackages__"
 ])
 
 load(
@@ -13,7 +13,7 @@ rust_library(
     srcs = ["netcode_global.rs"],
     deps = [
         "//third_party/cargo:log",
-        "//init:init",
+        "//core:init",
         "@netcode_io//:netcode_io_sys",
         "@reliable_io//:reliable_io_sys",
     ],
@@ -40,7 +40,7 @@ rust_library(
         "//third_party/cargo:libc",
         "//third_party/cargo:zcfg",
         "//third_party/cargo:zcfg_flag_parser",
-        "//init:init",
+        "//core:init",
         "@netcode_io//:netcode_io_sys",
         "@reliable_io//:reliable_io_sys",
     ],
@@ -63,7 +63,7 @@ rust_library(
         "//third_party/cargo:libc",
         "//third_party/cargo:zcfg",
         "//third_party/cargo:zcfg_flag_parser",
-        "//init:init",
+        "//core:init",
         "@netcode_io//:netcode_io_sys",
         "@reliable_io//:reliable_io_sys",
     ],
@@ -74,7 +74,7 @@ rust_binary(
     name = "netcode_demo",
     srcs = ["netcode_demo.rs"],
     deps = [
-        "//init:init",
+        "//core:init",
         ":netcode_server",
         ":netcode_client",
         ":netcode_api",

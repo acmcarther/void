@@ -1,5 +1,4 @@
 #![feature(used)]
-extern crate init;
 extern crate libc;
 #[macro_use]
 extern crate log;

@@ -39,7 +39,7 @@ struct Demo<'a> {
 }
 
 fn main() {
-  init::init_void();
+  init::init();
 
   let mut server_transmitter = StateTransmitterImpl::from_config(StateTransmitterConfig::default());
   let mut client_acceptor = StateAcceptorImpl::from_config(StateAcceptorConfig::default());

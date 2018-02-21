@@ -70,7 +70,7 @@ fn find_server_details(
 }
 
 fn main() {
-  init::init_void();
+  init::init();
 
   let env = Arc::new(EnvBuilder::new().cq_count(4).build());
   let gateway_addr = gateway_address::CONFIG.get_value();

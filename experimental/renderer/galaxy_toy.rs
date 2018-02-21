@@ -824,11 +824,11 @@ impl VulkanContext {
 
     let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(
       &device,
-      include_bytes!("../../../bazel-genfiles/client/renderer/demo/star_vert_shader.spv"),
+      include_bytes!("../../bazel-genfiles/experimental/renderer/star_vert_shader.spv"),
     ));
     let frag_shader_module = do_or_die!(vkl::builtins::make_shader_module(
       &device,
-      include_bytes!("../../../bazel-genfiles/client/renderer/demo/star_frag_shader.spv"),
+      include_bytes!("../../bazel-genfiles/experimental/renderer/star_frag_shader.spv"),
     ));
 
     let graphics_pipeline = do_or_die!(vkps::make_graphics_pipeline(

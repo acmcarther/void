@@ -9,8 +9,8 @@ rust_binary(
     name = "client",
     srcs = ["client.rs"],
     deps = [
-        "//init",
-        "//interconnect",
+        "//core:init",
+        "//game:interconnect",
         "//third_party/cargo:log",
         "//third_party/cargo:futures",
         "//third_party/cargo:grpcio",

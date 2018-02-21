@@ -15,7 +15,7 @@ use netcode_server::Server;
 use netcode_server::ServerConfig;
 
 fn main() {
-  init::init_void();
+  init::init();
   unsafe {
     netcode_global::init_network();
   }
