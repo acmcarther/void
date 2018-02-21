@@ -1,5 +1,6 @@
 package(default_visibility = [
-    "//game/net:__subpackages__"
+    "//game/net:__subpackages__",
+    "//experimental:__subpackages__"
 ])
 
 load(

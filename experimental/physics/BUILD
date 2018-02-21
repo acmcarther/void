@@ -1,4 +1,7 @@
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+    "//experimental:__subpackages__"
+])
+
 
 load(
     "@io_bazel_rules_rust//rust:rust.bzl",
