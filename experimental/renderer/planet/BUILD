@@ -20,15 +20,15 @@ rust_binary(
         "//core:init",
         "//game/assets:geometry",
         "//game/assets/gen:icosphere",
-        "//game/client/renderer:sdl2_vulkan_interop",
         "//game/client/renderer",
+        "//game/client/renderer:sdl2_vulkan_interop",
         "//game/client/renderer:vk_lite",
         "//third_party/cargo:cgmath",
         "//third_party/cargo:chrono",
         "//third_party/cargo:fern",
+        "//third_party/cargo:lazy_static",
         "//third_party/cargo:log",
         "//third_party/cargo:memoffset",
-        "//third_party/cargo:lazy_static",
         "//third_party/cargo:png",
         "//third_party/cargo:rand",
         "//third_party/cargo:sdl2",
@@ -40,6 +40,8 @@ rust_library(
     name = "planet_renderer",
     srcs = ["planet_renderer.rs"],
     data = [
+        ":planet_frag_shader",
+        ":planet_vert_shader",
     ],
     rustc_flags = [
         "-C opt-level=2",
@@ -56,4 +58,14 @@ rust_library(
         "//game/client/renderer:vk_swapchain_support",
         "//third_party/cargo:vk_sys",
     ],
+)
+
+compile_spirv_shader(
+    name = "planet_vert_shader",
+    src = ":planet.vert",
+)
+
+compile_spirv_shader(
+    name = "planet_frag_shader",
+    src = ":planet.frag",
 )
