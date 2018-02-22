@@ -655,7 +655,7 @@ struct VulkanContext {
 }
 
 impl VulkanContext {
-  fn create<W: vkl::WindowSystemPlugin>(
+  fn create<'window, W: vkl::WindowSystemPlugin<'window>>(
     vulkan: &vkl::Vulkan,
     window_system_plugin: &mut W,
   ) -> VulkanContext {
@@ -674,7 +674,7 @@ impl VulkanContext {
       vkl::builtins::vk_debug_report_callback_ext,
     ));
 
-    let v_surface = do_or_die!(window_system_plugin.create_surface(&instance));
+    let v_surface = do_or_die!(unsafe { window_system_plugin.create_surface(&instance) });
     let (device_cfg, device_spec) = {
       let physical_devices = do_or_die!(instance.list_physical_devices());
       let devices_details = do_or_die!(vkds::CandidateDeviceDetails::inspect_devices(
@@ -815,12 +815,19 @@ impl VulkanContext {
       &descriptor_pool
     ));
 
-    vkdrs::write_descriptor::<MVPUniform>(
+    vkdrs::write_ubo_descriptor::<MVPUniform>(
       &device,
       &uniform_buffer_details.buffer.0, /* buffer */
       descriptor_sets.get(0).unwrap(),
+      0, /* descriptor_binding_id */
+    );
+
+    vkdrs::write_texture_image_descriptor(
+      &device,
       &texture_buffer_details.image_view,
       &texture_sampler,
+      descriptor_sets.get(0).unwrap(),
+      1, /* descriptor_binding_id */
     );
 
     let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(

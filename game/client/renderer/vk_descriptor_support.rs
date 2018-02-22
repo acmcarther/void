@@ -3,6 +3,8 @@ extern crate vk_sys as vk;
 
 use std::ptr;
 
+pub type DescriptorBindingId = u32;
+
 pub fn make_descriptor_pool(device: &vkl::LDevice) -> vkl::RawResult<vk::DescriptorPool> {
   let ubo_pool_size = vk::DescriptorPoolSize {
     ty: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -76,12 +78,12 @@ pub fn make_descriptor_sets(
   device.allocate_descriptor_sets(&descriptor_set_allocate_info)
 }
 
-pub fn write_descriptor<T>(
+// TODO(acmcarther): Will need a batched api at some point
+pub fn write_ubo_descriptor<T>(
   device: &vkl::LDevice,
   uniform_buffer: &vk::Buffer,
   descriptor_set: &vk::DescriptorSet,
-  texture_image_view: &vk::ImageView,
-  texture_sampler: &vk::Sampler,
+  descriptor_binding_id: DescriptorBindingId,
 ) {
   let ubo_descriptor_buffer_info = vk::DescriptorBufferInfo {
     buffer: *uniform_buffer,
@@ -93,7 +95,7 @@ pub fn write_descriptor<T>(
     sType: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
     pNext: ptr::null(),
     dstSet: *descriptor_set,
-    dstBinding: 0,
+    dstBinding: descriptor_binding_id,
     dstArrayElement: 0,
     descriptorCount: 1,
     descriptorType: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -102,6 +104,22 @@ pub fn write_descriptor<T>(
     pTexelBufferView: ptr::null(),
   };
 
+
+  let all_descriptor_set_writes = vec![ubo_descriptor_set_write];
+  device.update_descriptor_sets(
+    &all_descriptor_set_writes,
+    &Vec::new(), /* descriptor_set_copies */
+  );
+}
+
+
+pub fn write_texture_image_descriptor(
+  device: &vkl::LDevice,
+  texture_image_view: &vk::ImageView,
+  texture_sampler: &vk::Sampler,
+  descriptor_set: &vk::DescriptorSet,
+  descriptor_binding_id: DescriptorBindingId,
+) {
   let sampler_descriptor_image_info = vk::DescriptorImageInfo {
     imageLayout: vk::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     imageView: *texture_image_view,
@@ -112,7 +130,7 @@ pub fn write_descriptor<T>(
     sType: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
     pNext: ptr::null(),
     dstSet: *descriptor_set,
-    dstBinding: 1,
+    dstBinding: descriptor_binding_id,
     dstArrayElement: 0,
     descriptorCount: 1,
     descriptorType: vk::DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -121,7 +139,7 @@ pub fn write_descriptor<T>(
     pTexelBufferView: ptr::null(),
   };
 
-  let all_descriptor_set_writes = vec![ubo_descriptor_set_write, sampler_descriptor_set_write];
+  let all_descriptor_set_writes = vec![sampler_descriptor_set_write];
   device.update_descriptor_sets(
     &all_descriptor_set_writes,
     &Vec::new(), /* descriptor_set_copies */

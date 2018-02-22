@@ -16,6 +16,7 @@ extern crate zcfg;
 
 use cgmath::Matrix4;
 use geometry::Mesh;
+use planet_renderer::MeshToRender;
 use planet_renderer::PlanetRenderer;
 use renderer::BaseRenderer;
 use renderer::BaseRendererConfig;
@@ -23,17 +24,17 @@ use sdl2::Sdl;
 use sdl2::video::Window;
 use sdl2_vulkan_interop::SdlWindowSystemPlugin;
 use std::marker::PhantomData;
+use std::time::Instant;
 
 fn main() {
   init::init();
 
-  let planet = IcoPlanet::new(6 /* iterations */);
   let mut game_window = GameWindow::new();
-  let planet_renderer = {
+  let mut planet_renderer = {
     let vulkan = vkl::Vulkan::new("libvulkan.so.1");
     let base_renderer = BaseRenderer::new(
       vulkan,
-      &mut game_window.window_system_plugin(),
+      &mut SdlWindowSystemPlugin::new(&mut game_window.window),
       BaseRendererConfig {
         extension_spec: x11_extension_spec(),
         layer_spec: x11_layer_spec(),
@@ -42,7 +43,57 @@ fn main() {
     PlanetRenderer::new(base_renderer)
   };
 
-  loop {}
+  let start_time = Instant::now();
+  let mut event_pump = game_window.sdl.event_pump().unwrap();
+
+  'running: loop {
+    for event in event_pump.poll_iter() {
+      match event {
+        sdl2::event::Event::Quit { .. }
+        | sdl2::event::Event::KeyDown {
+          keycode: Some(sdl2::keyboard::Keycode::Escape),
+          ..
+        } => break 'running,
+        _ => {},
+      }
+    }
+
+    let now = Instant::now();
+    let duration = now.duration_since(start_time);
+    let time_since_start_s =
+      (duration.as_secs() as f32) + ((duration.subsec_nanos()) as f32 / 1_000_000_000.0);
+
+    let cam_x = time_since_start_s.sin() * 200f32;
+    let cam_y = time_since_start_s.cos() * 200f32;
+
+    planet_renderer.set_camera_pos(cam_x, cam_y, 150f32);
+
+    let mut meshes_to_render = Vec::new();
+    let base_mesh_ids = vec![
+      planet_renderer::ICO_1_MESH_ID,
+      planet_renderer::ICO_2_MESH_ID,
+      planet_renderer::ICO_3_MESH_ID,
+      planet_renderer::ICO_4_MESH_ID,
+      planet_renderer::ICO_5_MESH_ID,
+      planet_renderer::ICO_6_MESH_ID,
+    ];
+
+    for (idx, base_mesh_id) in base_mesh_ids.into_iter().enumerate() {
+      let x = -50f32 + ((idx as f32) * 20f32);
+      for y_idx in 0..6 {
+        let y = -50f32 + ((y_idx as f32) * 20f32);
+        for z_idx in 0..6 {
+          let z = -50f32 + ((z_idx as f32) * 20f32);
+          meshes_to_render.push(MeshToRender {
+            mesh_id: base_mesh_id,
+            pos: [x, y, z],
+          });
+        }
+      }
+    }
+
+    planet_renderer.draw_demo_frame(&meshes_to_render);
+  }
 }
 
 struct GameWindow {
@@ -70,11 +121,6 @@ impl GameWindow {
       sdl: sdl,
       window: window,
     }
-  }
-
-  pub fn window_system_plugin<'window>(&'window mut self) -> SdlWindowSystemPlugin<'window> {
-    // TODO(acmcarther): This seems unpleasant and brittle-ish.
-    SdlWindowSystemPlugin::new(&mut self.window)
   }
 }
 

@@ -48,6 +48,7 @@ rust_library(
     ],
     deps = [
         "//game/assets:geometry",
+        "//game/assets/gen:icosphere",
         "//game/client/renderer",
         "//game/client/renderer:vk_buffer_support",
         "//game/client/renderer:vk_descriptor_support",
@@ -57,6 +58,8 @@ rust_library(
         "//game/client/renderer:vk_pipeline_support",
         "//game/client/renderer:vk_swapchain_support",
         "//third_party/cargo:vk_sys",
+        "//third_party/cargo:memoffset",
+        "//third_party/cargo:cgmath",
     ],
 )
 

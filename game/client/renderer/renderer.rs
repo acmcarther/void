@@ -20,6 +20,7 @@ pub struct BaseRenderer<'window> {
   pub swapchain: vkss::LoadedSwapchain,
   pub image_views: Vec<vk::ImageView>,
   pub render_pass: vk::RenderPass,
+  pub depth_format: vk::Format,
   pub gfx_command_pool: vk::CommandPool,
   pub transfer_command_pool_opt: Option<vk::CommandPool>,
   pub debug_report_callback: vk::DebugReportCallbackEXT,
@@ -57,25 +58,35 @@ impl<'window> BaseRenderer<'window> {
     let (device_cfg, device_spec) = select_device(&instance, &surface);
     debug!("Device cfg: {:?}", device_cfg);
 
-    let device =
-      do_or_die!(vkds::make_logical_device(&instance, &device_cfg, &device_spec, &enabled_layers,));
+    let device = do_or_die!(vkds::make_logical_device(
+      &instance,
+      &device_cfg,
+      &device_spec,
+      &enabled_layers,
+    ));
 
     let swapchain = do_or_die!(vkss::make_swapchain(&device, &device_spec, &surface));
     let image_views = {
       // UNSAFE: Swapchain images destroyed on BaseRenderer drop.
       let swapchain_images =
         do_or_die!(unsafe { device.get_swapchain_images(&swapchain.swapchain) });
-      do_or_die!(vkss::make_image_views(&device, &swapchain_images, &swapchain))
+      do_or_die!(vkss::make_image_views(
+        &device,
+        &swapchain_images,
+        &swapchain
+      ))
     };
 
-    let render_pass = {
-      let depth_format = select_depth_format(&instance, &device_spec);
-      do_or_die!(vkps::make_render_pass(&device, depth_format, &swapchain))
-    };
-    let gfx_command_pool =
-      do_or_die!(vkl::builtins::make_command_pool(&device, device_spec.gfx_queue_family_idx));
+    let depth_format = select_depth_format(&instance, &device_spec);
+    let render_pass = do_or_die!(vkps::make_render_pass(&device, depth_format, &swapchain));
+    let gfx_command_pool = do_or_die!(vkl::builtins::make_command_pool(
+      &device,
+      device_spec.gfx_queue_family_idx
+    ));
 
-    let transfer_command_pool_opt = if device_spec.dedicated_transfer_queue_family_idx_opt.is_some()
+    let transfer_command_pool_opt = if device_spec
+      .dedicated_transfer_queue_family_idx_opt
+      .is_some()
     {
       Some(do_or_die!(vkl::builtins::make_command_pool(
         &device,
@@ -95,6 +106,7 @@ impl<'window> BaseRenderer<'window> {
       image_views: image_views,
       device: device,
       render_pass: render_pass,
+      depth_format: depth_format,
       gfx_command_pool: gfx_command_pool,
       transfer_command_pool_opt: transfer_command_pool_opt,
       debug_report_callback: debug_report_callback,
@@ -112,7 +124,9 @@ impl<'window> Drop for BaseRenderer<'window> {
     }
 
     self.device.destroy_swapchain(self.swapchain.swapchain);
-    self.instance.destroy_debug_callback(self.debug_report_callback)
+    self
+      .instance
+      .destroy_debug_callback(self.debug_report_callback)
 
     // device: Destroyed on drop
     // instance: Destroyed on drop
@@ -141,7 +155,10 @@ fn select_device(
   let device_specs = vkds::select_best_device_and_queue(devices_details, devices_queues_details);
 
   let mut device_cfg_builder = vkds::LogicalDeviceCfgBuilder::default();
-  if device_specs.dedicated_transfer_queue_family_idx_opt.is_some() {
+  if device_specs
+    .dedicated_transfer_queue_family_idx_opt
+    .is_some()
+  {
     device_cfg_builder.transfer_queues(vec![vkds::QueueCfg::default()]);
   }
 
@@ -153,8 +170,11 @@ fn select_depth_format(
   instance: &vkl::LInstance,
   device_spec: &vkds::SelectedPhysicalDeviceSpec,
 ) -> vk::Format {
-  let candidates =
-    vec![vk::FORMAT_D32_SFLOAT, vk::FORMAT_D32_SFLOAT_S8_UINT, vk::FORMAT_D24_UNORM_S8_UINT];
+  let candidates = vec![
+    vk::FORMAT_D32_SFLOAT,
+    vk::FORMAT_D32_SFLOAT_S8_UINT,
+    vk::FORMAT_D24_UNORM_S8_UINT,
+  ];
   let tiling = vk::IMAGE_TILING_OPTIMAL;
   let features = vk::FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
