@@ -60,6 +60,7 @@ rust_library(
         "//third_party/cargo:vk_sys",
         "//third_party/cargo:memoffset",
         "//third_party/cargo:cgmath",
+        "//third_party/cargo:log",
     ],
 )
 

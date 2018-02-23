@@ -2,6 +2,8 @@ extern crate cgmath;
 extern crate geometry;
 extern crate icosphere;
 #[macro_use]
+extern crate log;
+#[macro_use]
 extern crate memoffset;
 extern crate renderer;
 extern crate vk_buffer_support as vkbs;
@@ -206,6 +208,7 @@ impl<'window> PlanetRenderer<'window> {
           &base_renderer.device_spec.memory_properties,
           &mesh,
         ));
+        debug!("Ico: {} has {} verts", mesh_id, mesh.vertices.len());
 
         mesh_cache.insert(mesh_id, mesh_buffers);
       }
@@ -376,8 +379,8 @@ impl<'window> PlanetRenderer<'window> {
               self.base_renderer.device.logical_device,
               1,
               all_fences.as_ptr(),
-              vk::TRUE,  /* wait all */
-              100000000, /* ns */
+              vk::TRUE,    /* wait all */
+              10000000000, /* ns */
             )
           }));
           do_or_die!(vkl::util::dooy("reset fences", &|| {
