@@ -141,6 +141,7 @@ struct MVPUniform {
 pub struct MeshToRender {
   pub mesh_id: MeshId,
   pub pos: [f32; 3],
+  pub scale: f32,
   //pub scale: f32,
 }
 
@@ -322,10 +323,10 @@ impl<'window> PlanetRenderer<'window> {
     }
   }
 
-  pub fn set_camera_pos(&mut self, x: f32, y: f32, z: f32) {
+  pub fn set_camera_pos(&mut self, pos: [f32; 3], target: [f32; 3]) {
     let view = cgmath::Matrix4::<f32>::look_at(
-      cgmath::Point3::<f32>::new(x, y, z),
-      cgmath::Point3::<f32>::new(0.0f32, 0.0f32, 0.0f32),
+      cgmath::Point3::<f32>::new(pos[0], pos[1], pos[2]),
+      cgmath::Point3::<f32>::new(target[0], target[1], target[2]),
       cgmath::Vector3::<f32>::new(0.0f32, 0.0f32, 1.0f32),
     );
     let mut proj = cgmath::perspective(
@@ -512,7 +513,7 @@ impl<'window> PlanetRenderer<'window> {
               mesh_to_render.pos[0],
               mesh_to_render.pos[1],
               mesh_to_render.pos[2],
-            )) * cgmath::Matrix4::<f32>::from_scale(8f32),
+            )) * cgmath::Matrix4::<f32>::from_scale(mesh_to_render.scale),
           };
           self.base_renderer.device.ptrs().CmdPushConstants(
             *command_buffer,

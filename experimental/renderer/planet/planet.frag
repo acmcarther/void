@@ -6,6 +6,5 @@ layout(location = 0) in vec3 inNorm;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-  outColor = vec4(1.0, 1.0, 1.0, 1.0);
   outColor = vec4(inNorm, 1.0);
 }

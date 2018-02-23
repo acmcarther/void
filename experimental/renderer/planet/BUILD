@@ -33,6 +33,7 @@ rust_binary(
         "//third_party/cargo:rand",
         "//third_party/cargo:sdl2",
         "//third_party/cargo:zcfg",
+        "//experimental/physics:cosmic_physics",
     ],
 )
 
