@@ -3,18 +3,21 @@ extern crate log;
 
 use std::mem;
 use std::ops::DerefMut;
-use std::ptr;
 
 type Index = u64;
 
-pub trait WithCoord {
+pub trait AsCoord {
   fn get_coord(&self) -> &[f32; 3];
 }
 
-impl WithCoord for [f32; 3] {
+impl AsCoord for [f32; 3] {
   fn get_coord(&self) -> &[f32; 3] {
     &self
   }
+}
+
+pub trait Aggregate {
+  fn combine(&self, other: &Self) -> Self;
 }
 
 #[derive(Clone, Debug)]
@@ -49,21 +52,28 @@ struct OctreeConfig {
 }
 
 #[derive(Debug)]
-pub struct OctreeRootNode<D> {
+pub struct OctreeRootNode<D, M = ()> {
   params: OctreeInitParams,
   out_of_volume_data: Vec<D>,
-  inner_node: OctreeNode<D>,
+  inner_node: OctreeNode<D, M>,
+  out_of_volume_metadata: Option<M>,
 }
 
 #[derive(Debug)]
-struct OctreeNode<D> {
+struct OctreeNode<D, M = ()> {
   config: OctreeConfig,
   data: Vec<D>,
   center: [f32; 3],
   half_size: [f32; 3],
   is_leaf: bool,
   population: usize,
-  children: Option<[Box<OctreeNode<D>>; 8]>,
+  children: [Option<Box<OctreeNode<D, M>>>; 8],
+  metadata: Option<M>,
+}
+
+struct NodeBounds {
+  center: [f32; 3],
+  half_size: [f32; 3],
 }
 
 struct RemovalDetails<D> {
@@ -91,10 +101,11 @@ impl Default for OctreeInitParams {
   }
 }
 
-impl<D: WithCoord> OctreeRootNode<D> {
-  pub fn new(params: OctreeInitParams) -> OctreeRootNode<D> {
+impl<D: AsCoord, M> OctreeRootNode<D, M> {
+  pub fn new(params: OctreeInitParams) -> OctreeRootNode<D, M> {
     OctreeRootNode {
       out_of_volume_data: Vec::new(),
+      out_of_volume_metadata: None,
       inner_node: OctreeNode {
         config: OctreeConfig {
           node_capacity: params.node_capacity.clone(),
@@ -104,8 +115,9 @@ impl<D: WithCoord> OctreeRootNode<D> {
         center: params.center.clone(),
         half_size: params.half_size.clone(),
         is_leaf: true,
-        children: None,
+        children: [None, None, None, None, None, None, None, None],
         population: 0,
+        metadata: None,
       },
       params: params,
     }
@@ -243,51 +255,21 @@ impl<D: WithCoord> OctreeRootNode<D> {
           // (but opposite from) insertion
           half_size: double_size.clone(),
           is_leaf: true,
-          children: None,
+          children: [None, None, None, None, None, None, None, None],
           population: 0,
+          metadata: None,
         };
 
         new_outer_node.population = inner_node.population;
         new_outer_node.is_leaf = false;
-        new_outer_node.children = Some({
-          let mut new_nodes: [Box<OctreeNode<D>>; 8] = mem::uninitialized();
-
-          for x_split in 0..2 {
-            let x_offset = inner_node.half_size[X_INDEX] * (-1f32 + (2f32 * x_split as f32));
-            let x_center = new_center[X_INDEX] + x_offset;
-            for y_split in 0..2 {
-              let y_offset = inner_node.half_size[Y_INDEX] * (-1f32 + (2f32 * y_split as f32));
-              let y_center = new_center[Y_INDEX] + y_offset;
-              for z_split in 0..2 {
-                let z_offset = inner_node.half_size[Z_INDEX] * (-1f32 + (2f32 * z_split as f32));
-                let z_center = new_center[Z_INDEX] + z_offset;
-                let node = Box::new(OctreeNode {
-                  config: new_outer_node.config.clone(),
-                  data: Vec::new(),
-                  center: [x_center, y_center, z_center],
-                  half_size: inner_node.half_size.clone(),
-                  is_leaf: true,
-                  children: None,
-                  population: 0,
-                });
-
-                let node_index = (x_split * 4) + (y_split * 2) + z_split;
-
-                ptr::write(&mut new_nodes[node_index], node);
-              }
-            }
-          }
-          new_nodes
-        });
-
 
         // Replace the empty node (where our former inner_node belongs)
         // ... but dont `forget` it, because it is a structurally complete node and needs to be
         // dropped.
-        let mut boxed_inner_node = Box::new(inner_node);
+        let mut boxed_inner_node = Some(Box::new(inner_node));
         mem::swap(
           // UNWRAP: Known to be populated from above code
-          &mut new_outer_node.children.as_mut().unwrap()[current_root_child_idx],
+          &mut new_outer_node.children[current_root_child_idx],
           &mut boxed_inner_node,
         );
 
@@ -332,22 +314,15 @@ impl<D: WithCoord> OctreeRootNode<D> {
       1f32 - (self.out_of_volume_len() as f32 / self.inner_node.len() as f32);
 
     while in_tree_occupancy_ratio > self.params.desired_tree_occupancy_ratio_max {
-      if self.inner_node.children.is_none() {
-        // Can't shrink the root node
+      if self.inner_node.is_leaf {
+        // Can't shrink a leaf node
         break;
       }
 
       // UNWRAP: Guarded by prior check
       let mut child_populations = [0; 8];
-      for (idx, child) in self
-        .inner_node
-        .children
-        .as_ref()
-        .unwrap()
-        .iter()
-        .enumerate()
-      {
-        child_populations[idx] = child.len();
+      for (idx, ref child) in self.inner_node.children.iter().enumerate() {
+        child_populations[idx] = child.as_ref().map(|c| c.len()).unwrap_or(0);
       }
 
       // UNWRAP: Fixed size
@@ -366,8 +341,6 @@ impl<D: WithCoord> OctreeRootNode<D> {
         population_without_max_node += pop;
       }
 
-      println!("pop w/o .. {}", population_without_max_node);
-
       let potential_new_occupancy_ratio = 1f32
         - (((population_without_max_node + self.out_of_volume_len()) as f32)
           / self.inner_node.len() as f32);
@@ -378,27 +351,17 @@ impl<D: WithCoord> OctreeRootNode<D> {
       }
 
       {
-        let mut new_root_node = Box::new(OctreeNode {
-          config: self.inner_node.config.clone(),
-          data: Vec::new(),
-          center: [-123.0, 456.0, -789.0],
-          half_size: [1.0, -1.0, 1.0],
-          is_leaf: true,
-          children: None,
-          population: 0,
-        });
+        let mut new_root_node = None;
 
         // UNWRAP: Guarded above by prior check
-        mem::swap(
-          &mut new_root_node,
-          &mut self.inner_node.children.as_mut().unwrap()[max_idx],
-        );
+        mem::swap(&mut new_root_node, &mut self.inner_node.children[max_idx]);
         self
           .out_of_volume_data
           .append(&mut self.inner_node.extract_values());
 
         // Make our current root into the extracted sub-node
-        mem::swap(new_root_node.deref_mut(), &mut self.inner_node);
+        // UNWRAP: Child node is known to exist (it had the max population)
+        mem::swap(new_root_node.unwrap().deref_mut(), &mut self.inner_node);
       }
 
       in_tree_occupancy_ratio = potential_new_occupancy_ratio
@@ -406,7 +369,33 @@ impl<D: WithCoord> OctreeRootNode<D> {
   }
 }
 
-impl<D: WithCoord> OctreeNode<D> {
+impl<D: AsCoord + Clone> OctreeRootNode<D> {
+  pub fn map_reduce<M_O: Clone, M_F, R_F>(
+    &self,
+    initial_value: M_O,
+    mapper: &M_F,
+    reducer: &R_F,
+  ) -> OctreeRootNode<D, M_O>
+  where
+    M_F: Fn(&D) -> M_O,
+    R_F: Fn(M_O, M_O) -> M_O,
+  {
+    let out_of_volume_metadata = self
+      .out_of_volume_data
+      .iter()
+      .map(mapper)
+      .fold(initial_value.clone(), reducer);
+    let inner_node = self.inner_node.map_reduce(initial_value, mapper, reducer);
+    OctreeRootNode {
+      out_of_volume_data: self.out_of_volume_data.clone(),
+      inner_node: inner_node,
+      out_of_volume_metadata: Some(out_of_volume_metadata),
+      params: self.params.clone(),
+    }
+  }
+}
+
+impl<D: AsCoord, M> OctreeNode<D, M> {
   pub fn insert(&mut self, item: D) -> bool {
     debug_assert!(!self.coord_is_out_of_bounds(item.get_coord()));
 
@@ -437,47 +426,6 @@ impl<D: WithCoord> OctreeNode<D> {
       }
 
       self.is_leaf = false;
-      self.children = Some(unsafe {
-        let mut new_nodes: [Box<OctreeNode<D>>; 8] = mem::uninitialized();
-
-        let quarter_size = [
-          self.half_size[X_INDEX] / 2.0,
-          self.half_size[Y_INDEX] / 2.0,
-          self.half_size[Z_INDEX] / 2.0,
-        ];
-
-        // N.B: Center heuristic
-        //
-        // To find the next center, we need to take the last center, and either add one quarter node
-        // size, or subtract one quarter node size. We can do a trick with the "index" of the split
-        // (0 or 1, per axis) to branchlessly perform that operation.
-        for x_split in 0..2 {
-          let x_offset = quarter_size[X_INDEX] * (-1f32 + (2f32 * x_split as f32));
-          let x_center = self.center[X_INDEX] + x_offset;
-          for y_split in 0..2 {
-            let y_offset = quarter_size[Y_INDEX] * (-1f32 + (2f32 * y_split as f32));
-            let y_center = self.center[Y_INDEX] + y_offset;
-            for z_split in 0..2 {
-              let z_offset = quarter_size[Z_INDEX] * (-1f32 + (2f32 * z_split as f32));
-              let z_center = self.center[Z_INDEX] + z_offset;
-              let node = Box::new(OctreeNode {
-                config: self.config.clone(),
-                data: Vec::new(),
-                center: [x_center, y_center, z_center],
-                half_size: quarter_size.clone(),
-                is_leaf: true,
-                children: None,
-                population: 0,
-              });
-
-              let node_index = (x_split * 4) + (y_split * 2) + z_split;
-
-              ptr::write(&mut new_nodes[node_index], node);
-            }
-          }
-        }
-        new_nodes
-      });
 
       // Take own data and distribute it among children
       {
@@ -486,16 +434,46 @@ impl<D: WithCoord> OctreeNode<D> {
 
         for entry in data.drain(..) {
           let child_idx = self.find_child_index_for_coord(entry.get_coord());
-          // UNWRAP: `children` created earlier in function
-          (self.children.as_mut().unwrap()[child_idx]).insert(entry);
+          if self.children[child_idx].is_some() {
+            // UNWRAP: Access guarded
+            self.children[child_idx].as_mut().unwrap().insert(entry);
+          } else {
+            let NodeBounds { center, half_size } = self.determine_child_bounds(child_idx);
+            self.children[child_idx] = Some(Box::new(OctreeNode {
+              config: self.config.clone(),
+              data: vec![entry],
+              center: center,
+              half_size: half_size,
+              is_leaf: true,
+              children: [None, None, None, None, None, None, None, None],
+              population: 1,
+              metadata: None,
+            }));
+          }
         }
       }
     };
 
     // Add to appropriate child and move on
     let child_idx = self.find_child_index_for_coord(item.get_coord());
-    // UNWRAP: non_leaf octree must have children
-    let inserted = (self.children.as_mut().unwrap()[child_idx]).insert(item);
+    let inserted = if self.children[child_idx].is_some() {
+      // UNWRAP: Access guarded
+      self.children[child_idx].as_mut().unwrap().insert(item)
+    } else {
+      let NodeBounds { center, half_size } = self.determine_child_bounds(child_idx);
+      self.children[child_idx] = Some(Box::new(OctreeNode {
+        config: self.config.clone(),
+        data: vec![item],
+        center: center,
+        half_size: half_size,
+        is_leaf: true,
+        children: [None, None, None, None, None, None, None, None],
+        population: 1,
+        metadata: None,
+      }));
+      true
+    };
+
     if inserted {
       self.population += 1;
     }
@@ -507,12 +485,16 @@ impl<D: WithCoord> OctreeNode<D> {
   }
 
   pub fn maximum_depth(&self) -> usize {
-    if let Some(ref children) = self.children {
-      // UNWRAP: Always an exact number of children
-      1usize + children.iter().map(|c| c.maximum_depth()).max().unwrap()
-    } else {
-      1usize
-    }
+    // UNWRAP: `children` is of fixed size
+    1usize
+      + self
+        .children
+        .iter()
+        .map(|c_opt| {
+          c_opt.as_ref().map(|c| c.maximum_depth()).unwrap_or(0usize)
+        })
+        .max()
+        .unwrap()
   }
 
   pub fn remove(&mut self, coord: &[f32; 3]) -> Option<D> {
@@ -567,7 +549,9 @@ impl<D: WithCoord> OctreeNode<D> {
       let child_idx = self.find_child_index_for_coord(coord);
 
       // UNWRAP: `children` guaranteed by !is_leaf
-      let removal_from_child = (self.children.as_mut().unwrap()[child_idx]).remove_internal(coord);
+      let removal_from_child = self.children[child_idx]
+        .as_mut()
+        .and_then(|c| c.remove_internal(coord));
       if removal_from_child.is_none() {
         return None;
       }
@@ -611,7 +595,7 @@ impl<D: WithCoord> OctreeNode<D> {
         // There are valuable merges to be performed for our child, even if we can't be merged.
         // Perform them now.
         // UNWRAP: Guaranteed to be present from prior guard
-        (self.children.as_mut().unwrap()[child_idx]).merge();
+        self.children[child_idx].as_mut().unwrap().merge();
       }
       println!("Merge happened or died because it was too shallow");
 
@@ -628,7 +612,7 @@ impl<D: WithCoord> OctreeNode<D> {
     debug_assert!(!self.len() <= self.config.node_capacity);
 
     self.data = self.extract_values();
-    self.children = None;
+    self.children = [None, None, None, None, None, None, None, None];
     self.is_leaf = true;
   }
 
@@ -649,11 +633,38 @@ impl<D: WithCoord> OctreeNode<D> {
       // UNWRAP: Guaranteed to be present from self.is_leaf
       self
         .children
-        .as_mut()
-        .unwrap()
         .iter_mut()
-        .flat_map(|c| c.extract_values().into_iter())
+        .flat_map(|c_opt| {
+          c_opt
+            .as_mut()
+            .map(|c| c.extract_values())
+            .unwrap_or(Vec::new())
+            .into_iter()
+        })
         .collect()
+    }
+  }
+
+  fn determine_child_bounds(&self, idx: usize) -> NodeBounds {
+    debug_assert!(idx < 8);
+
+    let quarter_size = [
+      self.half_size[X_INDEX] / 2.0,
+      self.half_size[Y_INDEX] / 2.0,
+      self.half_size[Z_INDEX] / 2.0,
+    ];
+
+    let x_dir = ((idx >> 2 & 1) * 2) as f32 - 1f32;
+    let y_dir = ((idx >> 1 & 1) * 2) as f32 - 1f32;
+    let z_dir = ((idx & 1) * 2) as f32 - 1f32;
+
+    let x_center = self.center[X_INDEX] + (quarter_size[X_INDEX] * x_dir);
+    let y_center = self.center[Y_INDEX] + (quarter_size[Y_INDEX] * y_dir);
+    let z_center = self.center[Z_INDEX] + (quarter_size[Z_INDEX] * z_dir);
+
+    NodeBounds {
+      center: [x_center, y_center, z_center],
+      half_size: quarter_size,
     }
   }
 
@@ -689,9 +700,77 @@ impl<D: WithCoord> OctreeNode<D> {
   }
 }
 
+impl<D: AsCoord + Clone> OctreeNode<D> {
+  pub fn map_reduce<M_O: Clone, M_F, R_F>(
+    &self,
+    initial_value: M_O,
+    mapper: &M_F,
+    reducer: &R_F,
+  ) -> OctreeNode<D, M_O>
+  where
+    M_F: Fn(&D) -> M_O,
+    R_F: Fn(M_O, M_O) -> M_O,
+  {
+    if self.is_leaf {
+      let metadata = self
+        .data
+        .iter()
+        .map(&mapper)
+        .fold(initial_value.clone(), &reducer);
+      return OctreeNode {
+        config: self.config.clone(),
+        data: self.data.clone(),
+        center: self.center.clone(),
+        half_size: self.half_size.clone(),
+        is_leaf: true,
+        children: [None, None, None, None, None, None, None, None],
+        population: self.population,
+        metadata: Some(metadata),
+      };
+    } else {
+      let mut children = [None, None, None, None, None, None, None, None];
+      for (idx, child) in self.children.iter().enumerate() {
+        children[idx] = child.as_ref().map(|c| {
+          Box::new(c.map_reduce(initial_value.clone(), mapper, reducer))
+        });
+      }
+      // UNWRAP: Guarded by filter
+      // UNWRAP: By definition of map_reduce, metadata must be present
+      let metadata: M_O = children
+        .iter()
+        .filter(|c| c.is_some())
+        .map(|c| c.as_ref().unwrap().metadata.clone().unwrap())
+        .fold(initial_value, &reducer);
+
+      return OctreeNode {
+        config: self.config.clone(),
+        data: self.data.clone(),
+        center: self.center.clone(),
+        half_size: self.half_size.clone(),
+        is_leaf: false,
+        children: children,
+        population: self.population,
+        metadata: Some(metadata),
+      };
+    }
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[derive(Clone, Debug)]
+  struct PointMass {
+    coord: [f32; 3],
+    mass: f32,
+  }
+
+  impl AsCoord for PointMass {
+    fn get_coord(&self) -> &[f32; 3] {
+      &self.coord
+    }
+  }
 
   #[test]
   fn test_octree_new() {
@@ -959,5 +1038,85 @@ mod tests {
       assert!(center[Y_INDEX] > 99f32 && center[Y_INDEX] < 101f32);
       assert!(center[Z_INDEX] > 99f32 && center[Z_INDEX] < 101f32);
     }
+  }
+
+  #[test]
+  fn test_mapreduce() {
+    let mut octree_init_params = OctreeInitParams::default();
+    let mut octree = OctreeRootNode::<PointMass>::new(octree_init_params);
+
+    octree.insert(PointMass {
+      coord: [1.0, 2.0, 3.0],
+      mass: 5000.0,
+    });
+    octree.insert(PointMass {
+      coord: [8.0, 6.0, 30.0],
+      mass: 200.0,
+    });
+    octree.insert(PointMass {
+      coord: [1.0, 6.0, 3.0],
+      mass: 50.0,
+    });
+    octree.insert(PointMass {
+      coord: [10.0, -200.0, 5.0],
+      mass: 500.0,
+    });
+    octree.insert(PointMass {
+      coord: [1000.0, -2.0, 5.0],
+      mass: 800.0,
+    });
+    octree.insert(PointMass {
+      coord: [-5.0, -200.0, 500.0],
+      mass: 800.0,
+    });
+
+    let bh_tree: OctreeRootNode<PointMass, PointMass> = octree.map_reduce(
+      PointMass {
+        coord: [0.0, 0.0, 0.0],
+        mass: 0.0,
+      },
+      &map_point_mass,
+      &reduce_point_masses,
+    );
+
+    println!("{:?}", bh_tree.out_of_volume_metadata);
+    assert!(
+      bh_tree.out_of_volume_metadata.as_ref().unwrap().mass > 2099.0
+        && bh_tree.out_of_volume_metadata.as_ref().unwrap().mass < 2101.0
+    );
+
+    println!("{:?}", bh_tree.inner_node.metadata);
+    assert!(
+      bh_tree.inner_node.metadata.as_ref().unwrap().mass > 5249.0
+        && bh_tree.inner_node.metadata.as_ref().unwrap().mass < 5251.0
+    );
+  }
+
+  fn map_point_mass(i: &PointMass) -> PointMass {
+    i.clone()
+  }
+
+  fn reduce_point_masses(i: PointMass, j: PointMass) -> PointMass {
+    if i.mass == 0.0 {
+      return j;
+    } else if j.mass == 0.0 {
+      return i;
+    }
+
+    let mass_sum = i.mass + j.mass;
+    let i_mass_fraction = i.mass / mass_sum;
+    let j_mass_fraction = j.mass / mass_sum;
+
+    // Positive + Negative mass that exactly cancels? WTF?
+    debug_assert!(mass_sum != 0.0);
+
+    return PointMass {
+      coord: [
+        i.coord[X_INDEX] * i_mass_fraction + j.coord[X_INDEX] * j_mass_fraction,
+        i.coord[Y_INDEX] * i_mass_fraction + j.coord[Y_INDEX] * j_mass_fraction,
+        i.coord[Z_INDEX] * i_mass_fraction + j.coord[Z_INDEX] * j_mass_fraction,
+      ],
+      mass: mass_sum,
+    };
   }
 }
