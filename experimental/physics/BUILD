@@ -23,6 +23,20 @@ rust_library(
     ],
 )
 
+rust_library(
+    name = "fast_cosmic_physics",
+    srcs = ["fast_cosmic_physics.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
+    deps = [
+        "//core/alg:octree",
+        "//third_party/cargo:chrono",
+        "//third_party/cargo:log",
+        "//third_party/cargo:rand",
+    ],
+)
+
 rust_binary(
     name = "cosmic_toy",
     srcs = ["cosmic_toy.rs"],

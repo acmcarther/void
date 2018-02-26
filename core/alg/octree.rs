@@ -2,8 +2,13 @@
 extern crate log;
 
 use std::default::Default;
+use std::iter;
 use std::mem;
 use std::ops::DerefMut;
+
+const X_INDEX: usize = 0;
+const Y_INDEX: usize = 1;
+const Z_INDEX: usize = 2;
 
 type Index = u64;
 
@@ -15,6 +20,10 @@ impl AsCoord for [f32; 3] {
   fn get_coord(&self) -> &[f32; 3] {
     &self
   }
+}
+
+pub trait UpdateCoord {
+  fn update_coord(&mut self, to: [f32; 3]);
 }
 
 pub trait Aggregate {
@@ -83,9 +92,21 @@ struct RemovalDetails<D> {
   merging_current_depth: usize,
 }
 
-const X_INDEX: usize = 0;
-const Y_INDEX: usize = 1;
-const Z_INDEX: usize = 2;
+pub struct NodeTraversalData<'a, D: 'a, M: 'a> {
+  pub data: &'a Vec<D>,
+  pub metadata: &'a M,
+  pub center: &'a [f32; 3],
+  pub half_size: &'a [f32; 3],
+  pub is_leaf: bool,
+  // Indicates that the above `center` and `size` specify the volume not captured by this space.
+  // This is useful for modeling out-of-volume data.
+  pub negate_specified_bouunds: bool,
+}
+
+pub struct ForwardTraversalResult<TO> {
+  pub should_continue: bool,
+  pub partial_result: TO,
+}
 
 impl Default for OctreeInitParams {
   fn default() -> OctreeInitParams {
@@ -372,16 +393,31 @@ impl<D: AsCoord, M> OctreeRootNode<D, M> {
   }
 }
 
-impl<D: AsCoord + Clone> OctreeRootNode<D> {
-  pub fn map_reduce<M_O: Clone, M_F, R_F>(
-    &self,
-    initial_value: M_O,
-    mapper: &M_F,
-    reducer: &R_F,
-  ) -> OctreeRootNode<D, M_O>
+impl<D: AsCoord, M: Default + Clone> OctreeRootNode<D, M> {
+  pub fn in_place_map_reduce<MF, RF>(&mut self, mapper: &MF, reducer: &RF)
   where
-    M_F: Fn(&D) -> M_O,
-    R_F: Fn(M_O, M_O) -> M_O,
+    MF: Fn(&D) -> M,
+    RF: Fn(M, M) -> M,
+  {
+    self.out_of_volume_metadata = self
+      .out_of_volume_data
+      .iter()
+      .map(mapper)
+      .fold(M::default(), reducer);
+    self.inner_node.in_place_map_reduce(mapper, reducer);
+  }
+}
+
+impl<D: AsCoord + Clone, M> OctreeRootNode<D, M> {
+  pub fn map_reduce<MO: Clone, MF, RF>(
+    &self,
+    initial_value: MO,
+    mapper: &MF,
+    reducer: &RF,
+  ) -> OctreeRootNode<D, MO>
+  where
+    MF: Fn(&D) -> MO,
+    RF: Fn(MO, MO) -> MO,
   {
     let out_of_volume_metadata = self
       .out_of_volume_data
@@ -394,6 +430,73 @@ impl<D: AsCoord + Clone> OctreeRootNode<D> {
       inner_node: inner_node,
       out_of_volume_metadata: out_of_volume_metadata,
       params: self.params.clone(),
+    }
+  }
+
+  pub fn traverse_reduce<TO: Clone, TF, RF>(
+    &self,
+    initial_value: TO,
+    traverser: &TF,
+    reducer: &RF,
+  ) -> TO
+  where
+    TF: Fn(NodeTraversalData<D, M>) -> ForwardTraversalResult<TO>,
+    RF: Fn(TO, TO) -> TO,
+  {
+    let in_volume_result = self
+      .inner_node
+      .traverse_reduce(initial_value, traverser, reducer);
+
+    if self.out_of_volume_data.is_empty() {
+      return in_volume_result;
+    }
+
+    let traversal_data = NodeTraversalData {
+      data: &self.out_of_volume_data,
+      metadata: &self.out_of_volume_metadata,
+      center: &self.inner_node.center,
+      half_size: &self.inner_node.half_size,
+      negate_specified_bouunds: true,
+      // out_of_bounds is considered leaf
+      is_leaf: true,
+    };
+    reducer(traverser(traversal_data).partial_result, in_volume_result)
+  }
+}
+
+impl<D: AsCoord + UpdateCoord, M: Default> OctreeRootNode<D, M> {
+  pub fn update(&mut self, from: &[f32; 3], to: [f32; 3]) {
+    let is_out_of_volume = self.inner_node.coord_is_out_of_bounds(from);
+
+    if is_out_of_volume {
+      if let Some(idx) = self
+        .out_of_volume_data
+        .iter()
+        .position(|d| d.get_coord() == from)
+      {
+        let new_is_out_of_volume = self.inner_node.coord_is_out_of_bounds(&to);
+
+        if new_is_out_of_volume {
+          // UNWRAP: Guarded by above check
+          self
+            .out_of_volume_data
+            .get_mut(idx)
+            .unwrap()
+            .update_coord(to);
+          return;
+        } else {
+          let mut data = self.out_of_volume_data.remove(idx);
+
+          data.update_coord(to);
+          self.inner_node.insert(data);
+          return;
+        }
+      }
+    }
+
+    if let Some(mut data) = self.inner_node.remove(from) {
+      data.update_coord(to);
+      self.inner_node.insert(data);
     }
   }
 }
@@ -705,16 +808,38 @@ impl<D: AsCoord, M> OctreeNode<D, M> {
   }
 }
 
-impl<D: AsCoord + Clone> OctreeNode<D> {
-  pub fn map_reduce<M_O: Clone, M_F, R_F>(
-    &self,
-    initial_value: M_O,
-    mapper: &M_F,
-    reducer: &R_F,
-  ) -> OctreeNode<D, M_O>
+impl<D: AsCoord, M: Default + Clone> OctreeNode<D, M> {
+  pub fn in_place_map_reduce<MF, RF>(&mut self, mapper: &MF, reducer: &RF)
   where
-    M_F: Fn(&D) -> M_O,
-    R_F: Fn(M_O, M_O) -> M_O,
+    MF: Fn(&D) -> M,
+    RF: Fn(M, M) -> M,
+  {
+    if self.is_leaf {
+      self.metadata = self.data.iter().map(&mapper).fold(M::default(), &reducer);
+    } else {
+      let mut children_results = Vec::new();
+      for child in self.children.iter_mut() {
+        if let &mut Some(ref mut c) = child {
+          c.in_place_map_reduce(mapper, reducer);
+          children_results.push(c.metadata.clone());
+        }
+      }
+      // UNWRAP: Guarded by filter
+      self.metadata = children_results.into_iter().fold(M::default(), &reducer);
+    }
+  }
+}
+
+impl<D: AsCoord + Clone, M> OctreeNode<D, M> {
+  pub fn map_reduce<MO: Clone, MF, RF>(
+    &self,
+    initial_value: MO,
+    mapper: &MF,
+    reducer: &RF,
+  ) -> OctreeNode<D, MO>
+  where
+    MF: Fn(&D) -> MO,
+    RF: Fn(MO, MO) -> MO,
   {
     if self.is_leaf {
       let metadata = self
@@ -740,7 +865,7 @@ impl<D: AsCoord + Clone> OctreeNode<D> {
         });
       }
       // UNWRAP: Guarded by filter
-      let metadata: M_O = children
+      let metadata: MO = children
         .iter()
         .filter(|c| c.is_some())
         .map(|c| c.as_ref().unwrap().metadata.clone())
@@ -758,7 +883,66 @@ impl<D: AsCoord + Clone> OctreeNode<D> {
       };
     }
   }
+
+  pub fn traverse_reduce<TO: Clone, TF, RF>(
+    &self,
+    initial_value: TO,
+    traverser: &TF,
+    reducer: &RF,
+  ) -> TO
+  where
+    TF: Fn(NodeTraversalData<D, M>) -> ForwardTraversalResult<TO>,
+    RF: Fn(TO, TO) -> TO,
+  {
+    let ForwardTraversalResult {
+      should_continue,
+      partial_result,
+    } = {
+      let traversal_data = NodeTraversalData {
+        data: &self.data,
+        metadata: &self.metadata,
+        center: &self.center,
+        half_size: &self.half_size,
+        negate_specified_bouunds: false,
+        is_leaf: self.is_leaf,
+      };
+
+      traverser(traversal_data)
+    };
+
+    if should_continue && !self.is_leaf {
+      let mut children_results = Vec::new();
+      for child in self.children.iter() {
+        if let &Some(ref c) = child {
+          children_results.push(c.traverse_reduce(initial_value.clone(), traverser, reducer));
+        }
+      }
+      // UNWRAP: Guarded by filter
+      return children_results
+        .into_iter()
+        .chain(iter::once(partial_result))
+        .fold(initial_value, &reducer);
+    } else {
+      return partial_result;
+    }
+  }
 }
+
+
+impl<'a, D, M> NodeTraversalData<'a, D, M> {
+  pub fn coord_is_out_of_bounds(&self, coord: &[f32; 3]) -> bool {
+    let max_x = self.center[X_INDEX] + self.half_size[X_INDEX];
+    let min_x = self.center[X_INDEX] - self.half_size[X_INDEX];
+    let max_y = self.center[Y_INDEX] + self.half_size[Y_INDEX];
+    let min_y = self.center[Y_INDEX] - self.half_size[Y_INDEX];
+    let max_z = self.center[Z_INDEX] + self.half_size[Z_INDEX];
+    let min_z = self.center[Z_INDEX] - self.half_size[Z_INDEX];
+
+    coord[X_INDEX] > max_x || coord[X_INDEX] < min_x || coord[Y_INDEX] > max_y
+      || coord[Y_INDEX] < min_y || coord[Z_INDEX] > max_z || coord[Z_INDEX] < min_z
+  }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -773,6 +957,15 @@ mod tests {
   impl AsCoord for PointMass {
     fn get_coord(&self) -> &[f32; 3] {
       &self.coord
+    }
+  }
+
+  impl Default for PointMass {
+    fn default() -> PointMass {
+      PointMass {
+        coord: [0f32, 0f32, 0f32],
+        mass: 0f32,
+      }
     }
   }
 
@@ -1090,6 +1283,47 @@ mod tests {
 
     println!("{:?}", bh_tree.inner_node.metadata);
     assert!(bh_tree.inner_node.metadata.mass > 5249.0 && bh_tree.inner_node.metadata.mass < 5251.0);
+  }
+
+  #[test]
+  fn test_inplace_mapreduce() {
+    let mut octree_init_params = OctreeInitParams::default();
+    let mut octree = OctreeRootNode::<PointMass, PointMass>::new(octree_init_params);
+
+    octree.insert(PointMass {
+      coord: [1.0, 2.0, 3.0],
+      mass: 5000.0,
+    });
+    octree.insert(PointMass {
+      coord: [8.0, 6.0, 30.0],
+      mass: 200.0,
+    });
+    octree.insert(PointMass {
+      coord: [1.0, 6.0, 3.0],
+      mass: 50.0,
+    });
+    octree.insert(PointMass {
+      coord: [10.0, -200.0, 5.0],
+      mass: 500.0,
+    });
+    octree.insert(PointMass {
+      coord: [1000.0, -2.0, 5.0],
+      mass: 800.0,
+    });
+    octree.insert(PointMass {
+      coord: [-5.0, -200.0, 500.0],
+      mass: 800.0,
+    });
+
+    octree.in_place_map_reduce(&map_point_mass, &reduce_point_masses);
+
+    println!("{:?}", octree.out_of_volume_metadata);
+    assert!(
+      octree.out_of_volume_metadata.mass > 2099.0 && octree.out_of_volume_metadata.mass < 2101.0
+    );
+
+    println!("{:?}", octree.inner_node.metadata);
+    assert!(octree.inner_node.metadata.mass > 5249.0 && octree.inner_node.metadata.mass < 5251.0);
   }
 
   fn map_point_mass(i: &PointMass) -> PointMass {
