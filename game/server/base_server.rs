@@ -82,11 +82,6 @@ pub trait NodeService<T> {
   fn on_remove(&mut self, _last_tick: &TickContext) {}
 }
 
-/** A state object that supports batched writes via a commiting mechanism. */
-pub trait CommitStore {
-  fn commit(&mut self);
-}
-
 /** The configuration for a single ServerNode. */
 pub struct NodeConfig {
   pub services: Vec<String>,
@@ -141,7 +136,9 @@ impl<T> ServerNode<T> {
       },
     }
   }
+}
 
+impl<T> ServerNode<T> {
   /** Configures the node for running by starting all services. */
   pub fn init(&mut self) {
     assert!(self.service_manager.is_none());
@@ -164,9 +161,7 @@ impl<T> ServerNode<T> {
       running_services: services,
     });
   }
-}
 
-impl<T: CommitStore> ServerNode<T> {
   /**
    * Advances the state of the simulation by one "tick".
    *
@@ -184,21 +179,15 @@ impl<T: CommitStore> ServerNode<T> {
       service.run_pre_tick(&self.state_store, &self.tick_context).unwrap();
     }
 
-    self.state_store.commit();
-
     trace!("Running service ticks");
     for service in manager.running_services.iter_mut() {
       service.run_tick(&self.state_store, &self.tick_context).unwrap();
     }
 
-    self.state_store.commit();
-
     trace!("Running service post-ticks");
     for service in manager.running_services.iter_mut() {
       service.run_post_tick(&self.state_store, &self.tick_context).unwrap();
     }
-
-    self.state_store.commit();
 
     Ok(())
   }
