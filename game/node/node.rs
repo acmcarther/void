@@ -25,63 +25,6 @@ pub enum RunError {
   ErrorFatal,
 }
 
-/**
- * A synchronized, individually threaded engine component.
- */
-pub trait NodeService<T> {
-  /** Emits common metadata for this node. */
-  fn metadata(&self) -> NodeServiceMetadata;
-
-  /**
-   * A system callback called when the system is added to the node.
-   */
-  fn on_include(&mut self, _last_tick: &TickContext) {}
-
-  /**
-   * A system callback called at the beginning of the tick.
-   *
-   * This is a good time for systems to receive pubsub messages from last tick.
-   * Pre-tick work happens strictly sequentially (i.e. single threaded), so
-   * heavy-weight work should wait until `run_tick`.
-   *
-   * TODO(acmcarther): Yield result (which will let service be restarted)
-   */
-  fn run_pre_tick(&mut self, _state: &T, _tick: &TickContext) -> Result<(), RunError> {
-    Ok(())
-  }
-
-  /**
-   * A system callback called to perform the work of a given tick.
-   *
-   * Systems should focus on their core business logic at this time, including
-   * processing received pubsub messages.
-   *
-   * TODO(acmcarther): Yield result (which will let service be restarted)
-   */
-  fn run_tick(&mut self, _state: &T, _tick: &TickContext) -> Result<(), RunError>;
-
-  /**
-   * A system callback called to perform post-tick cleanup.
-   *
-   * Systems should perform any necessary cleanup or late pubsub message
-   * handling. Most systems do not need to implement this method, and should
-   * prefer performing processing in `run_tick`, as this method is strictly
-   * invoked sequentially according to system priority.
-   *
-   * TODO(acmcarther): Yield result (which will let service be restarted)
-   */
-  fn run_post_tick(&mut self, _state: &T, _tick: &TickContext) -> Result<(), RunError> {
-    Ok(())
-  }
-
-  /**
-   * A system callback called when the system is removed.
-   *
-   * In a single node installation, this may never get called.
-   */
-  fn on_remove(&mut self, _last_tick: &TickContext) {}
-}
-
 /** The configuration for a single ServerNode. */
 pub struct NodeConfig {
   pub services: Vec<String>,
@@ -116,6 +59,57 @@ pub struct TickContext {
   pub current_tick: u64,
   pub last_creation_time: DateTime<Utc>,
   pub creation_time: DateTime<Utc>,
+}
+
+/**
+ * A synchronized, individually threaded engine component.
+ */
+pub trait NodeService<T> {
+  /** Emits common metadata for this node. */
+  fn metadata(&self) -> NodeServiceMetadata;
+
+  /**
+   * A system callback called when the system is added to the node.
+   */
+  fn on_include(&mut self, _last_tick: &TickContext) {}
+
+  /**
+   * A system callback called at the beginning of the tick.
+   *
+   * This is a good time for systems to receive pubsub messages from last tick.
+   * Pre-tick work happens strictly sequentially (i.e. single threaded), so
+   * heavy-weight work should wait until `run_tick`.
+   */
+  fn run_pre_tick(&mut self, _state: &T, _tick: &TickContext) -> Result<(), RunError> {
+    Ok(())
+  }
+
+  /**
+   * A system callback called to perform the work of a given tick.
+   *
+   * Systems should focus on their core business logic at this time, including
+   * processing received pubsub messages.
+   */
+  fn run_tick(&mut self, _state: &T, _tick: &TickContext) -> Result<(), RunError>;
+
+  /**
+   * A system callback called to perform post-tick cleanup.
+   *
+   * Systems should perform any necessary cleanup or late pubsub message
+   * handling. Most systems do not need to implement this method, and should
+   * prefer performing processing in `run_tick`, as this method is strictly
+   * invoked sequentially according to system priority.
+   */
+  fn run_post_tick(&mut self, _state: &T, _tick: &TickContext) -> Result<(), RunError> {
+    Ok(())
+  }
+
+  /**
+   * A system callback called when the system is removed.
+   *
+   * In a single node installation, this may never get called.
+   */
+  fn on_remove(&mut self, _last_tick: &TickContext) {}
 }
 
 impl<T> ServerNode<T> {

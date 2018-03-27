@@ -4,29 +4,30 @@
 # https://github.com/stepancheg/rust-protobuf/issues/189
 new_git_repository(
     name = "custom_rust_protobuf",
+    build_file = "third_party/custom/rust_protobuf.BUILD",
     commit = "1cd65f58202fd5ab66c9bf60e8194692d8a59313",
     remote = "https://github.com/acmcarther/rust-protobuf.git",
-    build_file = "custom_rust_protobuf.BUILD"
 )
 
 # Override rust grpc compiler for the same reason
 new_git_repository(
     name = "custom_rust_grpc_compiler",
+    build_file = "third_party/custom/rust_grpc_compiler.BUILD",
     commit = "121cd4534004fa8d80845f6629698a6032e38d49",
     remote = "https://github.com/acmcarther/grpc-rs.git",
-    build_file = "custom_rust_grpc_compiler.BUILD"
 )
 
 ## Fetch GRPC (old version, due to rust grpc incompat)
 # https://github.com/pingcap/grpc-rs/issues/110
 new_git_repository(
     name = "com_github_grpc_grpc",
-    tag = "v1.7.2",
-    remote = "https://github.com/grpc/grpc",
     build_file = "third_party/grpc.BUILD",
+    remote = "https://github.com/grpc/grpc",
+    tag = "v1.7.2",
 )
 
 load("//tools/bazel-ext:grpc.bzl", "old_grpc_repositories")
+
 old_grpc_repositories()
 
 git_repository(
@@ -36,6 +37,7 @@ git_repository(
 )
 
 load("@org_pubref_rules_protobuf//protobuf:rules.bzl", "proto_repositories")
+
 proto_repositories()
 
 git_repository(
@@ -45,9 +47,11 @@ git_repository(
 )
 
 load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repositories")
+
 rust_repositories()
 
 load("//third_party/cargo:crates.bzl", "raze_fetch_remote_crates")
+
 raze_fetch_remote_crates()
 
 # TODO(acmcarther): Bring into repo
@@ -91,4 +95,3 @@ new_git_repository(
     commit = "129451dd65853065076a4a606b0844d53859605e",
     remote = "https://github.com/networkprotocol/reliable.io",
 )
-

@@ -1,33 +1,28 @@
 #![feature(used)]
-extern crate base_server;
 extern crate control_proto;
 extern crate init;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
+extern crate node;
 extern crate physics;
 extern crate physics_proto;
 extern crate stores;
 #[macro_use]
 extern crate zcfg;
 
-use base_server::DenseComponentStore;
-use base_server::NodeConfig;
-use base_server::ServerNode;
-use base_server::ServiceBuilderFn;
-use base_server::SparseComponentStore;
+use node::DenseComponentStore;
+use node::NodeConfig;
+use node::ServerNode;
+use node::ServiceBuilderFn;
+use node::SparseComponentStore;
 use physics::SimplePhysics;
 use std::collections::HashMap;
 use std::sync::RwLock;
 use stores::StateStores;
 
-define_cfg!(
-  enabled_services,
-  Vec<String>,
-  Vec::new(),
-  "Which services should be enabled"
-);
+define_cfg!(enabled_services, Vec<String>, Vec::new(), "Which services should be enabled");
 
 pub fn main() {
   init::init();

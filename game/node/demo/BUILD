@@ -10,23 +10,12 @@ rust_binary(
     name = "server",
     srcs = ["server.rs"],
     deps = [
-        ":base_server",
         ":control_proto",
         ":physics",
         ":physics_proto",
         ":stores",
         "//core:init",
-        "//third_party/cargo:lazy_static",
-        "//third_party/cargo:log",
-        "//third_party/cargo:zcfg",
-    ],
-)
-
-rust_library(
-    name = "base_server",
-    srcs = ["base_server.rs"],
-    deps = [
-        "//third_party/cargo:chrono",
+        "//game/node",
         "//third_party/cargo:lazy_static",
         "//third_party/cargo:log",
         "//third_party/cargo:zcfg",
