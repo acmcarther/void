@@ -24,7 +24,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__futures__0_1_17//:futures",
+        "@raze__futures__0_1_20//:futures",
         "@raze__num_cpus__1_8_0//:num_cpus",
     ],
     rustc_flags = [

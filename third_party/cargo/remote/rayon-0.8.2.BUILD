@@ -25,7 +25,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__rayon_core__1_3_0//:rayon_core",
+        "@raze__rayon_core__1_4_0//:rayon_core",
     ],
     rustc_flags = [
         "--cap-lints allow",

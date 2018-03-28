@@ -42,13 +42,15 @@ proto_repositories()
 
 git_repository(
     name = "io_bazel_rules_rust",
-    commit = "5bc46ddca8817072cdae1961b3f9830a2bc3afa7",
-    remote = "https://github.com/acmcarther/rules_rust.git",
+    commit = "9be9a87f28f94bbe2bfb48530ff68b452763a8ee",
+    remote = "https://github.com/bazelbuild/rules_rust.git",
 )
 
-load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repositories")
+#load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repositories")
+#rust_repositories()
+load("//tools/rust:toolchain.bzl", "nightly_rust_repository")
 
-rust_repositories()
+nightly_rust_repository()
 
 load("//third_party/cargo:crates.bzl", "raze_fetch_remote_crates")
 
@@ -58,7 +60,8 @@ raze_fetch_remote_crates()
 new_local_repository(
     name = "llvm",
     build_file = "//third_party:llvm.BUILD",
-    path = "/usr/lib",
+    #path = "/usr/lib",
+    path = "/usr/lib/llvm-3.9/lib",
 )
 
 # TODO(acmcarther): Bring into repo

@@ -12,21 +12,21 @@ licenses([
 
 alias(
     name = "bindgen",
-    actual = "@raze__bindgen__0_32_2//:bindgen",
+    actual = "@raze__bindgen__0_35_0//:bindgen",
 )
 alias(
     # Extra aliased target, from raze configuration
     # N.B.: The exact form of this is subject to change.
     name = "cargo_bin_bindgen",
-    actual = "@raze__bindgen__0_32_2//:cargo_bin_bindgen",
+    actual = "@raze__bindgen__0_35_0//:cargo_bin_bindgen",
 )
 alias(
     name = "cgmath",
-    actual = "@raze__cgmath__0_16_0//:cgmath",
+    actual = "@raze__cgmath__0_16_1//:cgmath",
 )
 alias(
     name = "chrono",
-    actual = "@raze__chrono__0_4_0//:chrono",
+    actual = "@raze__chrono__0_4_1//:chrono",
 )
 alias(
     name = "derive_builder",
@@ -42,37 +42,19 @@ alias(
 )
 alias(
     name = "futures",
-    actual = "@raze__futures__0_1_17//:futures",
-)
-alias(
-    name = "glfw",
-    actual = "@raze__glfw__0_20_0//:glfw",
+    actual = "@raze__futures__0_1_20//:futures",
 )
 alias(
     name = "gnuplot",
     actual = "@raze__gnuplot__0_0_24//:gnuplot",
 )
 alias(
-    name = "grpcio",
-    actual = "@raze__grpcio__0_2_0//:grpcio",
-)
-alias(
-    # Extra aliased target, from raze configuration
-    # N.B.: The exact form of this is subject to change.
-    name = "cargo_bin_grpc_rust_plugin",
-    actual = "@raze__grpcio_compiler__0_2_0//:cargo_bin_grpc_rust_plugin",
-)
-alias(
-    name = "grpcio_proto",
-    actual = "@raze__grpcio_proto__0_2_0//:grpcio_proto",
-)
-alias(
     name = "hyper",
-    actual = "@raze__hyper__0_11_14//:hyper",
+    actual = "@raze__hyper__0_11_24//:hyper",
 )
 alias(
     name = "itertools",
-    actual = "@raze__itertools__0_7_6//:itertools",
+    actual = "@raze__itertools__0_7_8//:itertools",
 )
 alias(
     name = "lazy_static",
@@ -80,7 +62,7 @@ alias(
 )
 alias(
     name = "libc",
-    actual = "@raze__libc__0_2_36//:libc",
+    actual = "@raze__libc__0_2_40//:libc",
 )
 alias(
     name = "log",
@@ -96,27 +78,27 @@ alias(
 )
 alias(
     name = "protobuf",
-    actual = "@raze__protobuf__1_4_3//:protobuf",
+    actual = "@raze__protobuf__1_5_0//:protobuf",
 )
 alias(
     # Extra aliased target, from raze configuration
     # N.B.: The exact form of this is subject to change.
     name = "cargo_bin_protoc_gen_rust",
-    actual = "@raze__protobuf__1_4_3//:cargo_bin_protoc_gen_rust",
+    actual = "@raze__protobuf__1_5_0//:cargo_bin_protoc_gen_rust",
 )
 alias(
     name = "rand",
-    actual = "@raze__rand__0_3_20//:rand",
+    actual = "@raze__rand__0_3_22//:rand",
 )
 alias(
     name = "rustfmt_nightly",
-    actual = "@raze__rustfmt_nightly__0_3_6//:rustfmt_nightly",
+    actual = "@raze__rustfmt_nightly__0_3_8//:rustfmt_nightly",
 )
 alias(
     # Extra aliased target, from raze configuration
     # N.B.: The exact form of this is subject to change.
     name = "cargo_bin_rustfmt",
-    actual = "@raze__rustfmt_nightly__0_3_6//:cargo_bin_rustfmt",
+    actual = "@raze__rustfmt_nightly__0_3_8//:cargo_bin_rustfmt",
 )
 alias(
     name = "sdl2",
@@ -136,11 +118,11 @@ alias(
 )
 alias(
     name = "vk_sys",
-    actual = "@raze__vk_sys__0_3_2//:vk_sys",
+    actual = "@raze__vk_sys__0_3_3//:vk_sys",
 )
 alias(
     name = "x11_dl",
-    actual = "@raze__x11_dl__2_17_2//:x11_dl",
+    actual = "@raze__x11_dl__2_17_3//:x11_dl",
 )
 alias(
     name = "zcfg",

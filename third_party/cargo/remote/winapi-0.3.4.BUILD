@@ -34,6 +34,7 @@ rust_library(
         "dbghelp",
         "errhandlingapi",
         "handleapi",
+        "libloaderapi",
         "minwinbase",
         "minwindef",
         "ntdef",
@@ -47,8 +48,13 @@ rust_library(
         "sysinfoapi",
         "timezoneapi",
         "winbase",
+        "wincon",
         "winerror",
         "winnt",
+        "winsock2",
+        "ws2def",
+        "ws2ipdef",
+        "ws2tcpip",
     ],
 )
 

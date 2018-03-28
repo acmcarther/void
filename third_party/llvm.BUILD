@@ -4,7 +4,7 @@ licenses(["notice"])
 
 # Debian: apt-get install llvm-3.9
 cc_library(
-    name = "clang",
+    name = "libclang",
     srcs = [
       "libclang.so",
       "libclangAST.a",

@@ -25,9 +25,9 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__bitflags__0_7_0//:bitflags",
-        "@raze__deflate__0_7_17//:deflate",
+        "@raze__deflate__0_7_18//:deflate",
         "@raze__inflate__0_2_0//:inflate",
-        "@raze__num_iter__0_1_34//:num_iter",
+        "@raze__num_iter__0_1_35//:num_iter",
     ],
     rustc_flags = [
         "--cap-lints allow",

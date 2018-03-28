@@ -37,7 +37,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__serde__1_0_27//:serde",
+        "@raze__serde__1_0_36//:serde",
     ],
     rustc_flags = [
         "--cap-lints allow",

@@ -9,29 +9,26 @@ futures = "0.1.17"
 hyper = "0.11.7"
 itertools = "0.7.4"
 lazy_static = "0.2.11"
-libc = "0.2.34"
+libc = "0.2.40"
 log = "0.3.8"
 rand = "0.3.18"
 specs = "0.10.0"
 tic = "0.3.0"
 time = "0.1.38"
 vk-sys = "0.3.2"
-glfw = "0.20.0"
 zcfg = "0.2.0"
 zcfg_flag_parser = "0.2.0"
 gnuplot = "0.0.24"
 sdl2 = "0.31.0"
-bindgen = "0.32.2"
+bindgen = "0.35.0"
 dylib = "0.0.3"
 x11-dl = "2.17.2"
-rustfmt-nightly = "0.3.6"
+rustfmt-nightly = "0.3.8"
 memoffset = "0.2.1"
 derive_builder = "0.5.1"
 cgmath = "0.16.0"
 png = "0.11.0"
-grpcio = "0.2.0"
 protobuf = "1.4.3"
-grpcio-proto = "0.2.0"
 
 [lib]
 path = "fake_lib.rs"
@@ -41,10 +38,10 @@ workspace_path = "//third_party/cargo"
 target = "x86_64-unknown-linux-gnu"
 genmode = "Remote"
 
-[raze.crates.x11-dl.'2.17.2']
+[raze.crates.x11-dl.'2.17.3']
 gen_buildrs = true
 
-[raze.crates.rustfmt-nightly.'0.3.6']
+[raze.crates.rustfmt-nightly.'0.3.8']
 extra_aliased_targets = [
   "cargo_bin_rustfmt"
 ]
@@ -58,55 +55,32 @@ additional_deps = [
   "@//third_party/cargo/overrides/sdl2-sys:sdl2_sys"
 ]
 
-[raze.crates.bindgen.'0.32.2']
+[raze.crates.bindgen.'0.35.0']
 gen_buildrs = true
 extra_aliased_targets = [
   "cargo_bin_bindgen"
 ]
 
-[raze.crates.clang-sys.'0.21.1']
-gen_buildrs = true
+[raze.crates.clang-sys.'0.22.0']
+gen_buildrs = false
+skipped_deps = [
+  "libloading-0.5.0"
+]
 additional_deps = [
-  "@llvm//:clang"
+  "@//third_party/cargo/overrides/libloading-0.5.0:libloading",
 ]
 
-[raze.crates.cgmath.'0.16.0']
+[raze.crates.derive_builder.'0.5.1']
+data_attr = "glob([\"src/doc_tpl/*\"])"
+
+[raze.crates.cgmath.'0.16.1']
 # Generates some functions or something
 gen_buildrs = true
 
-[raze.crates.grpcio.'0.2.0']
-skipped_deps = [
-  "grpcio-sys-0.2.0",
-  "protobuf-1.4.3"
-]
-additional_deps = [
-  "@//third_party/cargo/overrides/grpcio-sys-0.2.0:grpcio_sys",
-  "@custom_rust_protobuf//:protobuf"
-]
-
-[raze.crates.grpcio-proto.'0.2.0']
-skipped_deps = [
-  "protobuf-1.4.3",
-  "grpcio-compiler-0.2.0"
-]
-additional_deps = [
-  "@custom_rust_protobuf//:protobuf",
-  "@custom_rust_grpc_compiler//:grpcio_compiler",
-]
-gen_buildrs = true
-
-[raze.crates.grpcio-compiler.'0.2.0']
-skipped_deps = [
-  "protobuf-1.4.3"
-]
-additional_deps = [
-  "@custom_rust_protobuf//:protobuf"
-]
-extra_aliased_targets = [
-  "cargo_bin_grpc_rust_plugin"
-]
-
-[raze.crates.protobuf.'1.4.3']
+[raze.crates.protobuf.'1.5.0']
 extra_aliased_targets = [
     "cargo_bin_protoc_gen_rust"
 ]
+
+[raze.crates.waterfall.'0.7.1']
+data_attr = "glob([\"assets/**\"])"

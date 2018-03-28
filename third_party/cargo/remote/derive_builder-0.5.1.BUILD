@@ -31,7 +31,6 @@ rust_library(
     crate_root = "src/lib.rs",
     crate_type = "proc-macro",
     srcs = glob(["**/*.rs"]),
-    data = glob(["**/*"]),
     deps = [
         "@raze__derive_builder_core__0_2_0//:derive_builder_core",
         "@raze__quote__0_3_15//:quote",
@@ -41,6 +40,7 @@ rust_library(
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
+    data = glob(["src/doc_tpl/*"]),
     crate_features = [
     ],
 )
