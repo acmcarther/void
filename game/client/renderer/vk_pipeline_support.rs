@@ -7,6 +7,43 @@ extern crate vk_sys as vk;
 
 use std::ffi::CString;
 use std::ptr;
+use std::mem;
+
+pub struct PushConstantRangeGenerator {
+  push_constant_ranges: Vec<vk::PushConstantRange>,
+}
+
+impl PushConstantRangeGenerator {
+  pub fn new() -> PushConstantRangeGenerator {
+    PushConstantRangeGenerator {
+      push_constant_ranges: Vec::new(),
+    }
+  }
+
+  /**
+   * Enqueues a push constant type (T) as available with at the pipeline stages indicated by the
+   * stage_flags.
+   */
+  pub fn push<'selff, T: Sized>(
+    &'selff mut self,
+    stage_flags: vk::PipelineStageFlags,
+  ) -> &'selff mut PushConstantRangeGenerator {
+    let existing_count = self.push_constant_ranges.len() as u32;
+    self.push_constant_ranges.push(vk::PushConstantRange {
+      stageFlags: stage_flags,
+      offset: existing_count,
+      size: std::mem::size_of::<T>() as u32,
+    });
+
+    self
+  }
+
+  pub fn take_ranges(&mut self) -> Vec<vk::PushConstantRange> {
+    let mut swap_vec = Vec::new();
+    mem::swap(&mut self.push_constant_ranges, &mut swap_vec);
+    swap_vec
+  }
+}
 
 /** Configures a render pass with one subpass and default fixed function pipeline settings. */
 pub fn make_render_pass(
@@ -90,36 +127,30 @@ pub fn make_render_pass(
   device.create_render_pass(&render_pass_create_info)
 }
 
-pub fn make_pipeline_layout<T>(
+pub fn make_pipeline_layout(
   device: &vkl::LDevice,
   descriptor_set_layouts: &Vec<vk::DescriptorSetLayout>,
+  push_constant_ranges: &Vec<vk::PushConstantRange>,
 ) -> vkl::RawResult<vk::PipelineLayout> {
-  let push_constant_range = vk::PushConstantRange {
-    stageFlags: vk::SHADER_STAGE_VERTEX_BIT,
-    offset: 0,
-    size: std::mem::size_of::<T>() as u32,
-  };
-  let all_push_constant_ranges = [push_constant_range];
   let pipeline_layout_create_info = vk::PipelineLayoutCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     pNext: ptr::null(),
     flags: 0,
     setLayoutCount: descriptor_set_layouts.len() as u32,
     pSetLayouts: descriptor_set_layouts.as_ptr(),
-    pushConstantRangeCount: all_push_constant_ranges.len() as u32,
-    pPushConstantRanges: all_push_constant_ranges.as_ptr(),
+    pushConstantRangeCount: push_constant_ranges.len() as u32,
+    pPushConstantRanges: push_constant_ranges.as_ptr(),
   };
 
   device.create_pipeline_layout(&pipeline_layout_create_info)
 }
-
 
 pub fn make_graphics_pipeline(
   device: &vkl::LDevice,
   vert_shader_module: &vk::ShaderModule,
   frag_shader_module: &vk::ShaderModule,
   all_attr_desc: &Vec<vk::VertexInputAttributeDescription>,
-  binding_description: vk::VertexInputBindingDescription,
+  all_vertex_binding_desc: &Vec<vk::VertexInputBindingDescription>,
   render_pass: &vk::RenderPass,
   swapchain: &vkss::LoadedSwapchain,
   pipeline_layout: &vk::PipelineLayout,
@@ -146,13 +177,12 @@ pub fn make_graphics_pipeline(
     pSpecializationInfo: ptr::null(),
   };
 
-  let all_vertex_binding_descriptions = [binding_description];
   let pipeline_vertex_input_state_create_info = vk::PipelineVertexInputStateCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
     pNext: ptr::null(),
     flags: 0,
-    vertexBindingDescriptionCount: 1,
-    pVertexBindingDescriptions: all_vertex_binding_descriptions.as_ptr(),
+    vertexBindingDescriptionCount: all_vertex_binding_desc.len() as u32,
+    pVertexBindingDescriptions: all_vertex_binding_desc.as_ptr(),
     vertexAttributeDescriptionCount: all_attr_desc.len() as u32,
     pVertexAttributeDescriptions: all_attr_desc.as_ptr(),
   };
@@ -226,7 +256,6 @@ pub fn make_graphics_pipeline(
   // TODO(acmcarther): Depth and Stencil Testing
   // ...
 
-
   // TODO(acmcarther): Examine these options
   let pipeline_color_blend_attachment_state = vk::PipelineColorBlendAttachmentState {
     blendEnable: vk::FALSE,
@@ -251,8 +280,8 @@ pub fn make_graphics_pipeline(
     blendConstants: [0f32, 0f32, 0f32, 0f32],
   };
 
+  // TODO(acmcarther): This isn't properly configured
   let dynamic_states = [vk::DYNAMIC_STATE_VIEWPORT, vk::DYNAMIC_STATE_LINE_WIDTH];
-
   let pipeline_dynamic_state_create_info = vk::PipelineDynamicStateCreateInfo {
     sType: vk::STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
     pNext: ptr::null(),

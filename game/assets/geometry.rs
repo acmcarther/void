@@ -10,3 +10,9 @@ pub struct Mesh {
   pub vertices: Vec<Vertex>,
   pub indices: Vec<u16>,
 }
+
+impl Mesh {
+  pub fn num_faces(&self) -> usize {
+    self.indices.len() / 3
+  }
+}

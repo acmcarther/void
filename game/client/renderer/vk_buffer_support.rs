@@ -7,24 +7,6 @@ extern crate vk_sys as vk;
 
 use std::ptr;
 
-fn find_suitable_memory_idx(
-  memory_requirements: &vk::MemoryRequirements,
-  memory_property_flags: vk::MemoryPropertyFlags,
-  memory_properties: &vk::PhysicalDeviceMemoryProperties,
-) -> u32 {
-  // TODO(acmcarther): This is potentially in the hot path but it looks inefficient.
-  // Consider profiling and optimizing if necessary.
-  (0..memory_properties.memoryTypeCount)
-    .filter(|idx| memory_requirements.memoryTypeBits & (1u32 << idx) > 0 /* type suitable */)
-    .filter(|idx| {
-      let prop_flags = memory_properties.memoryTypes[*idx as usize].propertyFlags;
-      prop_flags & memory_property_flags > 0 /* props suitable */
-    })
-    .next()
-    .expect("Vulkan: couldn't find physical device memory suitable for buffer or image")
-}
-
-
 pub struct PreparedBuffer(pub vk::Buffer, pub vk::DeviceMemory);
 pub struct PreparedImage(pub vk::Image, pub vk::DeviceMemory);
 
@@ -116,7 +98,6 @@ pub fn make_image(
 
   Ok(PreparedImage(image, device_memory))
 }
-
 
 fn begin_one_time_command(
   device: &vkl::LDevice,
@@ -303,7 +284,6 @@ pub fn copy_buffer_into_image(
 ) -> vkl::RawResult<()> {
   let command_buffer = try!(begin_one_time_command(device, transfer_command_pool));
 
-
   let region = vk::BufferImageCopy {
     bufferOffset: 0,
     bufferRowLength: 0,
@@ -335,7 +315,6 @@ pub fn copy_buffer_into_image(
     );
   }
 
-
   end_one_time_command(
     device,
     command_buffer,
@@ -343,7 +322,6 @@ pub fn copy_buffer_into_image(
     transfer_queue,
   )
 }
-
 
 pub fn copy_buffer(
   device: &vkl::LDevice,
@@ -423,4 +401,21 @@ pub fn make_command_buffers(
   };
 
   device.allocate_command_buffers(&command_buffer_allocate_info)
+}
+
+fn find_suitable_memory_idx(
+  memory_requirements: &vk::MemoryRequirements,
+  memory_property_flags: vk::MemoryPropertyFlags,
+  memory_properties: &vk::PhysicalDeviceMemoryProperties,
+) -> u32 {
+  // TODO(acmcarther): This is potentially in the hot path but it looks inefficient.
+  // Consider profiling and optimizing if necessary.
+  (0..memory_properties.memoryTypeCount)
+    .filter(|idx| memory_requirements.memoryTypeBits & (1u32 << idx) > 0 /* type suitable */)
+    .filter(|idx| {
+      let prop_flags = memory_properties.memoryTypes[*idx as usize].propertyFlags;
+      prop_flags & memory_property_flags > 0 /* props suitable */
+    })
+    .next()
+    .expect("Vulkan: couldn't find physical device memory suitable for buffer or image")
 }

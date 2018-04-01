@@ -20,6 +20,8 @@ extern crate vk_pipeline_support as vkps;
 extern crate vk_swapchain_support as vkss;
 extern crate vk_sys as vk;
 
+use vkps::PushConstantRangeGenerator;
+use vkdrs::BufferInfoGenerator;
 use cgmath::Angle;
 use rand::Rng;
 use std::os::raw::c_void;
@@ -499,7 +501,6 @@ struct PushConstant {
   model: cgmath::Matrix4<f32>,
 }
 
-
 pub fn record_command_buffer(
   device: &vkl::LDevice,
   swapchain: &vkss::LoadedSwapchain,
@@ -619,7 +620,6 @@ pub fn record_command_buffer(
     }))
   }
 }
-
 
 struct VulkanContext {
   first_frame_for_idxs: Vec<bool>,
@@ -742,9 +742,12 @@ impl VulkanContext {
     };
 
     let descriptor_set_layouts = do_or_die!(vkdrs::make_descriptor_set_layouts(&device));
-    let pipeline_layout = do_or_die!(vkps::make_pipeline_layout::<PushConstant>(
+    let pipeline_layout = do_or_die!(vkps::make_pipeline_layout(
       &device,
-      &descriptor_set_layouts
+      &descriptor_set_layouts,
+      &PushConstantRangeGenerator::new()
+        .push::<PushConstant>(vk::SHADER_STAGE_VERTEX_BIT)
+        .take_ranges()
     ));
 
     let (
@@ -815,12 +818,16 @@ impl VulkanContext {
       &descriptor_pool
     ));
 
-    vkdrs::write_ubo_descriptor::<MVPUniform>(
-      &device,
-      &uniform_buffer_details.buffer.0, /* buffer */
-      descriptor_sets.get(0).unwrap(),
-      0, /* descriptor_binding_id */
-    );
+    unsafe {
+      vkdrs::write_descriptors(
+        &device,
+        descriptor_sets.get(0).unwrap(),
+        0, /* descriptor_binding_id */
+        BufferInfoGenerator::new()
+          .push::<MVPUniform>(&uniform_buffer_details.buffer.0 /* buffer */)
+          .take_infos(),
+      );
+    }
 
     vkdrs::write_texture_image_descriptor(
       &device,
@@ -833,13 +840,13 @@ impl VulkanContext {
     let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(
       &device,
       include_bytes!(
-        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/galaxy_toy/star_vert_shader.spv"
+        "../../../bazel-out/k8-fastbuild/genfiles/experimental/demos/galaxy_toy/star_vert_shader.spv"
       ),
     ));
     let frag_shader_module = do_or_die!(vkl::builtins::make_shader_module(
       &device,
       include_bytes!(
-        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/galaxy_toy/star_frag_shader.spv"
+        "../../../bazel-out/k8-fastbuild/genfiles/experimental/demos/galaxy_toy/star_frag_shader.spv"
       ),
     ));
 
@@ -851,7 +858,7 @@ impl VulkanContext {
         vertex_buffer_details.vertex_input_props.pos_attr_desc,
         vertex_buffer_details.vertex_input_props.tex_attr_desc,
       ],
-      vertex_buffer_details.vertex_input_props.binding_description,
+      &vec![vertex_buffer_details.vertex_input_props.binding_description],
       &render_pass,
       &swapchain,
       &pipeline_layout
@@ -989,12 +996,10 @@ impl VulkanContext {
                 100000000, /* ns */
               )
             }));
-            do_or_die!(vkl::util::dooy("reset fences", &|| {
-              self
-                .device
-                .ptrs()
-                .ResetFences(self.device.logical_device, 1, all_fences.as_ptr())
-            }));
+            do_or_die!(vkl::util::dooy("reset fences", &|| self
+              .device
+              .ptrs()
+              .ResetFences(self.device.logical_device, 1, all_fences.as_ptr())));
           }
         } else {
           let first_frame_for_idx = self
@@ -1004,7 +1009,6 @@ impl VulkanContext {
           *first_frame_for_idx = false;
         }
       }
-
 
       record_command_buffer(
         &self.device,
@@ -1041,12 +1045,10 @@ impl VulkanContext {
         0, /* queue_index */
       );
 
-      do_or_die!(vkl::util::dooy("queue submit", &|| {
-        self
-          .device
-          .ptrs()
-          .QueueSubmit(queue, 1, &submit_info, *command_buffer_fence)
-      }));
+      do_or_die!(vkl::util::dooy("queue submit", &|| self
+        .device
+        .ptrs()
+        .QueueSubmit(queue, 1, &submit_info, *command_buffer_fence)));
 
       let swapchains = [self.swapchain.swapchain];
       let present_info_khr = vk::PresentInfoKHR {
@@ -1060,9 +1062,10 @@ impl VulkanContext {
         pResults: ptr::null_mut(),
       };
 
-      do_or_die!(vkl::util::dooy("queue present", &|| {
-        self.device.ptrs().QueuePresentKHR(queue, &present_info_khr)
-      }));
+      do_or_die!(vkl::util::dooy("queue present", &|| self
+        .device
+        .ptrs()
+        .QueuePresentKHR(queue, &present_info_khr)));
     }
   }
 }
@@ -1221,7 +1224,6 @@ fn main() {
       );
     }
 
-
     for tick in 0..100000000 {
       grid.tick_celestial_grid(&cosmic_params, 900u64);
 
@@ -1284,7 +1286,7 @@ fn main() {
           keycode: Some(sdl2::keyboard::Keycode::Escape),
           ..
         } => break 'running,
-        _ => {},
+        _ => {}
       }
     }
 
@@ -1295,7 +1297,7 @@ fn main() {
         Ok(state) => {
           last_recv = Some(state);
           false
-        },
+        }
         Err(std::sync::mpsc::TryRecvError::Empty) => true,
         Err(std::sync::mpsc::TryRecvError::Disconnected) => panic!("main thread hung up!"),
       };

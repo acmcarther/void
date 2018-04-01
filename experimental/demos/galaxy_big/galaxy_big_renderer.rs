@@ -5,7 +5,7 @@ extern crate icosphere;
 extern crate log;
 #[macro_use]
 extern crate memoffset;
-extern crate renderer;
+extern crate vk_buffer_cache;
 extern crate vk_buffer_support as vkbs;
 extern crate vk_descriptor_support as vkdrs;
 extern crate vk_device_support as vkds;
@@ -13,19 +13,30 @@ extern crate vk_instance_support as vkis;
 #[macro_use(do_or_die)]
 extern crate vk_lite as vkl;
 extern crate vk_pipeline_support as vkps;
+extern crate vk_renderer;
 extern crate vk_swapchain_support as vkss;
 extern crate vk_sys as vk;
 
 use cgmath::Angle;
 use geometry::Mesh;
 use geometry::Vertex;
-use renderer::BaseRenderer;
+use vk_renderer::BaseRenderer;
 use std::collections::HashMap;
 use std::os::raw::c_void;
 use std::ptr;
+use vkps::PushConstantRangeGenerator;
+use vkdrs::BufferInfoGenerator;
+use vk_buffer_cache::VertexBufferDescriptorId;
+use vk_buffer_cache::MeshId;
+use vk_buffer_cache::MeshCache;
+use vk_buffer_cache::VertexBufferDescriptorCache;
+use vk_buffer_cache::VertexBufferDescriptor;
+use vk_buffer_cache::VertexBuffer;
+use vk_buffer_cache::IndexBuffer;
+use vk_buffer_cache::MeshBuffers;
 
-/** A Planet-demo specific renderer. */
-pub struct PlanetRenderer<'window> {
+/** A GalaxyBig-demo specific renderer. */
+pub struct GalaxyBigRenderer<'window> {
   base_renderer: BaseRenderer<'window>,
   vert_shader_module: vk::ShaderModule,
   frag_shader_module: vk::ShaderModule,
@@ -80,57 +91,6 @@ struct DepthImage {
   image_view: vk::ImageView,
 }
 
-/**
- * Allocated buffers for a particular mesh.
- *
- * UNSAFE: Requires manual deallocation by the device that instantiated it.
- */
-struct MeshBuffers {
-  vertex_buffer: VertexBuffer,
-  index_buffer: IndexBuffer,
-}
-
-/**
- * A vertex buffer.
- *
- * Contains arbitrary vertices, along with a id to the descriptor that describes their form.
- *
- * UNSAFE: Requires manual deallocation by the device that instantiated it.
- */
-struct VertexBuffer {
-  vertex_buffer_descriptor_id: VertexBufferDescriptorId,
-  buffer: vkbs::PreparedBuffer,
-}
-
-/**
- * An index buffer
- *
- * Contains indexes into an arbitrary vertex buffer indicating the triangles that form a mesh's
- * shape.
- *
- * UNSAFE: Requires manual deallocation by the device that instantiated it.
- */
-struct IndexBuffer {
-  buffer: vkbs::PreparedBuffer,
-  num_indexes: u32,
-}
-
-/** A mapping from vertex buffer descriptor id to vertex buffer descriptor. */
-type VertexBufferDescriptorCache = HashMap<VertexBufferDescriptorId, VertexBufferDescriptor>;
-
-/** A unique identifier for a vertex buffer descriptor. */
-type VertexBufferDescriptorId = u32;
-
-type MeshId = u32;
-
-type MeshCache = HashMap<MeshId, MeshBuffers>;
-
-/** The vertex describing information required to construct a graphics pipeline for a mesh. */
-struct VertexBufferDescriptor {
-  attr_descriptions: Vec<vk::VertexInputAttributeDescription>,
-  binding_description: vk::VertexInputBindingDescription,
-}
-
 /** A uniform describing the "view" and "projection": characteristics of the camera/viewer. */
 #[repr(C)]
 struct MVPUniform {
@@ -146,6 +106,7 @@ pub struct MeshToRender {
 }
 
 const STANDARD_VERTEX_BUFFER_DESCRIPTOR_ID: VertexBufferDescriptorId = 1u32;
+pub const ICO_0_MESH_ID: MeshId = 0u32;
 pub const ICO_1_MESH_ID: MeshId = 1u32;
 pub const ICO_2_MESH_ID: MeshId = 2u32;
 pub const ICO_3_MESH_ID: MeshId = 3u32;
@@ -153,13 +114,16 @@ pub const ICO_4_MESH_ID: MeshId = 4u32;
 pub const ICO_5_MESH_ID: MeshId = 5u32;
 pub const ICO_6_MESH_ID: MeshId = 6u32;
 
-impl<'window> PlanetRenderer<'window> {
-  pub fn new(base_renderer: BaseRenderer<'window>) -> PlanetRenderer<'window> {
+impl<'window> GalaxyBigRenderer<'window> {
+  pub fn new(base_renderer: BaseRenderer<'window>) -> GalaxyBigRenderer<'window> {
     let descriptor_set_layouts =
       do_or_die!(vkdrs::make_descriptor_set_layouts(&base_renderer.device));
-    let pipeline_layout = do_or_die!(vkps::make_pipeline_layout::<ModelPushConstant>(
+    let pipeline_layout = do_or_die!(vkps::make_pipeline_layout(
       &base_renderer.device,
-      &descriptor_set_layouts
+      &descriptor_set_layouts,
+      &PushConstantRangeGenerator::new()
+        .push::<ModelPushConstant>(vk::SHADER_STAGE_VERTEX_BIT)
+        .take_ranges()
     ));
 
     let descriptor_pool = do_or_die!(vkdrs::make_descriptor_pool(&base_renderer.device));
@@ -169,7 +133,6 @@ impl<'window> PlanetRenderer<'window> {
       &descriptor_set_layouts,
       &descriptor_pool
     ));
-
 
     let mut vertex_buffer_descriptor_cache = VertexBufferDescriptorCache::new();
     vertex_buffer_descriptor_cache.insert(
@@ -192,6 +155,7 @@ impl<'window> PlanetRenderer<'window> {
         .get_device_queue(queue_family_idx, 0 /* queueIdx */);
 
       let icospheres = vec![
+        (ICO_0_MESH_ID, 0u32 /* iterations */),
         (ICO_1_MESH_ID, 1u32 /* iterations */),
         (ICO_2_MESH_ID, 2u32 /* iterations */),
         (ICO_3_MESH_ID, 3u32 /* iterations */),
@@ -220,24 +184,28 @@ impl<'window> PlanetRenderer<'window> {
       &base_renderer.device_spec.memory_properties
     ));
 
-    vkdrs::write_ubo_descriptor::<MVPUniform>(
-      &base_renderer.device,
-      &uniform_buffer.buffer.0, /* buffer */
-      descriptor_sets.get(0).unwrap(),
-      0, /* descriptor_binding_id */
-    );
+    unsafe {
+      vkdrs::write_descriptors(
+        &base_renderer.device,
+        descriptor_sets.get(0).unwrap(),
+        0, /* descriptor_binding_id */
+        BufferInfoGenerator::new()
+          .push::<MVPUniform>(&uniform_buffer.buffer.0 /* buffer */)
+          .take_infos(),
+      );
+    };
 
     let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(
       &base_renderer.device,
       include_bytes!(
-        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/planet/planet_vert_shader.\
+        "../../../bazel-out/k8-fastbuild/genfiles/experimental/demos/galaxy_big/galaxy_big_vert_shader.\
          spv"
       ),
     ));
     let frag_shader_module = do_or_die!(vkl::builtins::make_shader_module(
       &base_renderer.device,
       include_bytes!(
-        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/planet/planet_frag_shader.\
+        "../../../bazel-out/k8-fastbuild/genfiles/experimental/demos/galaxy_big/galaxy_big_frag_shader.\
          spv"
       ),
     ));
@@ -251,7 +219,9 @@ impl<'window> PlanetRenderer<'window> {
         &vert_shader_module,
         &frag_shader_module,
         &standard_vertex_buffer_descriptor.attr_descriptions,
-        standard_vertex_buffer_descriptor.binding_description_cloned(),
+        &vec![
+          standard_vertex_buffer_descriptor.binding_description_cloned(),
+        ],
         &base_renderer.render_pass,
         &base_renderer.swapchain,
         &pipeline_layout
@@ -300,8 +270,8 @@ impl<'window> PlanetRenderer<'window> {
       first_frame_for_idxs.push(true);
     }
 
-    // TODO(acmcarther): Perform initialization specific to planet demo
-    PlanetRenderer {
+    // TODO(acmcarther): Perform initialization specific to galaxy_big demo
+    GalaxyBigRenderer {
       base_renderer: base_renderer,
       vert_shader_module: vert_shader_module,
       frag_shader_module: frag_shader_module,
@@ -384,13 +354,15 @@ impl<'window> PlanetRenderer<'window> {
               10000000000, /* ns */
             )
           }));
-          do_or_die!(vkl::util::dooy("reset fences", &|| {
-            self.base_renderer.device.ptrs().ResetFences(
+          do_or_die!(vkl::util::dooy("reset fences", &|| self
+            .base_renderer
+            .device
+            .ptrs()
+            .ResetFences(
               self.base_renderer.device.logical_device,
               1,
               all_fences.as_ptr(),
-            )
-          }));
+            )));
         }
       } else {
         let first_frame_for_idx = self
@@ -598,7 +570,7 @@ impl<'window> PlanetRenderer<'window> {
   }
 }
 
-impl<'window> Drop for PlanetRenderer<'window> {
+impl<'window> Drop for GalaxyBigRenderer<'window> {
   fn drop(&mut self) {
     let device = &mut self.base_renderer.device;
 
@@ -620,12 +592,7 @@ impl<'window> Drop for PlanetRenderer<'window> {
     device.free_memory(self.uniform_buffer.buffer.1 /* deviceMemory */);
     device.free_memory(self.depth_image.image.1 /* deviceMemory */);
 
-    for mesh in self.mesh_cache.values() {
-      device.destroy_buffer(mesh.index_buffer.buffer.0 /* buffer */);
-      device.destroy_buffer(mesh.vertex_buffer.buffer.0 /* buffer */);
-      device.free_memory(mesh.index_buffer.buffer.1 /* deviceMemory */);
-      device.free_memory(mesh.vertex_buffer.buffer.1 /* deviceMemory */);
-    }
+    vk_buffer_cache::deallocate_mesh_cache(&device, &mut self.mesh_cache);
 
     device.destroy_descriptor_pool(self.descriptor_pool);
     for descriptor_set_layout in self.descriptor_set_layouts.drain(..) {
@@ -636,16 +603,6 @@ impl<'window> Drop for PlanetRenderer<'window> {
     device.destroy_shader_module(self.frag_shader_module);
     for command_buffer_fence in self.command_buffer_fences.drain(..) {
       device.destroy_fence(command_buffer_fence);
-    }
-  }
-}
-
-impl VertexBufferDescriptor {
-  pub fn binding_description_cloned(&self) -> vk::VertexInputBindingDescription {
-    vk::VertexInputBindingDescription {
-      binding: self.binding_description.binding,
-      stride: self.binding_description.stride,
-      inputRate: self.binding_description.inputRate,
     }
   }
 }

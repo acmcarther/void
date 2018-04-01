@@ -54,3 +54,10 @@ rust_test(
         ":cosmic_physics",
     ],
 )
+
+rust_test(
+    name = "fast_cosmic_physics_test",
+    deps = [
+        ":fast_cosmic_physics",
+    ],
+)
