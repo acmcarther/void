@@ -110,6 +110,20 @@ rust_library(
 )
 
 rust_library(
+    name = "vk_buffer_cache",
+    srcs = ["vk_buffer_cache.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
+    deps = [
+        ":vk_lite",
+        ":vk_buffer_support",
+        "//third_party/cargo:vk_sys",
+    ],
+)
+
+
+rust_library(
     name = "sdl2_vulkan_interop",
     srcs = ["sdl2_vulkan_interop.rs"],
     rustc_flags = [
@@ -124,8 +138,19 @@ rust_library(
 )
 
 rust_library(
-    name = "renderer",
-    srcs = ["renderer.rs"],
+    name = "sdl2_win",
+    srcs = ["sdl2_win.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
+    deps = [
+        "//third_party/cargo:sdl2",
+    ],
+)
+
+rust_library(
+    name = "vk_renderer",
+    srcs = ["vk_renderer.rs"],
     deps = [
       ":vk_device_support",
       ":vk_instance_support",
