@@ -34,33 +34,3 @@ struct Coordinate {
   // ... Each successive bit is another level of resolution.
   face_traversal_right: u16,
 }
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use icosphere;
-  use geometry::Mesh;
-  use geometry::Vertex;
-
-  #[test]
-  fn face_count() {
-    println!(
-      "Icosphere 0 face count: {}",
-      icosphere::icosphere(0).num_faces()
-    );
-    println!(
-      "Icosphere 1 face count: {}",
-      icosphere::icosphere(1).num_faces()
-    );
-    println!(
-      "Icosphere 2 face count: {}",
-      icosphere::icosphere(2).num_faces()
-    );
-    println!(
-      "Icosphere 3 face count: {}",
-      icosphere::icosphere(3).num_faces()
-    );
-
-    assert_eq!(1, 2);
-  }
-}
