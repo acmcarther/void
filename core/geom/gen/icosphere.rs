@@ -133,8 +133,8 @@ pub fn icosphere(iterations: u32) -> Mesh {
 mod tests {
   use super::*;
   use icosphere;
-  use geometry::Mesh;
-  use geometry::Vertex;
+  use geom::Mesh;
+  use geom::Vertex;
 
   #[test]
   fn face_count() {
