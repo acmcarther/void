@@ -170,7 +170,6 @@ impl<'window> PlanetRenderer<'window> {
       &descriptor_pool
     ));
 
-
     let mut vertex_buffer_descriptor_cache = VertexBufferDescriptorCache::new();
     vertex_buffer_descriptor_cache.insert(
       STANDARD_VERTEX_BUFFER_DESCRIPTOR_ID,
@@ -384,13 +383,15 @@ impl<'window> PlanetRenderer<'window> {
               10000000000, /* ns */
             )
           }));
-          do_or_die!(vkl::util::dooy("reset fences", &|| {
-            self.base_renderer.device.ptrs().ResetFences(
+          do_or_die!(vkl::util::dooy("reset fences", &|| self
+            .base_renderer
+            .device
+            .ptrs()
+            .ResetFences(
               self.base_renderer.device.logical_device,
               1,
               all_fences.as_ptr(),
-            )
-          }));
+            )));
         }
       } else {
         let first_frame_for_idx = self

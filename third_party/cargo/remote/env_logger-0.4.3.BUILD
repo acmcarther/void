@@ -25,7 +25,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__log__0_3_9//:log",
-        "@raze__regex__0_2_5//:regex",
+        "@raze__regex__0_2_10//:regex",
     ],
     rustc_flags = [
         "--cap-lints allow",

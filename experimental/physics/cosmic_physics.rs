@@ -223,8 +223,16 @@ mod tests {
 
     let mut grid = CelestialGrid::new();
     let system_1 = grid.insert_system(
-      CelestialVector { x: 0, y: 0, z: 0 },
-      CelestialVector { x: 0, y: 0, z: 0 },
+      CelestialVector {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+      },
+      CelestialVector {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+      },
       100f64,
     );
 
@@ -248,8 +256,16 @@ mod tests {
 
     let mut grid = CelestialGrid::new();
     let system_1 = grid.insert_system(
-      CelestialVector { x: 0, y: 0, z: 0 },
-      CelestialVector { x: 1, y: -1, z: 5 },
+      CelestialVector {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+      },
+      CelestialVector {
+        x: 1.0,
+        y: -1.0,
+        z: 5.0,
+      },
       100f64,
     );
 
@@ -274,28 +290,28 @@ mod tests {
     let mut grid = CelestialGrid::new();
     let system_1 = grid.insert_system(
       CelestialVector {
-        x: -10000,
-        y: 0,
-        z: 0,
+        x: -10000.0,
+        y: 0.0,
+        z: 0.0,
       },
       CelestialVector {
-        x: 0,
-        y: -1000,
-        z: 0,
+        x: 0.0,
+        y: -1000.0,
+        z: 0.0,
       },
       100_000_000f64,
     );
 
     let system_2 = grid.insert_system(
       CelestialVector {
-        x: 10000,
-        y: 0,
-        z: 0,
+        x: 10000.0,
+        y: 0.0,
+        z: 0.0,
       },
       CelestialVector {
-        x: 0,
-        y: 1000,
-        z: 0,
+        x: 0.0,
+        y: 1000.0,
+        z: 0.0,
       },
       100_000_000f64,
     );
@@ -308,12 +324,12 @@ mod tests {
     let system_details_2 = grid.get_system_details(system_2).unwrap();
 
     // Verify that system did not dissociate
-    assert!(system_details_1.coords.x < 20000 && system_details_1.coords.x > -20000);
-    assert!(system_details_1.coords.y < 20000 && system_details_1.coords.y > -20000);
-    assert!(system_details_1.coords.z < 20000 && system_details_1.coords.z > -20000);
-    assert!(system_details_2.coords.x < 20000 && system_details_2.coords.x > -20000);
-    assert!(system_details_2.coords.y < 20000 && system_details_2.coords.y > -20000);
-    assert!(system_details_2.coords.z < 20000 && system_details_2.coords.z > -20000);
+    assert!(system_details_1.coords.x < 20000.0 && system_details_1.coords.x > -20000.0);
+    assert!(system_details_1.coords.y < 20000.0 && system_details_1.coords.y > -20000.0);
+    assert!(system_details_1.coords.z < 20000.0 && system_details_1.coords.z > -20000.0);
+    assert!(system_details_2.coords.x < 20000.0 && system_details_2.coords.x > -20000.0);
+    assert!(system_details_2.coords.y < 20000.0 && system_details_2.coords.y > -20000.0);
+    assert!(system_details_2.coords.z < 20000.0 && system_details_2.coords.z > -20000.0);
 
     // Verify that system did not converge at some point
     assert!(system_details_1.coords.x != system_details_2.coords.x);

@@ -1,0 +1,21 @@
+[package]
+name = "libloading"
+version = "0.5.0"
+authors = ["Simonas Kazlauskas <libloading@kazlauskas.me>"]
+build = "build.rs"
+description = "A safer binding to platform’s dynamic library loading utilities"
+keywords = ["dlopen", "load", "shared", "dylib"]
+license = "ISC"
+repository = "https://github.com/nagisa/rust_libloading/"
+documentation = "https://docs.rs/libloading/"
+
+[build-dependencies.cc]
+version = "1.0"
+
+[target.'cfg(windows)'.dependencies.winapi]
+version = "0.3"
+features = [
+    "winerror",
+    "errhandlingapi",
+    "libloaderapi",
+]

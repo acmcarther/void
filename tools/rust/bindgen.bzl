@@ -1,4 +1,4 @@
-def bindgen(name, hdr, includes=[], formatted=True, blacklist_types=[], flags = [], clang_args = []):
+def bindgen(name, hdr, includes=[], formatted=False, blacklist_types=[], flags = [], clang_args = []):
   bindgen_out_name = name
   if formatted:
     bindgen_out_name = name + "_unformatted"
@@ -29,5 +29,5 @@ def bindgen(name, hdr, includes=[], formatted=True, blacklist_types=[], flags = 
         name = name,
           srcs = [bindgen_out_name],
         outs = [name + ".rs"],
-        cmd = "$(location @//third_party/cargo/overrides/rustfmt-0.3.6:cargo_bin_rustfmt) --write-mode=plain $(location " + bindgen_out_name + ") > $@",
-        tools = ["@//third_party/cargo/overrides/rustfmt-0.3.6:cargo_bin_rustfmt"])
+        cmd = "$(location @//third_party/cargo:cargo_bin_rustfmt) --write-mode=plain $(location " + bindgen_out_name + ") > $@",
+        tools = ["@//third_party/cargo:cargo_bin_rustfmt"])

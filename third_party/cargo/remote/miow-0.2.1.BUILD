@@ -25,7 +25,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__kernel32_sys__0_2_2//:kernel32_sys",
-        "@raze__net2__0_2_31//:net2",
+        "@raze__net2__0_2_32//:net2",
         "@raze__winapi__0_2_8//:winapi",
         "@raze__ws2_32_sys__0_2_1//:ws2_32_sys",
     ],

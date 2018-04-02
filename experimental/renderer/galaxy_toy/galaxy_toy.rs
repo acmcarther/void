@@ -499,7 +499,6 @@ struct PushConstant {
   model: cgmath::Matrix4<f32>,
 }
 
-
 pub fn record_command_buffer(
   device: &vkl::LDevice,
   swapchain: &vkss::LoadedSwapchain,
@@ -619,7 +618,6 @@ pub fn record_command_buffer(
     }))
   }
 }
-
 
 struct VulkanContext {
   first_frame_for_idxs: Vec<bool>,
@@ -989,12 +987,10 @@ impl VulkanContext {
                 100000000, /* ns */
               )
             }));
-            do_or_die!(vkl::util::dooy("reset fences", &|| {
-              self
-                .device
-                .ptrs()
-                .ResetFences(self.device.logical_device, 1, all_fences.as_ptr())
-            }));
+            do_or_die!(vkl::util::dooy("reset fences", &|| self
+              .device
+              .ptrs()
+              .ResetFences(self.device.logical_device, 1, all_fences.as_ptr())));
           }
         } else {
           let first_frame_for_idx = self
@@ -1004,7 +1000,6 @@ impl VulkanContext {
           *first_frame_for_idx = false;
         }
       }
-
 
       record_command_buffer(
         &self.device,
@@ -1041,12 +1036,10 @@ impl VulkanContext {
         0, /* queue_index */
       );
 
-      do_or_die!(vkl::util::dooy("queue submit", &|| {
-        self
-          .device
-          .ptrs()
-          .QueueSubmit(queue, 1, &submit_info, *command_buffer_fence)
-      }));
+      do_or_die!(vkl::util::dooy("queue submit", &|| self
+        .device
+        .ptrs()
+        .QueueSubmit(queue, 1, &submit_info, *command_buffer_fence)));
 
       let swapchains = [self.swapchain.swapchain];
       let present_info_khr = vk::PresentInfoKHR {
@@ -1060,9 +1053,10 @@ impl VulkanContext {
         pResults: ptr::null_mut(),
       };
 
-      do_or_die!(vkl::util::dooy("queue present", &|| {
-        self.device.ptrs().QueuePresentKHR(queue, &present_info_khr)
-      }));
+      do_or_die!(vkl::util::dooy("queue present", &|| self
+        .device
+        .ptrs()
+        .QueuePresentKHR(queue, &present_info_khr)));
     }
   }
 }
@@ -1221,7 +1215,6 @@ fn main() {
       );
     }
 
-
     for tick in 0..100000000 {
       grid.tick_celestial_grid(&cosmic_params, 900u64);
 
@@ -1284,7 +1277,7 @@ fn main() {
           keycode: Some(sdl2::keyboard::Keycode::Escape),
           ..
         } => break 'running,
-        _ => {},
+        _ => {}
       }
     }
 
@@ -1295,7 +1288,7 @@ fn main() {
         Ok(state) => {
           last_recv = Some(state);
           false
-        },
+        }
         Err(std::sync::mpsc::TryRecvError::Empty) => true,
         Err(std::sync::mpsc::TryRecvError::Disconnected) => panic!("main thread hung up!"),
       };
