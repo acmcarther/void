@@ -1,7 +1,6 @@
 package(default_visibility = [
-    "//experimental:__subpackages__"
+    "//experimental:__subpackages__",
 ])
-
 
 load(
     "@io_bazel_rules_rust//rust:rust.bzl",
@@ -34,17 +33,6 @@ rust_library(
         "//third_party/cargo:chrono",
         "//third_party/cargo:log",
         "//third_party/cargo:rand",
-    ],
-)
-
-rust_binary(
-    name = "cosmic_toy",
-    srcs = ["cosmic_toy.rs"],
-    deps = [
-        ":cosmic_physics",
-        "//third_party/cargo:gnuplot",
-        "//third_party/cargo:rand",
-        "//third_party/cargo:vk_sys",
     ],
 )
 

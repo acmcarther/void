@@ -42,8 +42,8 @@ proto_repositories()
 
 git_repository(
     name = "io_bazel_rules_rust",
-    commit = "9be9a87f28f94bbe2bfb48530ff68b452763a8ee",
-    remote = "https://github.com/bazelbuild/rules_rust.git",
+    commit = "5bc46ddca8817072cdae1961b3f9830a2bc3afa7",
+    remote = "https://github.com/acmcarther/rules_rust.git",
 )
 
 #load("@io_bazel_rules_rust//rust:repositories.bzl", "rust_repositories")

@@ -1,6 +1,6 @@
 Chunk: Segment of EntityId - ComponentTable entries
 Chunkman/Chunkmen: Owns segments of chunks, operating in a consensus group
-ComponentTable: A chunked proto-like object, keyed on EntityIdo
+ComponentTable: A chunked proto-like object, keyed on EntityId
 
 Per tick, ComponentTable deltas are emitted to a component tick table
 

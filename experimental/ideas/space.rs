@@ -162,7 +162,7 @@ mod positioning_2 {
   }
 
   /** The complete cosmos, containing point masses representing system masses */
-  type SystemId: u64;
+  type SystemId = u64;
 
   struct CosmicParams {
     gravitational_constant: u64,
@@ -209,7 +209,7 @@ mod positioning_2 {
             };
 
             let distance_seconds =
-              dt_s
+              (dt_s
                 * (distance_vector.x.powi(2)
                   + distance_vector.y.powi(2)
                   + distance_vector.z.powi(2) as f64).sqrt()) as i64;

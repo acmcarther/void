@@ -1,6 +1,7 @@
 package(default_visibility = [
     "//experimental:__subpackages__",
     "//game/net:__subpackages__",
+    "//game/state/relay/demo:__subpackages__",
 ])
 
 load(

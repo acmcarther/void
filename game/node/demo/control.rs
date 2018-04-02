@@ -1,19 +1,18 @@
-extern crate base_server;
 extern crate control_proto;
 #[macro_use]
 extern crate log;
+extern crate node;
 extern crate stores;
 
-use base_server::NodeConfig;
-use base_server::NodeService;
-use base_server::NodeServiceMetadata;
-use base_server::RunError;
-use base_server::TickContext;
+use node::NodeConfig;
+use node::NodeService;
+use node::NodeServiceMetadata;
+use node::RunError;
+use node::TickContext;
 // TODO(acmcarther): This is becoming a single point of recompilation
 use stores::StateStores;
 
 pub struct SimpleControl;
-
 
 impl SimpleControl {
   pub fn new(_: &NodeConfig) -> Box<NodeService<StateStores>> {

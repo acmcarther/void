@@ -1,19 +1,18 @@
-extern crate base_server;
 #[macro_use]
 extern crate log;
+extern crate node;
 extern crate physics_proto;
 extern crate stores;
 
-use base_server::NodeConfig;
-use base_server::NodeService;
-use base_server::NodeServiceMetadata;
-use base_server::RunError;
-use base_server::TickContext;
+use node::NodeConfig;
+use node::NodeService;
+use node::NodeServiceMetadata;
+use node::RunError;
+use node::TickContext;
 // TODO(acmcarther): This is becoming a single point of recompilation
 use stores::StateStores;
 
 pub struct SimplePhysics;
-
 
 impl SimplePhysics {
   pub fn new(_: &NodeConfig) -> Box<NodeService<StateStores>> {

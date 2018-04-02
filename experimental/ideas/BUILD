@@ -7,23 +7,4 @@ load(
     "rust_binary",
 )
 
-rust_library(
-    name = "space",
-    srcs = ["space.rs"],
-    rustc_flags = [
-        "-C opt-level=2",
-    ],
-    deps = [
-        "//third_party/cargo:chrono",
-        "//third_party/cargo:log",
-        "//third_party/cargo:rand",
-    ],
-)
-
-rust_test(
-    name = "space_test",
-    deps = [
-        ":space",
-    ],
-)
-
+# space build target removed as code doesn't compile

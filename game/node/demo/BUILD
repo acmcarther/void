@@ -26,9 +26,9 @@ rust_library(
     name = "physics",
     srcs = ["physics.rs"],
     deps = [
-        ":base_server",
         ":physics_proto",
         ":stores",
+        "//game/node",
         "//third_party/cargo:chrono",
         "//third_party/cargo:lazy_static",
         "//third_party/cargo:log",
@@ -40,9 +40,9 @@ rust_library(
     name = "stores",
     srcs = ["stores.rs"],
     deps = [
-        ":base_server",
         ":control_proto",
         ":physics_proto",
+        "//game/node",
         "//third_party/cargo:chrono",
         "//third_party/cargo:lazy_static",
         "//third_party/cargo:log",
