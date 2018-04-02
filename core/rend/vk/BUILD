@@ -96,6 +96,19 @@ rust_library(
 )
 
 rust_library(
+    name = "vk_buffer_cache",
+    srcs = ["vk_buffer_cache.rs"],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
+    deps = [
+        ":vk_buffer_support",
+        ":vk_lite",
+        "//third_party/cargo:vk_sys",
+    ],
+)
+
+rust_library(
     name = "vk_descriptor_support",
     srcs = ["vk_descriptor_support.rs"],
     rustc_flags = [
