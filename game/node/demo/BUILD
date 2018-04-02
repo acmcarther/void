@@ -7,8 +7,8 @@ load(
 )
 
 rust_binary(
-    name = "server",
-    srcs = ["server.rs"],
+    name = "demo",
+    srcs = ["demo.rs"],
     deps = [
         ":control_proto",
         ":physics",
