@@ -54,7 +54,6 @@ fn main() {
   }
 }
 
-
 mod server {
   use demo_proto::demo::ColorComponent;
   use demo_proto::demo::PositionComponent;

@@ -56,7 +56,6 @@ impl Default for ClientConfig {
   }
 }
 
-
 impl Client {
   pub fn start_from_config(config: ClientConfig) -> Box<Client> {
     let mut nio_client_config: nio::netcode_client_config_t = unsafe { std::mem::uninitialized() };
@@ -302,7 +301,6 @@ mod util {
 
     rio::reliable_endpoint_create(&mut rio_client_config, init_time)
   }
-
 
   unsafe extern "C" fn rio_transmit_packet_function(
     context: *mut ::std::os::raw::c_void,

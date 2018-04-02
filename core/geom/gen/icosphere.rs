@@ -18,11 +18,9 @@ impl IcosphereMeshBuilder {
       vertices: self
         .vertices
         .into_iter()
-        .map(|(x, y, z)| {
-          Vertex {
-            pos: [x, y, z],
-            norm: [x, y, z],
-          }
+        .map(|(x, y, z)| Vertex {
+          pos: [x, y, z],
+          norm: [x, y, z],
         })
         .collect(),
       // TODO(acmcarther): Not terribly efficient, but easy to implement

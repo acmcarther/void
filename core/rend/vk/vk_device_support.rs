@@ -68,13 +68,10 @@ impl CandidateDeviceDetails {
         continue;
       }
 
-
       let available_extensions = try!(instance.list_device_extension_properties(*physical_device));
       let available_extension_names = available_extensions
         .iter()
-        .map(|e| unsafe {
-          CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap()
-        })
+        .map(|e| unsafe { CStr::from_ptr(e.extensionName.as_ptr()).to_str().unwrap() })
         .collect::<Vec<_>>();
       let missing_required_extensions = required_extension_names
         .iter()
@@ -144,9 +141,7 @@ impl CandidateDeviceQueueDetails {
         .list_queue_family_properties(candidate_device.physical_device)
         .into_iter()
         .enumerate()
-        .map(|(idx, queue_family_properties)| {
-          (idx as u32, queue_family_properties)
-        })
+        .map(|(idx, queue_family_properties)| (idx as u32, queue_family_properties))
         .collect::<Vec<_>>();
 
       // Inspect queue families ordered by queue count (desc) to find the best queue families first
@@ -265,7 +260,7 @@ impl CandidateDeviceQueueDetails {
               dedicated_transfer_queue_family_idx_opt: Some(m_idx_2),
               gfx_queue_family_idx: m_idx_1,
             }
-          },
+          }
           // 4) Equally suboptimal queue family arrangement
           //   (multifunctional + graphics)
           (None, Some(m_idx), None, Some(g_idx)) => CandidateDeviceQueueDetails {
@@ -298,7 +293,7 @@ impl CandidateDeviceQueueDetails {
             dump_device_details(&candidate_device.physical_device_properties);
             // Move on to the next device
             continue;
-          },
+          }
         }
       };
 
@@ -371,9 +366,7 @@ pub fn select_best_device_and_queue(
   let selected_queue_details = candidate_device_queue_details.get(0).unwrap();
   let candidate_device_details = candidate_device_details
     .into_iter()
-    .find(|d| {
-      d.physical_device == selected_queue_details.physical_device
-    })
+    .find(|d| d.physical_device == selected_queue_details.physical_device)
     .unwrap();
 
   assert!(candidate_device_details.surface_formats.len() > 0);
@@ -600,8 +593,6 @@ pub struct ExperimentalDeviceQueueManager {
   transfer_qf_spec_opt: Option<DeviceQueueSpec>,
 }
 
-
-
 impl ExperimentalDeviceQueueManager {
   /**
    * Collects information about the selected physical device, generating a complete queue manager.
@@ -629,9 +620,7 @@ impl ExperimentalDeviceQueueManager {
         .get_mut(gfx_queue_family_idx as usize)
         .unwrap();
       let gfx_queues = (0..gfx_queue_family_properties.queueCount)
-        .map(|queue_idx| {
-          device.get_device_queue(gfx_queue_family_idx, queue_idx)
-        })
+        .map(|queue_idx| device.get_device_queue(gfx_queue_family_idx, queue_idx))
         .collect::<Vec<_>>();
 
       // Mem swap the interesting props out of the list
@@ -653,9 +642,7 @@ impl ExperimentalDeviceQueueManager {
           .get_mut(transfer_queue_family_idx as usize)
           .unwrap();
         let transfer_queues = (0..transfer_queue_family_properties.queueCount)
-          .map(|queue_idx| {
-            device.get_device_queue(transfer_queue_family_idx, queue_idx)
-          })
+          .map(|queue_idx| device.get_device_queue(transfer_queue_family_idx, queue_idx))
           .collect::<Vec<_>>();
 
         // Mem swap the interesting props out of the list.

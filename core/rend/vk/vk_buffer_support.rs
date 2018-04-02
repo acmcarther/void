@@ -24,7 +24,6 @@ fn find_suitable_memory_idx(
     .expect("Vulkan: couldn't find physical device memory suitable for buffer or image")
 }
 
-
 pub struct PreparedBuffer(pub vk::Buffer, pub vk::DeviceMemory);
 pub struct PreparedImage(pub vk::Image, pub vk::DeviceMemory);
 
@@ -116,7 +115,6 @@ pub fn make_image(
 
   Ok(PreparedImage(image, device_memory))
 }
-
 
 fn begin_one_time_command(
   device: &vkl::LDevice,
@@ -303,7 +301,6 @@ pub fn copy_buffer_into_image(
 ) -> vkl::RawResult<()> {
   let command_buffer = try!(begin_one_time_command(device, transfer_command_pool));
 
-
   let region = vk::BufferImageCopy {
     bufferOffset: 0,
     bufferRowLength: 0,
@@ -335,7 +332,6 @@ pub fn copy_buffer_into_image(
     );
   }
 
-
   end_one_time_command(
     device,
     command_buffer,
@@ -343,7 +339,6 @@ pub fn copy_buffer_into_image(
     transfer_queue,
   )
 }
-
 
 pub fn copy_buffer(
   device: &vkl::LDevice,

@@ -82,7 +82,7 @@ impl StateBlob for State {
       _ => {
         warn!("Unknown component_type_id requested: {}", component_type_id);
         HashSet::new()
-      },
+      }
     }
   }
 
@@ -104,7 +104,7 @@ impl StateBlob for State {
       _ => {
         warn!("Unknown component_type_id requested: {}", component_type_id);
         Vec::new()
-      },
+      }
     }
   }
 
@@ -120,7 +120,7 @@ impl StateBlob for State {
       _ => {
         warn!("Unknown component_type_id update: {}", component_type_id);
         Err(UpdateErr::UnknownComponentTypeId)
-      },
+      }
     }
   }
 
@@ -128,13 +128,13 @@ impl StateBlob for State {
     match *component_type_id {
       POSITION_COMPONENT_ID => {
         self.position_components.remove(entity_id);
-      },
+      }
       COLOR_COMPONENT_ID => {
         self.color_components.remove(entity_id);
-      },
+      }
       _ => {
         warn!("Unknown component_type_id remove: {}", component_type_id);
-      },
+      }
     }
   }
 }

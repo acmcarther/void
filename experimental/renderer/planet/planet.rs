@@ -135,7 +135,7 @@ fn main() {
           keycode: Some(sdl2::keyboard::Keycode::Space),
           ..
         } => pause = !pause,
-        _ => {},
+        _ => {}
       }
     }
 
@@ -171,10 +171,10 @@ fn main() {
         let mut sim = GALAXY_SIM.lock().unwrap();
         sim.tick();
         planet_renderer.draw_demo_frame(sim.get_meshes_to_render());
-      },
+      }
       something_else => {
         panic!("Unknown sim type {}", something_else);
-      },
+      }
     }
   }
 }
@@ -269,7 +269,6 @@ impl GalaxySim {
         );
       }
 
-
       for tick in 0..100000000 {
         grid.tick_celestial_grid(&cosmic_params, 900u64);
 
@@ -337,7 +336,7 @@ impl GalaxySim {
         Ok(state) => {
           self.meshes_to_render = state;
           false
-        },
+        }
         Err(std::sync::mpsc::TryRecvError::Empty) => true,
         Err(std::sync::mpsc::TryRecvError::Disconnected) => panic!("main thread hung up!"),
       };

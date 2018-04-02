@@ -336,8 +336,7 @@ impl NetcodeServer for Server {
     let slot = slot_opt.unwrap() as i32;
     debug!(
       "Disconnecting client {} from slot {} (takes effect next update)",
-      client_id,
-      slot
+      client_id, slot
     );
 
     unsafe {

@@ -80,7 +80,6 @@ fn main() {
   info!("Done!");
 }
 
-
 impl<'a> Demo<'a> {
   pub fn add_fancy_entity(&mut self) {
     {
@@ -103,7 +102,6 @@ impl<'a> Demo<'a> {
         .update_position(1 /* entity_id */, position_data);
     }
   }
-
 
   pub fn update_fancy_entity(&mut self) {
     {

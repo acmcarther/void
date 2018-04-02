@@ -104,14 +104,12 @@ pub fn write_ubo_descriptor<T>(
     pTexelBufferView: ptr::null(),
   };
 
-
   let all_descriptor_set_writes = vec![ubo_descriptor_set_write];
   device.update_descriptor_sets(
     &all_descriptor_set_writes,
     &Vec::new(), /* descriptor_set_copies */
   );
 }
-
 
 pub fn write_texture_image_descriptor(
   device: &vkl::LDevice,

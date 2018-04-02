@@ -30,8 +30,8 @@ rust_library(
     name = "state_acceptor",
     srcs = ["state_acceptor.rs"],
     deps = [
-        ":state_api",
         ":state_acceptor_api",
+        ":state_api",
         ":state_proto",
         "//third_party/cargo:log",
         "@custom_rust_protobuf//:protobuf",
@@ -69,4 +69,3 @@ rust_library(
         "@custom_rust_protobuf//:protobuf",
     ],
 )
-

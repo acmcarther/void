@@ -166,7 +166,6 @@ pub mod builtins {
     device.create_shader_module(&shader_module_create_info)
   }
 
-
   pub fn make_command_pool(device: &LDevice, queue_family_idx: u32) -> RawResult<vk::CommandPool> {
     let command_pool_create_info = vk::CommandPoolCreateInfo {
       sType: vk::STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -320,7 +319,6 @@ impl Vulkan {
       Ok(enabled_layers)
     }
   }
-
 
   pub fn create_instance(
     &self,
@@ -708,7 +706,6 @@ impl LDevice {
     }
   }
 
-
   pub fn create_pipeline_layout(
     &self,
     pipeline_layout_create_info: &vk::PipelineLayoutCreateInfo,
@@ -730,7 +727,6 @@ impl LDevice {
         .DestroyPipelineLayout(self.logical_device, pipeline_layout, ptr::null())
     }
   }
-
 
   pub fn create_graphics_pipelines(
     &self,
@@ -1022,7 +1018,6 @@ impl LDevice {
     }
   }
 
-
   pub unsafe fn map_data_to_memory<T>(&self, memory: &vk::DeviceMemory, data: &T) -> RawResult<()> {
     unsafe {
       let mut bound_data: *mut *mut c_void = std::mem::uninitialized();
@@ -1043,7 +1038,6 @@ impl LDevice {
       Ok(())
     }
   }
-
 
   pub unsafe fn map_vec_data_to_memory<T>(
     &self,

@@ -142,10 +142,10 @@ impl<T> ServerNode<T> {
     info!("Starting all services!");
     for service_name in self.config.services.iter() {
       debug!("Starting service: {}", service_name);
-      let builder = self
-        .service_builders
-        .get(service_name)
-        .expect(&format!("could not find service builder for {}", service_name));
+      let builder = self.service_builders.get(service_name).expect(&format!(
+        "could not find service builder for {}",
+        service_name
+      ));
       let mut service = builder(&self.config);
       service.on_include(&self.tick_context);
       services.push(service);
@@ -170,17 +170,23 @@ impl<T> ServerNode<T> {
 
     trace!("Running service pre-ticks");
     for service in manager.running_services.iter_mut() {
-      service.run_pre_tick(&self.state_store, &self.tick_context).unwrap();
+      service
+        .run_pre_tick(&self.state_store, &self.tick_context)
+        .unwrap();
     }
 
     trace!("Running service ticks");
     for service in manager.running_services.iter_mut() {
-      service.run_tick(&self.state_store, &self.tick_context).unwrap();
+      service
+        .run_tick(&self.state_store, &self.tick_context)
+        .unwrap();
     }
 
     trace!("Running service post-ticks");
     for service in manager.running_services.iter_mut() {
-      service.run_post_tick(&self.state_store, &self.tick_context).unwrap();
+      service
+        .run_post_tick(&self.state_store, &self.tick_context)
+        .unwrap();
     }
 
     Ok(())
@@ -198,7 +204,9 @@ impl TickContext {
 
   // TODO(acmcarther): Cache this
   pub fn delta_t(&self) -> Duration {
-    self.creation_time.signed_duration_since(self.last_creation_time)
+    self
+      .creation_time
+      .signed_duration_since(self.last_creation_time)
   }
 }
 

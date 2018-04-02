@@ -14,8 +14,8 @@ rust_library(
         "-C opt-level=2",
     ],
     deps = [
-        "//third_party/cargo:log",
         "//third_party/cargo:dylib",
+        "//third_party/cargo:log",
         "//third_party/cargo:vk_sys",
     ],
 )
@@ -127,13 +127,12 @@ rust_library(
     name = "renderer",
     srcs = ["renderer.rs"],
     deps = [
-      ":vk_device_support",
-      ":vk_instance_support",
-      ":vk_lite",
-      ":vk_pipeline_support",
-      ":vk_swapchain_support",
-       "//third_party/cargo:vk_sys",
-       "//third_party/cargo:log",
-    ]
+        ":vk_device_support",
+        ":vk_instance_support",
+        ":vk_lite",
+        ":vk_pipeline_support",
+        ":vk_swapchain_support",
+        "//third_party/cargo:log",
+        "//third_party/cargo:vk_sys",
+    ],
 )
-

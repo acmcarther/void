@@ -94,8 +94,7 @@ impl StateTransmitter for StateTransmitterImpl {
     if !self.node_details.contains_key(node_id) {
       warn!(
         "Tried to add global interest in {:?} for node {} but it didn't exist",
-        component_type_id,
-        node_id
+        component_type_id, node_id
       );
       return;
     }
@@ -110,8 +109,7 @@ impl StateTransmitter for StateTransmitterImpl {
     if interest_already_exists {
       warn!(
         "Tried to add global interest in {:?} for node {} but it was already present",
-        component_type_id,
-        node_id
+        component_type_id, node_id
       );
       return;
     }
@@ -136,8 +134,7 @@ impl StateTransmitter for StateTransmitterImpl {
     if !self.node_details.contains_key(node_id) {
       warn!(
         "Tried to remove global interest in {:?} for node {} but it didn't exist",
-        component_type_id,
-        node_id
+        component_type_id, node_id
       );
       return;
     }
@@ -152,8 +149,7 @@ impl StateTransmitter for StateTransmitterImpl {
     if interest_position.is_none() {
       warn!(
         "Tried to remove global interest in {:?} for node {} but it wasn't present",
-        component_type_id,
-        node_id
+        component_type_id, node_id
       );
       return;
     }

@@ -126,11 +126,9 @@ impl Cosmos {
     self.systems.keys().cloned().collect()
   }
 
-
   pub fn get_system_data<'a>(&'a self, system_id: &SystemId) -> Option<&'a SystemData> {
     self.systems.get(system_id)
   }
-
 
   pub fn tick(&mut self, dt_s: f32) {
     // Integrate velocity
@@ -291,7 +289,6 @@ impl Default for CosmosParams {
     }
   }
 }
-
 
 fn map_point_mass(i: &PointMass) -> PointMass {
   i.clone()

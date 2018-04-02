@@ -113,7 +113,6 @@ pub fn make_pipeline_layout<T>(
   device.create_pipeline_layout(&pipeline_layout_create_info)
 }
 
-
 pub fn make_graphics_pipeline(
   device: &vkl::LDevice,
   vert_shader_module: &vk::ShaderModule,
@@ -225,7 +224,6 @@ pub fn make_graphics_pipeline(
 
   // TODO(acmcarther): Depth and Stencil Testing
   // ...
-
 
   // TODO(acmcarther): Examine these options
   let pipeline_color_blend_attachment_state = vk::PipelineColorBlendAttachmentState {
