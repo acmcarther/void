@@ -4,7 +4,6 @@ load(
     "@io_bazel_rules_rust//rust:rust.bzl",
     "rust_library",
     "rust_test",
-    "rust_binary",
 )
 
 rust_library(
@@ -14,4 +13,9 @@ rust_library(
         "//core/geom:geometry",
         "//third_party/cargo:itertools",
     ],
+)
+
+rust_test(
+    name = "icosphere_test",
+    deps = [":icosphere"],
 )

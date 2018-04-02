@@ -128,3 +128,19 @@ pub fn icosphere(iterations: u32) -> Mesh {
 
   icosphere_mesh_builder.to_mesh()
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use icosphere;
+  use geometry::Mesh;
+  use geometry::Vertex;
+
+  #[test]
+  fn face_count() {
+    assert_eq!(icosphere(0).num_faces(), 20);
+    assert_eq!(icosphere(1).num_faces(), 80);
+    assert_eq!(icosphere(2).num_faces(), 320);
+    assert_eq!(icosphere(3).num_faces(), 1280);
+  }
+}
