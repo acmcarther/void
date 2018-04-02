@@ -2,8 +2,44 @@ extern crate vk_lite as vkl;
 extern crate vk_sys as vk;
 
 use std::ptr;
+use std::mem;
 
 pub type DescriptorBindingId = u32;
+
+pub struct BufferInfoGenerator {
+  buffer_infos: Vec<vk::DescriptorBufferInfo>,
+  existing_byte_size: u64,
+}
+
+impl BufferInfoGenerator {
+  pub fn new() -> BufferInfoGenerator {
+    BufferInfoGenerator {
+      buffer_infos: Vec::new(),
+      existing_byte_size: 0,
+    }
+  }
+
+  pub unsafe fn push<'selff, T: Sized>(
+    &'selff mut self,
+    buffer: &vk::Buffer,
+  ) -> &'selff mut BufferInfoGenerator {
+    let size = std::mem::size_of::<T>() as u64;
+    self.buffer_infos.push(vk::DescriptorBufferInfo {
+      buffer: *buffer,
+      offset: self.existing_byte_size,
+      range: size,
+    });
+    self.existing_byte_size = self.existing_byte_size + size;
+
+    self
+  }
+
+  pub fn take_infos(&mut self) -> Vec<vk::DescriptorBufferInfo> {
+    let mut swap_vec = Vec::new();
+    mem::swap(&mut self.buffer_infos, &mut swap_vec);
+    swap_vec
+  }
+}
 
 pub fn make_descriptor_pool(device: &vkl::LDevice) -> vkl::RawResult<vk::DescriptorPool> {
   let ubo_pool_size = vk::DescriptorPoolSize {
@@ -78,33 +114,26 @@ pub fn make_descriptor_sets(
   device.allocate_descriptor_sets(&descriptor_set_allocate_info)
 }
 
-// TODO(acmcarther): Will need a batched api at some point
-pub fn write_ubo_descriptor<T>(
+pub fn write_descriptors(
   device: &vkl::LDevice,
-  uniform_buffer: &vk::Buffer,
   descriptor_set: &vk::DescriptorSet,
   descriptor_binding_id: DescriptorBindingId,
+  descriptor_set_infos: Vec<vk::DescriptorBufferInfo>,
 ) {
-  let ubo_descriptor_buffer_info = vk::DescriptorBufferInfo {
-    buffer: *uniform_buffer,
-    offset: 0,
-    range: std::mem::size_of::<T>() as u64,
-  };
-
-  let ubo_descriptor_set_write = vk::WriteDescriptorSet {
+  let descriptor_set_write = vk::WriteDescriptorSet {
     sType: vk::STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
     pNext: ptr::null(),
     dstSet: *descriptor_set,
     dstBinding: descriptor_binding_id,
     dstArrayElement: 0,
-    descriptorCount: 1,
+    descriptorCount: descriptor_set_infos.len() as u32,
     descriptorType: vk::DESCRIPTOR_TYPE_UNIFORM_BUFFER,
     pImageInfo: ptr::null(),
-    pBufferInfo: &ubo_descriptor_buffer_info,
+    pBufferInfo: descriptor_set_infos.as_ptr(),
     pTexelBufferView: ptr::null(),
   };
 
-  let all_descriptor_set_writes = vec![ubo_descriptor_set_write];
+  let all_descriptor_set_writes = vec![descriptor_set_write];
   device.update_descriptor_sets(
     &all_descriptor_set_writes,
     &Vec::new(), /* descriptor_set_copies */

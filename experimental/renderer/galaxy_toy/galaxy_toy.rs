@@ -20,6 +20,8 @@ extern crate vk_pipeline_support as vkps;
 extern crate vk_swapchain_support as vkss;
 extern crate vk_sys as vk;
 
+use vkps::PushConstantRangeGenerator;
+use vkdrs::BufferInfoGenerator;
 use cgmath::Angle;
 use rand::Rng;
 use std::os::raw::c_void;
@@ -740,9 +742,12 @@ impl VulkanContext {
     };
 
     let descriptor_set_layouts = do_or_die!(vkdrs::make_descriptor_set_layouts(&device));
-    let pipeline_layout = do_or_die!(vkps::make_pipeline_layout::<PushConstant>(
+    let pipeline_layout = do_or_die!(vkps::make_pipeline_layout(
       &device,
-      &descriptor_set_layouts
+      &descriptor_set_layouts,
+      &PushConstantRangeGenerator::new()
+        .push::<PushConstant>(vk::SHADER_STAGE_VERTEX_BIT)
+        .take_ranges()
     ));
 
     let (
@@ -813,12 +818,16 @@ impl VulkanContext {
       &descriptor_pool
     ));
 
-    vkdrs::write_ubo_descriptor::<MVPUniform>(
-      &device,
-      &uniform_buffer_details.buffer.0, /* buffer */
-      descriptor_sets.get(0).unwrap(),
-      0, /* descriptor_binding_id */
-    );
+    unsafe {
+      vkdrs::write_descriptors(
+        &device,
+        descriptor_sets.get(0).unwrap(),
+        0, /* descriptor_binding_id */
+        BufferInfoGenerator::new()
+          .push::<MVPUniform>(&uniform_buffer_details.buffer.0 /* buffer */)
+          .take_infos(),
+      );
+    }
 
     vkdrs::write_texture_image_descriptor(
       &device,
@@ -849,7 +858,7 @@ impl VulkanContext {
         vertex_buffer_details.vertex_input_props.pos_attr_desc,
         vertex_buffer_details.vertex_input_props.tex_attr_desc,
       ],
-      vertex_buffer_details.vertex_input_props.binding_description,
+      &vec![vertex_buffer_details.vertex_input_props.binding_description],
       &render_pass,
       &swapchain,
       &pipeline_layout

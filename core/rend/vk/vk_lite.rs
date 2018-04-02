@@ -194,6 +194,17 @@ pub mod builtins {
     };
     device.create_fence(&fence_create_info)
   }
+
+  pub fn clone_viad(
+    viad: &vk::VertexInputAttributeDescription,
+  ) -> vk::VertexInputAttributeDescription {
+    vk::VertexInputAttributeDescription {
+      binding: viad.binding.clone(),
+      location: viad.location.clone(),
+      format: viad.format.clone(),
+      offset: viad.offset.clone(),
+    }
+  }
 }
 
 pub trait WindowSystemPlugin<'window> {

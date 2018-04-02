@@ -1,6 +1,6 @@
 #![feature(used)]
 extern crate cgmath;
-extern crate cosmic_physics as cp;
+extern crate fast_cosmic_physics;
 extern crate galaxy_big_renderer;
 extern crate geometry;
 extern crate icosphere;
@@ -10,20 +10,26 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 extern crate rand;
-extern crate renderer;
 extern crate sdl2;
 extern crate sdl2_vulkan_interop;
 extern crate vk_lite as vkl;
+extern crate vk_renderer;
 #[macro_use]
 extern crate zcfg;
 
 use cgmath::Matrix4;
-use geometry::Mesh;
-use galaxy_big_renderer::MeshToRender;
+use fast_cosmic_physics::Cosmos;
+use fast_cosmic_physics::CosmosParams;
+use fast_cosmic_physics::PointMass;
+use fast_cosmic_physics::SystemData;
+use fast_cosmic_physics::SystemId;
+use fast_cosmic_physics::SystemParams;
 use galaxy_big_renderer::GalaxyBigRenderer;
+use galaxy_big_renderer::MeshToRender;
+use geometry::Mesh;
 use rand::Rng;
-use renderer::BaseRenderer;
-use renderer::BaseRendererConfig;
+use vk_renderer::BaseRenderer;
+use vk_renderer::BaseRendererConfig;
 use sdl2::Sdl;
 use sdl2::video::Window;
 use sdl2_vulkan_interop::SdlWindowSystemPlugin;
@@ -31,8 +37,14 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::mpsc::Receiver;
+use std::thread;
 use std::thread::JoinHandle;
+use std::time::Duration;
 use std::time::Instant;
+
+const X_INDEX: usize = 0;
+const Y_INDEX: usize = 1;
+const Z_INDEX: usize = 2;
 
 mod flags {
   define_pub_cfg!(
@@ -41,30 +53,90 @@ mod flags {
     "sphere_grid",
     "type of sim to render (sphere_grid|galaxy)"
   );
+  define_pub_cfg!(
+    use_centroid_cam,
+    bool,
+    false,
+    "whether or not to aim the camera at the centroid (galaxy only)"
+  );
+  define_pub_cfg!(
+    large_body_count,
+    i32,
+    2,
+    "How many large bodies to generate (galaxy only)"
+  );
+  define_pub_cfg!(
+    medium_body_count,
+    i32,
+    5,
+    "How many medium bodies to generate (galaxy only)"
+  );
+  define_pub_cfg!(
+    small_body_count,
+    i32,
+    100,
+    "How many small bodies to generate (galaxy only)"
+  );
+  define_pub_cfg!(
+    gravitational_constant,
+    f32,
+    0.01,
+    "The cosmological gravitational constant"
+  );
+  define_pub_cfg!(
+    simplified_calculation_theta,
+    f32,
+    10.0,
+    "The cosmological gravitational constant"
+  );
 }
 
 lazy_static! {
   static ref SPHERE_MESHES_TO_RENDER: Vec<MeshToRender> = {
     let mut meshes_to_render = Vec::new();
     let base_mesh_ids = vec![
-      galaxy_big_renderer::ICO_1_MESH_ID,
-      galaxy_big_renderer::ICO_2_MESH_ID,
-      galaxy_big_renderer::ICO_3_MESH_ID,
-      galaxy_big_renderer::ICO_4_MESH_ID,
-      galaxy_big_renderer::ICO_5_MESH_ID,
-      galaxy_big_renderer::ICO_6_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
+      galaxy_big_renderer::ICO_0_MESH_ID,
     ];
 
     for (idx, base_mesh_id) in base_mesh_ids.into_iter().enumerate() {
-      let x = -50f32 + ((idx as f32) * 20f32);
-      for y_idx in 0..6 {
-        let y = -50f32 + ((y_idx as f32) * 20f32);
-        for z_idx in 0..6 {
-          let z = -50f32 + ((z_idx as f32) * 20f32);
+      let x = -50f32 + ((idx as f32) * 4f32);
+      for y_idx in 0..30 {
+        let y = -50f32 + ((y_idx as f32) * 4f32);
+        for z_idx in 0..30 {
+          let z = -50f32 + ((z_idx as f32) * 4f32);
           meshes_to_render.push(MeshToRender {
             mesh_id: base_mesh_id,
             pos: [x, y, z],
-            scale: 8f32,
+            scale: 2f32,
           });
         }
       }
@@ -151,7 +223,7 @@ fn main() {
 
     let sim_type = ::flags::sim_type::CONFIG.get_value();
 
-    let target = if sim_type == "galaxy" {
+    let target = if sim_type == "galaxy" && ::flags::use_centroid_cam::CONFIG.get_value() {
       let sim = GALAXY_SIM.lock().unwrap();
       sim.get_centroid()
     } else {
@@ -177,16 +249,13 @@ fn main() {
       }
     }
   }
+
+  info!("ending!");
 }
 
 struct GameWindow {
   sdl: Sdl,
   window: Window,
-}
-
-struct IcoPlanet {
-  pub mesh: Mesh,
-  pub model: Matrix4<f32>,
 }
 
 struct GalaxySim {
@@ -200,7 +269,7 @@ impl GameWindow {
     let sdl = sdl2::init().unwrap();
     let video_subsystem = sdl.video().unwrap();
     let window = video_subsystem
-      .window("galaxy big demo", 1920, 1080)
+      .window("planet demo", 1920, 1080)
       .position_centered()
       .vulkan()
       .build()
@@ -213,112 +282,169 @@ impl GameWindow {
   }
 }
 
-impl IcoPlanet {
-  pub fn new(iterations: u32) -> IcoPlanet {
-    IcoPlanet {
-      mesh: icosphere::icosphere(iterations),
-      model: Matrix4::<f32>::from_scale(1.0),
-    }
-  }
-}
-
 impl GalaxySim {
   pub fn new() -> GalaxySim {
-    const POSITION_CEILING: f64 = 100.0;
-    const VELOCITY_CEILING: f64 = 20.0;
-    const STAR_MASS: f64 = 600.0f64;
-    const PLANET_MASS: f64 = 1.0f64;
+    const POSITION_CEILING: f32 = 200.0;
+    const VELOCITY_CEILING: f32 = 35.00f32;
+    const STAR_MASS: f32 = 6000.0f32;
+    const MIDLING_MASS: f32 = 100.0f32;
+    const PLANET_MASS: f32 = 5.0f32;
     let (state_send, state_recv) = std::sync::mpsc::channel();
 
     let join_handle = std::thread::spawn(move || {
-      let mut grid = cp::CelestialGrid::new();
       let mut rng = rand::thread_rng();
-      let cosmic_params = cp::CosmicParams {
-        gravitational_constant: 10.0,
-      };
+      let mut cosmos_params = CosmosParams::default();
+      cosmos_params.gravitational_constant = ::flags::gravitational_constant::CONFIG.get_value();
+      cosmos_params.simplified_calculation_theta =
+        ::flags::simplified_calculation_theta::CONFIG.get_value();
+      cosmos_params.octree_params.resize_tree_bounds = true;
+      cosmos_params.octree_params.desired_tree_occupancy_ratio_min = 0.950;
+      cosmos_params.octree_params.desired_tree_occupancy_ratio_max = 0.980;
+      cosmos_params.octree_params.tree_resize_minimum_population = 0;
+      let mut cosmos = Cosmos::new(cosmos_params);
 
-      for _ in 0..2 {
-        grid.insert_system(
-          cp::CelestialVector {
-            x: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
-            y: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
-            z: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
-          },
-          cp::CelestialVector {
-            x: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
-            y: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
-            z: 0.0f64,
-          },
-          STAR_MASS,
-        );
+      let large_body_count = ::flags::large_body_count::CONFIG.get_value() as usize;
+      let medium_body_count = ::flags::medium_body_count::CONFIG.get_value() as usize;
+      let small_body_count = ::flags::small_body_count::CONFIG.get_value() as usize;
+      for _ in 0..large_body_count {
+        cosmos.add_system(SystemParams {
+          coord: [
+            ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+            ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+            ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+          ],
+          velocity: [
+            ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+            ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+            ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+          ],
+          mass: STAR_MASS,
+        });
       }
 
-      for _ in 0..40 {
-        grid.insert_system(
-          cp::CelestialVector {
-            x: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
-            y: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
-            z: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
-          },
-          cp::CelestialVector {
-            x: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
-            y: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
-            z: 0.0f64,
-          },
-          PLANET_MASS,
-        );
+      for _ in 0..medium_body_count {
+        cosmos.add_system(SystemParams {
+          coord: [
+            ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+            ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+            ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+          ],
+          velocity: [
+            ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+            ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+            ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+          ],
+          mass: MIDLING_MASS,
+        });
       }
 
+      for _ in 0..small_body_count {
+        cosmos.add_system(SystemParams {
+          coord: [
+            ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+            ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+            ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+          ],
+          velocity: [
+            ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+            ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+            ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+          ],
+          mass: PLANET_MASS,
+        });
+      }
+
+      let mut last_tick = Instant::now();
       for tick in 0..100000000 {
-        grid.tick_celestial_grid(&cosmic_params, 900u64);
+        debug!("Begin physics tick");
+        info!("Octree diagnostics: center: {:?}", cosmos.octree.center());
+        info!(
+          "Octree diagnostics: half_size: {:?}",
+          cosmos.octree.half_size()
+        );
+        info!(
+          "Octree diagnostics: out_of_volume_len: {:?}",
+          cosmos.octree.out_of_volume_len()
+        );
+        info!(
+          "Octree diagnostics: in_volume_len: {:?}",
+          cosmos.octree.in_volume_len()
+        );
+        info!(
+          "Octree diagnostics: Maximum depth {:?}",
+          cosmos.octree.maximum_depth()
+        );
+        let now = Instant::now();
+        let duration = now.duration_since(last_tick);
+        let last_tick = now;
+        let dt_s =
+          (duration.as_secs() as f32) + ((duration.subsec_nanos()) as f32 / 1_000_000_000.0);
+        // TODO(acmcarther): use real dt
+        cosmos.tick(dt_s / 100.0);
 
         let mut snap_ents = Vec::new();
-        for id in grid.get_system_ids().iter() {
-          if let Some(system_details) = grid.get_system_details(id.clone()) {
+        for id in cosmos.get_system_ids().iter() {
+          if let Some(ref system_data) = cosmos.get_system_data(&id) {
             snap_ents.push(MeshToRender {
-              mesh_id: galaxy_big_renderer::ICO_2_MESH_ID,
+              mesh_id: galaxy_big_renderer::ICO_1_MESH_ID,
               pos: [
-                system_details.coords.x.clone() as f32,
-                system_details.coords.y.clone() as f32,
-                system_details.coords.z.clone() as f32,
+                system_data.last_coord[X_INDEX],
+                system_data.last_coord[Y_INDEX],
+                system_data.last_coord[Z_INDEX],
               ],
-              scale: (system_details.mass.clone().cbrt() / 3.0) as f32,
+              scale: (system_data.mass.clone().cbrt() / 3.0) as f32,
             });
           }
         }
         state_send.send(snap_ents).unwrap();
 
         if tick % 10 == 0 {
-          for id in grid.get_system_ids().iter() {
+          for id in cosmos.get_system_ids().iter() {
             let mut remove_system = false;
             let mut system_mass = 0.0;
-            if let Some(system_details) = grid.get_system_details(id.clone()) {
-              if system_details.coords.x > 2_000.0 || system_details.coords.x < -2_000.0 {
+            if let Some(system_data) = cosmos.get_system_data(&id) {
+              if system_data.last_coord[X_INDEX] > 300.0 || system_data.last_coord[X_INDEX] < -300.0
+              {
                 remove_system = true;
-                system_mass = *system_details.mass;
-              } else if system_details.coords.y > 2_000.0 || system_details.coords.y < -2_000.0 {
+                system_mass = system_data.mass;
+              } else if system_data.last_coord[X_INDEX] > 300.0
+                || system_data.last_coord[Y_INDEX] < -300.0
+              {
                 remove_system = true;
-                system_mass = *system_details.mass;
+                system_mass = system_data.mass;
+              } else if system_data.last_coord[Z_INDEX] > 300.0
+                || system_data.last_coord[Z_INDEX] < -300.0
+              {
+                remove_system = true;
+                system_mass = system_data.mass;
               }
             }
             if remove_system {
-              println!("removing system: {}", id);
-              grid.remove_system(id.clone());
-              grid.insert_system(
-                cp::CelestialVector {
-                  x: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
-                  y: ((POSITION_CEILING * rng.gen::<f64>()) - (POSITION_CEILING / 2.0)),
-                  z: 0.0f64,
-                },
-                cp::CelestialVector {
-                  x: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
-                  y: ((VELOCITY_CEILING * rng.gen::<f64>()) - (VELOCITY_CEILING / 2.0)),
-                  z: 0.0f64,
-                },
-                system_mass,
-              );
+              cosmos.remove_system(id.clone());
+              cosmos.add_system(SystemParams {
+                coord: [
+                  ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+                  ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+                  ((POSITION_CEILING * rng.gen::<f32>()) - (POSITION_CEILING / 2.0)),
+                ],
+                velocity: [
+                  ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+                  ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+                  ((VELOCITY_CEILING * rng.gen::<f32>()) - (VELOCITY_CEILING / 2.0)),
+                ],
+                mass: system_mass,
+              });
             }
           }
+        }
+        let now = Instant::now();
+        let duration = now.duration_since(last_tick);
+        let dt_s =
+          (duration.as_secs() as f32) + ((duration.subsec_nanos()) as f32 / 1_000_000_000.0);
+
+        if dt_s < 0.017 {
+          let sleep_duration_s = 0.017 - dt_s;
+          thread::sleep(Duration::from_millis((sleep_duration_s * 1000.0) as u64))
         }
       }
     });
@@ -398,5 +524,3 @@ fn x11_layer_spec() -> vkl::FeatureSpec {
     required: vec!["VK_LAYER_LUNARG_standard_validation"],
   }
 }
-
-fn get_meshes() {}

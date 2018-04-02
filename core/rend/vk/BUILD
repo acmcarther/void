@@ -137,8 +137,8 @@ rust_library(
 )
 
 rust_library(
-    name = "renderer",
-    srcs = ["renderer.rs"],
+    name = "vk_renderer",
+    srcs = ["vk_renderer.rs"],
     deps = [
         ":vk_device_support",
         ":vk_instance_support",
