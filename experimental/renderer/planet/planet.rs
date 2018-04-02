@@ -1,5 +1,5 @@
 extern crate chrono;
-extern crate geometry;
+extern crate geom;
 extern crate icosphere;
 extern crate log;
 extern crate rand;

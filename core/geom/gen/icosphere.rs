@@ -1,8 +1,8 @@
-extern crate geometry;
+extern crate geom;
 extern crate itertools;
 
-use geometry::Mesh;
-use geometry::Vertex;
+use geom::Mesh;
+use geom::Vertex;
 use itertools::Itertools;
 use std::collections::HashMap;
 

@@ -137,8 +137,8 @@ rust_library(
 )
 
 rust_library(
-    name = "vk_renderer",
-    srcs = ["vk_renderer.rs"],
+    name = "vk_base_renderer",
+    srcs = ["vk_base_renderer.rs"],
     deps = [
         ":vk_device_support",
         ":vk_instance_support",
@@ -146,6 +146,25 @@ rust_library(
         ":vk_pipeline_support",
         ":vk_swapchain_support",
         "//third_party/cargo:log",
+        "//third_party/cargo:vk_sys",
+    ],
+)
+
+rust_library(
+    name = "vk_application",
+    srcs = ["vk_application.rs"],
+    deps = [
+        ":vk_base_renderer",
+        ":vk_buffer_cache",
+        ":vk_buffer_support",
+        ":vk_descriptor_support",
+        ":vk_device_support",
+        ":vk_instance_support",
+        ":vk_lite",
+        ":vk_pipeline_support",
+        ":vk_swapchain_support",
+        "//third_party/cargo:log",
+        "//third_party/cargo:memoffset",
         "//third_party/cargo:vk_sys",
     ],
 )

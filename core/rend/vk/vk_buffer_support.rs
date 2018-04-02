@@ -10,7 +10,7 @@ use std::ptr;
 pub struct PreparedBuffer(pub vk::Buffer, pub vk::DeviceMemory);
 pub struct PreparedImage(pub vk::Image, pub vk::DeviceMemory);
 
-pub fn make_buffer(
+pub fn make_bound_buffer(
   device: &vkl::LDevice,
   buffer_size: vk::DeviceSize,
   buffer_usage: vk::BufferUsageFlags,
@@ -49,6 +49,9 @@ pub fn make_buffer(
 
   let device_memory = try!(device.allocate_memory(&memory_allocate_info));
 
+  unsafe {
+    try!(device.bind_buffer_memory(&buffer, &device_memory));
+  }
   Ok(PreparedBuffer(buffer, device_memory))
 }
 

@@ -2,7 +2,7 @@
 extern crate cgmath;
 extern crate fast_cosmic_physics;
 extern crate galaxy_big_renderer;
-extern crate geometry;
+extern crate geom;
 extern crate icosphere;
 extern crate init;
 #[macro_use]
@@ -12,8 +12,8 @@ extern crate log;
 extern crate rand;
 extern crate sdl2;
 extern crate sdl2_vulkan_interop;
+extern crate vk_base_renderer;
 extern crate vk_lite as vkl;
-extern crate vk_renderer;
 #[macro_use]
 extern crate zcfg;
 
@@ -26,10 +26,10 @@ use fast_cosmic_physics::SystemId;
 use fast_cosmic_physics::SystemParams;
 use galaxy_big_renderer::GalaxyBigRenderer;
 use galaxy_big_renderer::MeshToRender;
-use geometry::Mesh;
+use geom::Mesh;
 use rand::Rng;
-use vk_renderer::BaseRenderer;
-use vk_renderer::BaseRendererConfig;
+use vk_base_renderer::BaseRenderer;
+use vk_base_renderer::BaseRendererConfig;
 use sdl2::Sdl;
 use sdl2::video::Window;
 use sdl2_vulkan_interop::SdlWindowSystemPlugin;
