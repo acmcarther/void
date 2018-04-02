@@ -1,6 +1,7 @@
 #![feature(used)]
 extern crate cgmath;
 extern crate cosmic_physics as cp;
+extern crate galaxy_big_renderer;
 extern crate geometry;
 extern crate icosphere;
 extern crate init;
@@ -8,7 +9,6 @@ extern crate init;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-extern crate planet_renderer;
 extern crate rand;
 extern crate renderer;
 extern crate sdl2;
@@ -19,8 +19,8 @@ extern crate zcfg;
 
 use cgmath::Matrix4;
 use geometry::Mesh;
-use planet_renderer::MeshToRender;
-use planet_renderer::PlanetRenderer;
+use galaxy_big_renderer::MeshToRender;
+use galaxy_big_renderer::GalaxyBigRenderer;
 use rand::Rng;
 use renderer::BaseRenderer;
 use renderer::BaseRendererConfig;
@@ -47,12 +47,12 @@ lazy_static! {
   static ref SPHERE_MESHES_TO_RENDER: Vec<MeshToRender> = {
     let mut meshes_to_render = Vec::new();
     let base_mesh_ids = vec![
-      planet_renderer::ICO_1_MESH_ID,
-      planet_renderer::ICO_2_MESH_ID,
-      planet_renderer::ICO_3_MESH_ID,
-      planet_renderer::ICO_4_MESH_ID,
-      planet_renderer::ICO_5_MESH_ID,
-      planet_renderer::ICO_6_MESH_ID,
+      galaxy_big_renderer::ICO_1_MESH_ID,
+      galaxy_big_renderer::ICO_2_MESH_ID,
+      galaxy_big_renderer::ICO_3_MESH_ID,
+      galaxy_big_renderer::ICO_4_MESH_ID,
+      galaxy_big_renderer::ICO_5_MESH_ID,
+      galaxy_big_renderer::ICO_6_MESH_ID,
     ];
 
     for (idx, base_mesh_id) in base_mesh_ids.into_iter().enumerate() {
@@ -79,7 +79,7 @@ fn main() {
   init::init();
 
   let mut game_window = GameWindow::new();
-  let mut planet_renderer = {
+  let mut galaxy_big_renderer = {
     let vulkan = vkl::Vulkan::new("libvulkan.so.1");
     let base_renderer = BaseRenderer::new(
       vulkan,
@@ -89,7 +89,7 @@ fn main() {
         layer_spec: x11_layer_spec(),
       },
     );
-    PlanetRenderer::new(base_renderer)
+    GalaxyBigRenderer::new(base_renderer)
   };
 
   let start_time = Instant::now();
@@ -97,12 +97,12 @@ fn main() {
 
   let mut meshes_to_render = Vec::new();
   let base_mesh_ids = vec![
-    planet_renderer::ICO_1_MESH_ID,
-    planet_renderer::ICO_2_MESH_ID,
-    planet_renderer::ICO_3_MESH_ID,
-    planet_renderer::ICO_4_MESH_ID,
-    planet_renderer::ICO_5_MESH_ID,
-    planet_renderer::ICO_6_MESH_ID,
+    galaxy_big_renderer::ICO_1_MESH_ID,
+    galaxy_big_renderer::ICO_2_MESH_ID,
+    galaxy_big_renderer::ICO_3_MESH_ID,
+    galaxy_big_renderer::ICO_4_MESH_ID,
+    galaxy_big_renderer::ICO_5_MESH_ID,
+    galaxy_big_renderer::ICO_6_MESH_ID,
   ];
 
   for (idx, base_mesh_id) in base_mesh_ids.into_iter().enumerate() {
@@ -163,14 +163,14 @@ fn main() {
     } else {
       [cam_x, cam_y, 225f32]
     };
-    planet_renderer.set_camera_pos(cam_pos, target);
+    galaxy_big_renderer.set_camera_pos(cam_pos, target);
 
     match sim_type.as_ref() {
-      "sphere_grid" => planet_renderer.draw_demo_frame(&SPHERE_MESHES_TO_RENDER),
+      "sphere_grid" => galaxy_big_renderer.draw_demo_frame(&SPHERE_MESHES_TO_RENDER),
       "galaxy" => {
         let mut sim = GALAXY_SIM.lock().unwrap();
         sim.tick();
-        planet_renderer.draw_demo_frame(sim.get_meshes_to_render());
+        galaxy_big_renderer.draw_demo_frame(sim.get_meshes_to_render());
       }
       something_else => {
         panic!("Unknown sim type {}", something_else);
@@ -200,7 +200,7 @@ impl GameWindow {
     let sdl = sdl2::init().unwrap();
     let video_subsystem = sdl.video().unwrap();
     let window = video_subsystem
-      .window("planet demo", 1920, 1080)
+      .window("galaxy big demo", 1920, 1080)
       .position_centered()
       .vulkan()
       .build()
@@ -276,7 +276,7 @@ impl GalaxySim {
         for id in grid.get_system_ids().iter() {
           if let Some(system_details) = grid.get_system_details(id.clone()) {
             snap_ents.push(MeshToRender {
-              mesh_id: planet_renderer::ICO_2_MESH_ID,
+              mesh_id: galaxy_big_renderer::ICO_2_MESH_ID,
               pos: [
                 system_details.coords.x.clone() as f32,
                 system_details.coords.y.clone() as f32,

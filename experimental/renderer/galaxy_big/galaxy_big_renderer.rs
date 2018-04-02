@@ -24,8 +24,8 @@ use std::collections::HashMap;
 use std::os::raw::c_void;
 use std::ptr;
 
-/** A Planet-demo specific renderer. */
-pub struct PlanetRenderer<'window> {
+/** A GalaxyBig-demo specific renderer. */
+pub struct GalaxyBigRenderer<'window> {
   base_renderer: BaseRenderer<'window>,
   vert_shader_module: vk::ShaderModule,
   frag_shader_module: vk::ShaderModule,
@@ -153,8 +153,8 @@ pub const ICO_4_MESH_ID: MeshId = 4u32;
 pub const ICO_5_MESH_ID: MeshId = 5u32;
 pub const ICO_6_MESH_ID: MeshId = 6u32;
 
-impl<'window> PlanetRenderer<'window> {
-  pub fn new(base_renderer: BaseRenderer<'window>) -> PlanetRenderer<'window> {
+impl<'window> GalaxyBigRenderer<'window> {
+  pub fn new(base_renderer: BaseRenderer<'window>) -> GalaxyBigRenderer<'window> {
     let descriptor_set_layouts =
       do_or_die!(vkdrs::make_descriptor_set_layouts(&base_renderer.device));
     let pipeline_layout = do_or_die!(vkps::make_pipeline_layout::<ModelPushConstant>(
@@ -229,14 +229,14 @@ impl<'window> PlanetRenderer<'window> {
     let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(
       &base_renderer.device,
       include_bytes!(
-        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/planet/planet_vert_shader.\
+        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/galaxy_big/galaxy_big_vert_shader.\
          spv"
       ),
     ));
     let frag_shader_module = do_or_die!(vkl::builtins::make_shader_module(
       &base_renderer.device,
       include_bytes!(
-        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/planet/planet_frag_shader.\
+        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/galaxy_big/galaxy_big_frag_shader.\
          spv"
       ),
     ));
@@ -300,7 +300,7 @@ impl<'window> PlanetRenderer<'window> {
     }
 
     // TODO(acmcarther): Perform initialization specific to planet demo
-    PlanetRenderer {
+    GalaxyBigRenderer {
       base_renderer: base_renderer,
       vert_shader_module: vert_shader_module,
       frag_shader_module: frag_shader_module,
@@ -599,7 +599,7 @@ impl<'window> PlanetRenderer<'window> {
   }
 }
 
-impl<'window> Drop for PlanetRenderer<'window> {
+impl<'window> Drop for GalaxyBigRenderer<'window> {
   fn drop(&mut self) {
     let device = &mut self.base_renderer.device;
 

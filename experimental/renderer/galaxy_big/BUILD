@@ -8,15 +8,15 @@ load(
 )
 
 rust_binary(
-    name = "planet",
-    srcs = ["planet.rs"],
+    name = "galaxy_big",
+    srcs = ["galaxy_big.rs"],
     data = [
     ],
     rustc_flags = [
         "-C opt-level=2",
     ],
     deps = [
-        ":planet_renderer",
+        ":galaxy_big_renderer",
         "//core:init",
         "//core/geom:geometry",
         "//core/geom/gen:icosphere",
@@ -38,11 +38,11 @@ rust_binary(
 )
 
 rust_library(
-    name = "planet_renderer",
-    srcs = ["planet_renderer.rs"],
+    name = "galaxy_big_renderer",
+    srcs = ["galaxy_big_renderer.rs"],
     data = [
-        ":planet_frag_shader",
-        ":planet_vert_shader",
+        ":galaxy_big_frag_shader",
+        ":galaxy_big_vert_shader",
     ],
     rustc_flags = [
         "-C opt-level=2",
@@ -66,11 +66,11 @@ rust_library(
 )
 
 compile_spirv_shader(
-    name = "planet_vert_shader",
-    src = ":planet.vert",
+    name = "galaxy_big_vert_shader",
+    src = ":galaxy_big.vert",
 )
 
 compile_spirv_shader(
-    name = "planet_frag_shader",
-    src = ":planet.frag",
+    name = "galaxy_big_frag_shader",
+    src = ":galaxy_big.frag",
 )
