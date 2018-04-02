@@ -104,29 +104,26 @@ pub fn make_vertex_buffer(
 
   let buffer_size = (std::mem::size_of::<VertexData>() * vertices.len()) as u64;
 
-  let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) = try!(vkbs::make_buffer(
-    device,
-    buffer_size,
-    vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
-    vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    memory_properties
-  ));
+  let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) =
+    try!(vkbs::make_bound_buffer(
+      device,
+      buffer_size,
+      vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
+      vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      memory_properties
+    ));
 
   unsafe {
-    try!(device.bind_buffer_memory(&transfer_buffer, &transfer_device_memory));
     try!(device.map_vec_data_to_memory(&transfer_device_memory, &vertices));
   }
 
-  let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_buffer(
+  let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_bound_buffer(
     device,
     buffer_size,
     vk::BUFFER_USAGE_TRANSFER_DST_BIT | vk::BUFFER_USAGE_VERTEX_BUFFER_BIT,
     vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     memory_properties
   ));
-  unsafe {
-    try!(device.bind_buffer_memory(&buffer, &device_memory));
-  }
 
   let pos_attr_desc = vk::VertexInputAttributeDescription {
     binding: 0,
@@ -188,29 +185,26 @@ pub fn make_index_buffer(
 
   let buffer_size = (std::mem::size_of::<u16>() * indexes.len()) as u64;
 
-  let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) = try!(vkbs::make_buffer(
-    device,
-    buffer_size,
-    vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
-    vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    memory_properties
-  ));
+  let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) =
+    try!(vkbs::make_bound_buffer(
+      device,
+      buffer_size,
+      vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
+      vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      memory_properties
+    ));
 
   unsafe {
-    try!(device.bind_buffer_memory(&transfer_buffer, &transfer_device_memory));
     try!(device.map_vec_data_to_memory(&transfer_device_memory, &indexes));
   }
 
-  let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_buffer(
+  let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_bound_buffer(
     device,
     buffer_size,
     vk::BUFFER_USAGE_TRANSFER_DST_BIT | vk::BUFFER_USAGE_INDEX_BUFFER_BIT,
     vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     memory_properties
   ));
-  unsafe {
-    try!(device.bind_buffer_memory(&buffer, &device_memory));
-  }
 
   // Perform device copy in either transfer queue, or graphics queue (if we must)
   {
@@ -252,16 +246,16 @@ pub fn make_texture_image(
 
   let buffer_size = (img_info.width * img_info.height * 4) as u64;
 
-  let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) = try!(vkbs::make_buffer(
-    device,
-    buffer_size,
-    vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
-    vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    memory_properties
-  ));
+  let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) =
+    try!(vkbs::make_bound_buffer(
+      device,
+      buffer_size,
+      vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
+      vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      memory_properties
+    ));
 
   unsafe {
-    try!(device.bind_buffer_memory(&transfer_buffer, &transfer_device_memory));
     try!(device.map_vec_data_to_memory(&transfer_device_memory, &img_buf));
   }
 
@@ -478,19 +472,13 @@ pub fn make_uniform_buffer(
   memory_properties: &vk::PhysicalDeviceMemoryProperties,
 ) -> vkl::RawResult<UniformBufferDetails> {
   let buffer_size = std::mem::size_of::<MVPUniform>();
-  let prepared_buffer = try!(vkbs::make_buffer(
+  let prepared_buffer = try!(vkbs::make_bound_buffer(
     device,
     buffer_size as u64,
     vk::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
     vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
     memory_properties,
   ));
-  unsafe {
-    try!(device.bind_buffer_memory(
-      &prepared_buffer.0, /* buffer */
-      &prepared_buffer.1  /* deviceMemory */
-    ));
-  }
   Ok(UniformBufferDetails {
     buffer: prepared_buffer,
   })

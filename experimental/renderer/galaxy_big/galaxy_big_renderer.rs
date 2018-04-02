@@ -1,10 +1,11 @@
 extern crate cgmath;
-extern crate geometry;
+extern crate geom;
 extern crate icosphere;
 #[macro_use]
 extern crate log;
 #[macro_use]
 extern crate memoffset;
+extern crate vk_base_renderer;
 extern crate vk_buffer_cache;
 extern crate vk_buffer_support as vkbs;
 extern crate vk_descriptor_support as vkdrs;
@@ -13,14 +14,13 @@ extern crate vk_instance_support as vkis;
 #[macro_use(do_or_die)]
 extern crate vk_lite as vkl;
 extern crate vk_pipeline_support as vkps;
-extern crate vk_renderer;
 extern crate vk_swapchain_support as vkss;
 extern crate vk_sys as vk;
 
 use cgmath::Angle;
-use geometry::Mesh;
-use geometry::Vertex;
-use vk_renderer::BaseRenderer;
+use geom::Mesh;
+use geom::Vertex;
+use vk_base_renderer::BaseRenderer;
 use std::collections::HashMap;
 use std::os::raw::c_void;
 use std::ptr;
@@ -33,7 +33,7 @@ use vk_buffer_cache::VertexBufferDescriptorCache;
 use vk_buffer_cache::VertexBufferDescriptor;
 use vk_buffer_cache::VertexBuffer;
 use vk_buffer_cache::IndexBuffer;
-use vk_buffer_cache::MeshBuffers;
+use vk_buffer_cache::MeshBufferSet;
 
 /** A GalaxyBig-demo specific renderer. */
 pub struct GalaxyBigRenderer<'window> {
@@ -640,34 +640,31 @@ fn make_mesh_buffers(
   queue: &vk::Queue,
   memory_properties: &vk::PhysicalDeviceMemoryProperties,
   mesh: &Mesh,
-) -> vkl::RawResult<MeshBuffers> {
+) -> vkl::RawResult<MeshBufferSet> {
   let vertex_buffer = {
     let vertices = &mesh.vertices;
     let buffer_size = (std::mem::size_of::<Vertex>() * vertices.len()) as u64;
 
-    let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) = try!(vkbs::make_buffer(
-      device,
-      buffer_size,
-      vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
-      vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      memory_properties
-    ));
+    let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) =
+      try!(vkbs::make_bound_buffer(
+        device,
+        buffer_size,
+        vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
+        vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        memory_properties
+      ));
 
     unsafe {
-      try!(device.bind_buffer_memory(&transfer_buffer, &transfer_device_memory));
       try!(device.map_vec_data_to_memory(&transfer_device_memory, vertices));
     }
 
-    let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_buffer(
+    let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_bound_buffer(
       device,
       buffer_size,
       vk::BUFFER_USAGE_TRANSFER_DST_BIT | vk::BUFFER_USAGE_VERTEX_BUFFER_BIT,
       vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       memory_properties
     ));
-    unsafe {
-      try!(device.bind_buffer_memory(&buffer, &device_memory));
-    }
 
     // Perform device copy in either transfer queue, or graphics queue (if we must)
     {
@@ -697,29 +694,26 @@ fn make_mesh_buffers(
 
     let buffer_size = (std::mem::size_of::<u16>() * indexes.len()) as u64;
 
-    let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) = try!(vkbs::make_buffer(
-      device,
-      buffer_size,
-      vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
-      vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      memory_properties
-    ));
+    let vkbs::PreparedBuffer(transfer_buffer, transfer_device_memory) =
+      try!(vkbs::make_bound_buffer(
+        device,
+        buffer_size,
+        vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
+        vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        memory_properties
+      ));
 
     unsafe {
-      try!(device.bind_buffer_memory(&transfer_buffer, &transfer_device_memory));
       try!(device.map_vec_data_to_memory(&transfer_device_memory, indexes));
     }
 
-    let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_buffer(
+    let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_bound_buffer(
       device,
       buffer_size,
       vk::BUFFER_USAGE_TRANSFER_DST_BIT | vk::BUFFER_USAGE_INDEX_BUFFER_BIT,
       vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       memory_properties
     ));
-    unsafe {
-      try!(device.bind_buffer_memory(&buffer, &device_memory));
-    }
 
     // Perform device copy in either transfer queue, or graphics queue (if we must)
     {
@@ -742,7 +736,7 @@ fn make_mesh_buffers(
     }
   };
 
-  Ok(MeshBuffers {
+  Ok(MeshBufferSet {
     index_buffer: index_buffer,
     vertex_buffer: vertex_buffer,
   })
@@ -753,19 +747,13 @@ fn make_uniform_buffer(
   memory_properties: &vk::PhysicalDeviceMemoryProperties,
 ) -> vkl::RawResult<UniformBuffer> {
   let buffer_size = std::mem::size_of::<MVPUniform>();
-  let prepared_buffer = try!(vkbs::make_buffer(
+  let prepared_buffer = try!(vkbs::make_bound_buffer(
     device,
     buffer_size as u64,
     vk::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
     vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
     memory_properties,
   ));
-  unsafe {
-    try!(device.bind_buffer_memory(
-      &prepared_buffer.0, /* buffer */
-      &prepared_buffer.1  /* deviceMemory */
-    ));
-  }
   Ok(UniformBuffer {
     buffer: prepared_buffer,
   })

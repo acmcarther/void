@@ -11,7 +11,7 @@ pub type VertexBufferDescriptorId = u32;
 pub type MeshId = u32;
 
 /** A collection of mesh buffers keyed on MeshIds */
-pub type MeshCache = HashMap<MeshId, MeshBuffers>;
+pub type MeshCache = HashMap<MeshId, MeshBufferSet>;
 
 /** A mapping from vertex buffer descriptor id to vertex buffer descriptor. */
 pub type VertexBufferDescriptorCache = HashMap<VertexBufferDescriptorId, VertexBufferDescriptor>;
@@ -52,7 +52,7 @@ pub struct IndexBuffer {
  *
  * UNSAFE: Requires manual deallocation by the device that instantiated it.
  */
-pub struct MeshBuffers {
+pub struct MeshBufferSet {
   pub vertex_buffer: VertexBuffer,
   pub index_buffer: IndexBuffer,
 }
