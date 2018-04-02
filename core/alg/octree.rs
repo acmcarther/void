@@ -10,8 +10,6 @@ const X_INDEX: usize = 0;
 const Y_INDEX: usize = 1;
 const Z_INDEX: usize = 2;
 
-type Index = u64;
-
 pub trait AsCoord {
   fn get_coord(&self) -> &[f32; 3];
 }
@@ -170,15 +168,18 @@ impl<D: AsCoord, M: Default> OctreeRootNode<D, M> {
   }
 
   fn try_to_grow_whole_tree(&mut self) {
+    debug!("Trying to resize tree");
     if self.out_of_volume_data.is_empty() {
       // Don't know how to grow if there are no out of tree nodes.
       return;
     }
 
-    let mut in_tree_occupancy_ratio =
-      1f32 - (self.out_of_volume_len() as f32 / self.inner_node.len() as f32);
+    let mut in_tree_occupancy_ratio = 1f32 - (self.out_of_volume_len() as f32 / self.len() as f32);
 
-    while in_tree_occupancy_ratio < self.params.desired_tree_occupancy_ratio_min {
+    debug!("occupancy ratio is {}", in_tree_occupancy_ratio);
+    while in_tree_occupancy_ratio < 1.0
+      && in_tree_occupancy_ratio < self.params.desired_tree_occupancy_ratio_min
+    {
       let mut out_of_volume_population_per_octant = [0; 8];
 
       for entry in self.out_of_volume_data.iter() {
@@ -211,22 +212,18 @@ impl<D: AsCoord, M: Default> OctreeRootNode<D, M> {
       };
 
       let new_center = {
-        let x_offset = -(parent_direction_relative_to_child[X_INDEX] * double_size[X_INDEX]);
-        let y_offset = -(parent_direction_relative_to_child[Y_INDEX] * double_size[Y_INDEX]);
-        let z_offset = -(parent_direction_relative_to_child[Z_INDEX] * double_size[Z_INDEX]);
+        let x_offset =
+          -(parent_direction_relative_to_child[X_INDEX] * self.inner_node.half_size[X_INDEX]);
+        let y_offset =
+          -(parent_direction_relative_to_child[Y_INDEX] * self.inner_node.half_size[Y_INDEX]);
+        let z_offset =
+          -(parent_direction_relative_to_child[Z_INDEX] * self.inner_node.half_size[Z_INDEX]);
         // Parent center is current center *minus* offset relative to child
         let x_center = self.inner_node.center[X_INDEX] - x_offset;
         let y_center = self.inner_node.center[Y_INDEX] - y_offset;
         let z_center = self.inner_node.center[Z_INDEX] - z_offset;
         [x_center, y_center, z_center]
       };
-
-      // Find the exact opposite index (this node from the new parent's perspective
-      // Bitflip of each index component does the trick
-      let mut current_root_child_idx = max_idx;
-      current_root_child_idx ^= 0;
-      current_root_child_idx ^= 1;
-      current_root_child_idx ^= 2;
 
       unsafe {
         // Take ownership of inner node without initializing a replacement
@@ -249,15 +246,21 @@ impl<D: AsCoord, M: Default> OctreeRootNode<D, M> {
         new_outer_node.population = inner_node.population;
         new_outer_node.is_leaf = false;
 
+        let current_root_new_child_idx =
+          new_outer_node.find_child_index_for_coord(&inner_node.center);
+
         // Replace the empty node (where our former inner_node belongs)
         // ... but dont `forget` it, because it is a structurally complete node and needs to be
         // dropped.
         let mut boxed_inner_node = Some(Box::new(inner_node));
-        mem::swap(
-          // UNWRAP: Known to be populated from above code
-          &mut new_outer_node.children[current_root_child_idx],
-          &mut boxed_inner_node,
-        );
+        // UNWRAP: Produced as `some`
+        if boxed_inner_node.as_ref().unwrap().len() != 0 {
+          mem::swap(
+            // UNWRAP: Known to be populated from above code
+            &mut new_outer_node.children[current_root_new_child_idx],
+            &mut boxed_inner_node,
+          );
+        }
 
         // Replace the currently uninitialized inner_node with this new outer node
         // ... and forget about the uninitialized value that we are left with.
@@ -283,8 +286,7 @@ impl<D: AsCoord, M: Default> OctreeRootNode<D, M> {
       // Update the occupancy ratio so that we can see if we need to enlarge again.  This may
       // happen if most of the out of tree nodes are concentrated very far away from the octree
       // (multiples of the current width).
-      in_tree_occupancy_ratio =
-        1f32 - (self.out_of_volume_len() as f32 / self.inner_node.len() as f32);
+      in_tree_occupancy_ratio = 1f32 - (self.out_of_volume_len() as f32 / self.len() as f32);
     }
   }
 }
@@ -314,13 +316,37 @@ impl<D: AsCoord, M> OctreeRootNode<D, M> {
     self.inner_node.half_size.clone()
   }
 
+  pub fn find(&self, coord: &[f32; 3]) -> Option<&D> {
+    if self.inner_node.coord_is_out_of_bounds(coord) {
+      self
+        .out_of_volume_data
+        .iter()
+        .position(|d| d.get_coord() == coord)
+        .and_then(|idx| self.out_of_volume_data.get(idx))
+    } else {
+      self.inner_node.find(coord)
+    }
+  }
+
   pub fn remove(&mut self, coord: &[f32; 3]) -> Option<D> {
-    let removed_node = self.inner_node.remove(coord);
+    let is_out_of_volume = self.inner_node.coord_is_out_of_bounds(coord);
+
+    let removed_node = if is_out_of_volume {
+      self
+        .out_of_volume_data
+        .iter()
+        .position(|d| d.get_coord() == coord)
+        .map(|idx| self.out_of_volume_data.remove(idx))
+    } else {
+      self.inner_node.remove(coord)
+    };
 
     if removed_node.is_some() {
       if self.params.resize_tree_bounds && self.len() > self.params.tree_resize_minimum_population {
         self.try_to_shrink_whole_tree();
       }
+    } else {
+      warn!("Tried to remove {:?} but there was no such node", coord);
     }
 
     removed_node
@@ -332,12 +358,11 @@ impl<D: AsCoord, M> OctreeRootNode<D, M> {
       return;
     }
 
-    println!("sanity check");
+    let mut in_tree_occupancy_ratio = 1f32 - (self.out_of_volume_len() as f32 / self.len() as f32);
 
-    let mut in_tree_occupancy_ratio =
-      1f32 - (self.out_of_volume_len() as f32 / self.inner_node.len() as f32);
-
-    while in_tree_occupancy_ratio > self.params.desired_tree_occupancy_ratio_max {
+    while in_tree_occupancy_ratio > 0.0
+      && in_tree_occupancy_ratio > self.params.desired_tree_occupancy_ratio_max
+    {
       if self.inner_node.is_leaf {
         // Can't shrink a leaf node
         break;
@@ -366,8 +391,7 @@ impl<D: AsCoord, M> OctreeRootNode<D, M> {
       }
 
       let potential_new_occupancy_ratio = 1f32
-        - (((population_without_max_node + self.out_of_volume_len()) as f32)
-          / self.inner_node.len() as f32);
+        - (((population_without_max_node + self.out_of_volume_len()) as f32) / self.len() as f32);
 
       if potential_new_occupancy_ratio < self.params.desired_tree_occupancy_ratio_min {
         // Not going to lower the occupancy below the threshold where we'd have to grow again
@@ -483,20 +507,36 @@ impl<D: AsCoord + UpdateCoord, M: Default> OctreeRootNode<D, M> {
             .get_mut(idx)
             .unwrap()
             .update_coord(to);
-          return;
         } else {
           let mut data = self.out_of_volume_data.remove(idx);
 
           data.update_coord(to);
           self.inner_node.insert(data);
-          return;
         }
+      } else {
+        warn!(
+          "Tried to update {:?} but there was no such node (out of volume?)",
+          from
+        );
+        return;
       }
-    }
-
-    if let Some(mut data) = self.inner_node.remove(from) {
+    } else if let Some(mut data) = self.inner_node.remove(from) {
       data.update_coord(to);
-      self.inner_node.insert(data);
+
+      if self.inner_node.coord_is_out_of_bounds(&to) {
+        self.out_of_volume_data.push(data)
+      } else {
+        self.inner_node.insert(data);
+      }
+    } else {
+      warn!(
+        "Tried to update {:?} but there was no such node (inside volume?)",
+        from
+      );
+      return;
+    }
+    if self.params.resize_tree_bounds && self.len() > self.params.tree_resize_minimum_population {
+      self.try_to_grow_whole_tree();
     }
   }
 }
@@ -508,10 +548,6 @@ impl<D: AsCoord, M: Default> OctreeNode<D, M> {
     // Enqueue into own data and move on
     if self.is_leaf && self.data.len() < self.config.node_capacity {
       if self.coord_exists_in_self(item.get_coord()) {
-        println!(
-          "Tried to insert into octree with already existing coord: {:?}",
-          item.get_coord()
-        );
         return false;
       }
 
@@ -524,10 +560,6 @@ impl<D: AsCoord, M: Default> OctreeNode<D, M> {
     // on
     if self.is_leaf && self.data.len() == self.config.node_capacity {
       if self.coord_exists_in_self(item.get_coord()) {
-        println!(
-          "Tried to insert into octree with already existing coord: {:?}",
-          item.get_coord()
-        );
         return false;
       }
 
@@ -598,11 +630,28 @@ impl<D: AsCoord, M> OctreeNode<D, M> {
       + self
         .children
         .iter()
-        .map(|c_opt| {
-          c_opt.as_ref().map(|c| c.maximum_depth()).unwrap_or(0usize)
-        })
+        .map(|c_opt| c_opt.as_ref().map(|c| c.maximum_depth()).unwrap_or(0usize))
         .max()
         .unwrap()
+  }
+
+  pub fn find(&self, coord: &[f32; 3]) -> Option<&D> {
+    if self.coord_is_out_of_bounds(coord) {
+      return None;
+    }
+
+    if self.is_leaf {
+      if let Some(idx) = self.data.iter().position(|d| d.get_coord() == coord) {
+        self.data.get(idx)
+      } else {
+        None
+      }
+    } else {
+      let child_idx = self.find_child_index_for_coord(coord);
+      return self.children[child_idx]
+        .as_ref()
+        .and_then(|c| c.find(coord));
+    }
   }
 
   pub fn remove(&mut self, coord: &[f32; 3]) -> Option<D> {
@@ -656,7 +705,6 @@ impl<D: AsCoord, M> OctreeNode<D, M> {
     } else {
       let child_idx = self.find_child_index_for_coord(coord);
 
-      // UNWRAP: `children` guaranteed by !is_leaf
       let removal_from_child = self.children[child_idx]
         .as_mut()
         .and_then(|c| c.remove_internal(coord));
@@ -699,13 +747,11 @@ impl<D: AsCoord, M> OctreeNode<D, M> {
           merging_current_depth: merging_current_depth + 1,
         });
       } else if merging_current_depth > 0 {
-        println!("DEBUG: performing submerge");
         // There are valuable merges to be performed for our child, even if we can't be merged.
         // Perform them now.
         // UNWRAP: Guaranteed to be present from prior guard
         self.children[child_idx].as_mut().unwrap().merge();
       }
-      println!("Merge happened or died because it was too shallow");
 
       // Either the merge was a dead end (child was leaf), or we already performed the merge
       return Some(RemovalDetails {
@@ -860,9 +906,9 @@ impl<D: AsCoord + Clone, M> OctreeNode<D, M> {
     } else {
       let mut children = [None, None, None, None, None, None, None, None];
       for (idx, child) in self.children.iter().enumerate() {
-        children[idx] = child.as_ref().map(|c| {
-          Box::new(c.map_reduce(initial_value.clone(), mapper, reducer))
-        });
+        children[idx] = child
+          .as_ref()
+          .map(|c| Box::new(c.map_reduce(initial_value.clone(), mapper, reducer)));
       }
       // UNWRAP: Guarded by filter
       let metadata: MO = children
@@ -928,7 +974,6 @@ impl<D: AsCoord + Clone, M> OctreeNode<D, M> {
   }
 }
 
-
 impl<'a, D, M> NodeTraversalData<'a, D, M> {
   pub fn coord_is_out_of_bounds(&self, coord: &[f32; 3]) -> bool {
     let max_x = self.center[X_INDEX] + self.half_size[X_INDEX];
@@ -942,7 +987,6 @@ impl<'a, D, M> NodeTraversalData<'a, D, M> {
       || coord[Y_INDEX] < min_y || coord[Z_INDEX] > max_z || coord[Z_INDEX] < min_z
   }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -1111,6 +1155,21 @@ mod tests {
   }
 
   #[test]
+  fn test_remove_can_remove_out_of_bound_things() {
+    let mut octree_init_params = OctreeInitParams::default();
+    octree_init_params.half_size = [100f32, 100f32, 100f32];
+    // Merge any trees at or below 5 nodes: (a bit plus 5 / 8)
+    octree_init_params.desired_node_occupancy_ratio_min = 0.626;
+    octree_init_params.resize_tree_bounds = false;
+    let mut octree = OctreeRootNode::<[f32; 3]>::new(octree_init_params);
+    octree.insert([-100.1, 100.1, 100.1]);
+
+    let data = octree.remove(&[-100.1, 100.1, 100.1]);
+    assert_eq!(data, Some([-100.1, 100.1, 100.1]));
+    assert_eq!(octree.len(), 0);
+  }
+
+  #[test]
   fn test_octree_remove_can_merge_incrementally() {
     let mut octree_init_params = OctreeInitParams::default();
     octree_init_params.half_size = [100f32, 100f32, 100f32];
@@ -1180,6 +1239,69 @@ mod tests {
   }
 
   #[test]
+  fn test_find_works_as_expected() {
+    let mut octree_init_params = OctreeInitParams::default();
+    octree_init_params.node_capacity = 2;
+    octree_init_params.desired_tree_occupancy_ratio_min = 0.999;
+    octree_init_params.desired_tree_occupancy_ratio_max = 0.999;
+    octree_init_params.resize_tree_bounds = true;
+    octree_init_params.tree_resize_minimum_population = 0;
+    let mut octree = OctreeRootNode::<[f32; 3]>::new(octree_init_params);
+    octree.insert([-1.0, 1.0, 2.0]);
+    octree.insert([1.0, 1.0, 1.0]);
+    octree.insert([2.0, 2.0, 2.0]);
+    octree.insert([3.0, 3.0, 3.0]);
+
+    // All nodes should be locatabable
+    assert!(octree.find(&[-1.0, 1.0, 2.0]).is_some());
+    assert!(octree.find(&[1.0, 1.0, 1.0]).is_some());
+    assert!(octree.find(&[2.0, 2.0, 2.0]).is_some());
+    assert!(octree.find(&[3.0, 3.0, 3.0]).is_some());
+  }
+
+  #[test]
+  fn test_find_works_after_resize() {
+    let mut octree_init_params = OctreeInitParams::default();
+    octree_init_params.node_capacity = 2;
+    octree_init_params.desired_tree_occupancy_ratio_min = 0.999;
+    octree_init_params.desired_tree_occupancy_ratio_max = 0.999;
+    octree_init_params.resize_tree_bounds = true;
+    octree_init_params.tree_resize_minimum_population = 0;
+    let mut octree = OctreeRootNode::<[f32; 3]>::new(octree_init_params);
+    // Should work after resize as well
+    {
+      println!("octree: {:#?}", octree);
+      octree.insert([100.1, 1.0, 1.0]);
+      println!("octree: {:#?}", octree);
+      assert!(octree.find(&[100.1, 1.0, 1.0]).is_some());
+    }
+
+    {
+      println!("octree: {:#?}", octree);
+      octree.insert([-600.1, 1.0, 1.0]);
+      println!("octree: {:#?}", octree);
+
+      {
+        let mut octree_init_params = OctreeInitParams::default();
+        octree_init_params.center = [-1000.0, 600.0, 600.0];
+        octree_init_params.half_size = [800.0, 800.0, 800.0];
+        octree_init_params.node_capacity = 2;
+        octree_init_params.desired_tree_occupancy_ratio_min = 0.999;
+        octree_init_params.desired_tree_occupancy_ratio_max = 0.999;
+        octree_init_params.resize_tree_bounds = true;
+        octree_init_params.tree_resize_minimum_population = 1000;
+        let mut octree = OctreeRootNode::<[f32; 3]>::new(octree_init_params);
+        octree.insert([100.1, 1.0, 1.0]);
+        octree.insert([-600.1, 1.0, 1.0]);
+        println!("octree manual: {:#?}", octree);
+      }
+
+      assert!(octree.find(&[100.1, 1.0, 1.0]).is_some());
+      assert!(octree.find(&[-600.1, 1.0, 1.0]).is_some());
+    }
+  }
+
+  #[test]
   fn test_octree_can_resize_root() {
     let mut octree_init_params = OctreeInitParams::default();
     octree_init_params.half_size = [100f32, 100f32, 100f32];
@@ -1193,53 +1315,32 @@ mod tests {
     octree_init_params.tree_resize_minimum_population = 0;
 
     let mut octree = OctreeRootNode::<[f32; 3]>::new(octree_init_params);
-    println!("octree: {:#?}", octree);
+    //println!("octree: {:#?}", octree);
+    octree.insert([1.0, 1.0, 1.0]);
 
     // A single insertion should cause the tree to resize
     {
       octree.insert([101.0, 101.0, 101.0]);
       println!("octree: {:#?}", octree);
-      assert_eq!(octree.len(), 1);
+      assert_eq!(octree.len(), 2);
       let half_size = octree.half_size();
+      println!("center {:?}", octree.center());
+      println!("half_size {:?}", half_size);
       assert!(half_size[X_INDEX] > 199f32 && half_size[X_INDEX] < 201f32);
       assert!(half_size[Y_INDEX] > 199f32 && half_size[Y_INDEX] < 201f32);
       assert!(half_size[Z_INDEX] > 199f32 && half_size[Z_INDEX] < 201f32);
       let center = octree.center();
-      assert!(center[X_INDEX] > 199f32 && center[X_INDEX] < 201f32);
-      assert!(center[Y_INDEX] > 199f32 && center[Y_INDEX] < 201f32);
-      assert!(center[Z_INDEX] > 199f32 && center[Z_INDEX] < 201f32);
-    }
-
-    // And now a super far away point
-    {
-      octree.insert([-6000.0, 101.0, 10001.0]);
-      println!("octree: {:#?}", octree);
-      let half_size = octree.half_size();
-      assert!(half_size[X_INDEX] > 6399f32 && half_size[X_INDEX] < 6401f32);
-      assert!(half_size[Y_INDEX] > 6399f32 && half_size[Y_INDEX] < 6401f32);
-      assert!(half_size[Z_INDEX] > 6399f32 && half_size[Z_INDEX] < 6401f32);
-    }
-
-    // And then remove that point
-    // Should be back down to a sane size (approx the initial size, with volume recentered)
-    {
-      let value = octree.remove(&[-6000.0, 101.0, 10001.0]);
-      println!("octree: {:#?}", octree);
-      assert_eq!(value, Some([-6000.0, 101.0, 10001.0]));
-      let half_size = octree.half_size();
-      assert!(half_size[X_INDEX] > 99f32 && half_size[X_INDEX] < 101f32);
-      assert!(half_size[Y_INDEX] > 99f32 && half_size[Y_INDEX] < 101f32);
-      assert!(half_size[Z_INDEX] > 99f32 && half_size[Z_INDEX] < 101f32);
-      let center = octree.center();
       assert!(center[X_INDEX] > 99f32 && center[X_INDEX] < 101f32);
       assert!(center[Y_INDEX] > 99f32 && center[Y_INDEX] < 101f32);
       assert!(center[Z_INDEX] > 99f32 && center[Z_INDEX] < 101f32);
+      assert!(octree.find(&[1.0, 1.0, 1.0]).is_some());
+      assert!(octree.find(&[101.0, 101.0, 101.0]).is_some());
     }
   }
 
   #[test]
   fn test_mapreduce() {
-    let mut octree_init_params = OctreeInitParams::default();
+    let octree_init_params = OctreeInitParams::default();
     let mut octree = OctreeRootNode::<PointMass>::new(octree_init_params);
 
     octree.insert(PointMass {
@@ -1287,7 +1388,7 @@ mod tests {
 
   #[test]
   fn test_inplace_mapreduce() {
-    let mut octree_init_params = OctreeInitParams::default();
+    let octree_init_params = OctreeInitParams::default();
     let mut octree = OctreeRootNode::<PointMass, PointMass>::new(octree_init_params);
 
     octree.insert(PointMass {
