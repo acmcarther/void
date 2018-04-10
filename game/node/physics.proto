@@ -1,0 +1,17 @@
+
+syntax = "proto3";
+
+package game.node;
+
+message PhysicsInfo {
+  Vec3 position = 1;
+  Vec3 velocity = 2;
+  float reciprocal_mass = 3;
+  bool is_static = 4;
+}
+
+message Vec3 {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}

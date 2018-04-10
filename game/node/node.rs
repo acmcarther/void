@@ -3,13 +3,12 @@ extern crate chrono;
 extern crate log;
 
 use chrono::DateTime;
-use chrono::Duration;
 use chrono::Utc;
+use chrono::Duration;
 use std::collections::HashMap;
-use std::sync::RwLock;
 
 pub type EntityId = u32;
-pub type ServiceBuilderFn<T> = fn(config: &NodeConfig) -> Box<NodeService<T>>;
+pub type ServiceBuilderFn = fn(config: &NodeConfig) -> Box<NodeService>;
 
 /**
  * An error emitted by a service during execution.
@@ -31,16 +30,15 @@ pub struct NodeConfig {
 }
 
 /** An array of running services and associated state. */
-pub struct NodeServiceManager<T> {
-  running_services: Vec<Box<NodeService<T>>>,
+pub struct NodeServiceManager {
+  running_services: Vec<Box<NodeService>>,
 }
 
 /** A game backend installation. */
-pub struct ServerNode<T> {
+pub struct ServerNode {
   config: NodeConfig,
-  state_store: T,
-  service_builders: HashMap<String, fn(config: &NodeConfig) -> Box<NodeService<T>>>,
-  service_manager: Option<NodeServiceManager<T>>,
+  service_builders: HashMap<String, fn(config: &NodeConfig) -> Box<NodeService>>,
+  service_manager: Option<NodeServiceManager>,
   tick_context: TickContext,
 }
 
@@ -59,12 +57,13 @@ pub struct TickContext {
   pub current_tick: u64,
   pub last_creation_time: DateTime<Utc>,
   pub creation_time: DateTime<Utc>,
+  pub delta_t: Duration,
 }
 
 /**
  * A synchronized, individually threaded engine component.
  */
-pub trait NodeService<T> {
+pub trait NodeService {
   /** Emits common metadata for this node. */
   fn metadata(&self) -> NodeServiceMetadata;
 
@@ -80,7 +79,7 @@ pub trait NodeService<T> {
    * Pre-tick work happens strictly sequentially (i.e. single threaded), so
    * heavy-weight work should wait until `run_tick`.
    */
-  fn run_pre_tick(&mut self, _state: &T, _tick: &TickContext) -> Result<(), RunError> {
+  fn run_pre_tick(&mut self, _tick: &TickContext) -> Result<(), RunError> {
     Ok(())
   }
 
@@ -90,7 +89,9 @@ pub trait NodeService<T> {
    * Systems should focus on their core business logic at this time, including
    * processing received pubsub messages.
    */
-  fn run_tick(&mut self, _state: &T, _tick: &TickContext) -> Result<(), RunError>;
+  fn run_tick(&mut self, _tick: &TickContext) -> Result<(), RunError> {
+    Ok(())
+  }
 
   /**
    * A system callback called to perform post-tick cleanup.
@@ -100,7 +101,7 @@ pub trait NodeService<T> {
    * prefer performing processing in `run_tick`, as this method is strictly
    * invoked sequentially according to system priority.
    */
-  fn run_post_tick(&mut self, _state: &T, _tick: &TickContext) -> Result<(), RunError> {
+  fn run_post_tick(&mut self, _tick: &TickContext) -> Result<(), RunError> {
     Ok(())
   }
 
@@ -112,27 +113,26 @@ pub trait NodeService<T> {
   fn on_remove(&mut self, _last_tick: &TickContext) {}
 }
 
-impl<T> ServerNode<T> {
+impl ServerNode {
   pub fn new(
     config: NodeConfig,
-    service_builders: HashMap<String, ServiceBuilderFn<T>>,
-    initial_state: T,
-  ) -> ServerNode<T> {
+    service_builders: HashMap<String, ServiceBuilderFn>,
+  ) -> ServerNode {
     ServerNode {
       config: config,
-      state_store: initial_state,
       service_builders: service_builders,
       service_manager: None,
       tick_context: TickContext {
         current_tick: 0u64,
         last_creation_time: Utc::now(),
         creation_time: Utc::now(),
+        delta_t: Duration::seconds(0),
       },
     }
   }
 }
 
-impl<T> ServerNode<T> {
+impl ServerNode {
   /** Configures the node for running by starting all services. */
   pub fn init(&mut self) {
     assert!(self.service_manager.is_none());
@@ -170,23 +170,17 @@ impl<T> ServerNode<T> {
 
     trace!("Running service pre-ticks");
     for service in manager.running_services.iter_mut() {
-      service
-        .run_pre_tick(&self.state_store, &self.tick_context)
-        .unwrap();
+      service.run_pre_tick(&self.tick_context).unwrap();
     }
 
     trace!("Running service ticks");
     for service in manager.running_services.iter_mut() {
-      service
-        .run_tick(&self.state_store, &self.tick_context)
-        .unwrap();
+      service.run_tick(&self.tick_context).unwrap();
     }
 
     trace!("Running service post-ticks");
     for service in manager.running_services.iter_mut() {
-      service
-        .run_post_tick(&self.state_store, &self.tick_context)
-        .unwrap();
+      service.run_post_tick(&self.tick_context).unwrap();
     }
 
     Ok(())
@@ -195,18 +189,15 @@ impl<T> ServerNode<T> {
 
 impl TickContext {
   pub fn next(&self) -> Self {
+    let creation_time = Utc::now();
+    let delta_t = creation_time.signed_duration_since(self.last_creation_time);
+
     TickContext {
       current_tick: self.current_tick + 1,
       last_creation_time: self.creation_time,
-      creation_time: Utc::now(),
+      creation_time: creation_time,
+      delta_t: delta_t,
     }
-  }
-
-  // TODO(acmcarther): Cache this
-  pub fn delta_t(&self) -> Duration {
-    self
-      .creation_time
-      .signed_duration_since(self.last_creation_time)
   }
 }
 
