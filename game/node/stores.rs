@@ -165,9 +165,6 @@ impl<'a, T> Iterator for DenseStoreIter<'a, T> {
   type Item = &'a T;
 
   fn next(&mut self) -> Option<&'a T> {
-    println!("reic {}", self.real_elements_iterated_count);
-    println!("index {}", self.index);
-    println!("capacity {}", self.capacity);
     if self.real_elements_iterated_count == self.len {
       return None;
     }
@@ -175,7 +172,6 @@ impl<'a, T> Iterator for DenseStoreIter<'a, T> {
     // Skipping check for index > capacity, case implicitly handled above
 
     for index in self.index..self.capacity {
-      println!("index {}", self.index);
       let item = self.dense_store_iter.next();
       // Inner iterator is done.
       if item.is_none() {
@@ -190,8 +186,6 @@ impl<'a, T> Iterator for DenseStoreIter<'a, T> {
         return item_inner.as_ref();
       }
     }
-
-    println!("escaped");
 
     self.index = self.capacity;
     None
