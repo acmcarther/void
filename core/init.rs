@@ -31,7 +31,7 @@ impl zcfg::ConfigParseable for LogLevelParsable {
 define_pub_cfg!(
   log_level,
   ::LogLevelParsable,
-  ::LogLevelParsable(::log::LogLevelFilter::Debug),
+  ::LogLevelParsable(::log::LogLevelFilter::Info),
   "What log level to emit logs to"
 );
 
