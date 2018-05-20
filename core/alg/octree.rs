@@ -146,24 +146,26 @@ impl<D: AsCoord, M: Default> OctreeRootNode<D, M> {
   pub fn insert(&mut self, item: D) {
     let is_out_of_volume = self.inner_node.coord_is_out_of_bounds(item.get_coord());
 
-    if is_out_of_volume {
-      let already_exists_out_of_volume = {
-        let coord = item.get_coord();
-        self
-          .out_of_volume_data
-          .iter()
-          .any(|e| e.get_coord() == coord)
-      };
-
-      if !already_exists_out_of_volume {
-        self.out_of_volume_data.push(item);
-        if self.params.resize_tree_bounds && self.len() > self.params.tree_resize_minimum_population
-        {
-          self.try_to_grow_whole_tree();
-        }
-      }
-    } else {
+    if !is_out_of_volume {
       self.inner_node.insert(item);
+      return;
+    }
+
+    let already_exists_out_of_volume = {
+      let coord = item.get_coord();
+      self
+        .out_of_volume_data
+        .iter()
+        .any(|e| e.get_coord() == coord)
+    };
+
+    if already_exists_out_of_volume {
+      return;
+    }
+
+    self.out_of_volume_data.push(item);
+    if self.params.resize_tree_bounds && self.len() > self.params.tree_resize_minimum_population {
+      self.try_to_grow_whole_tree();
     }
   }
 
