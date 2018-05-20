@@ -18,3 +18,11 @@ rust_library(
         "//third_party/cargo:zcfg_flag_parser",
     ],
 )
+
+rust_library(
+    name = "task",
+    srcs = ["task.rs"],
+    deps = [
+        "//third_party/cargo:log",
+    ],
+)
