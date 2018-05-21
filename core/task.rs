@@ -16,7 +16,7 @@ use std::mem;
 #[macro_export]
 macro_rules! local_task_metadata {
   ($task_name:expr) => {
-    TaskMetadata::raw_new($task_name.to_string(), file!().to_owned(), line!())
+    $crate::TaskMetadata::raw_new($task_name.to_string(), file!().to_owned(), line!())
   }
 }
 
