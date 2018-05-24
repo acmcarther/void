@@ -14,66 +14,63 @@ use hyper::Result as HyperResult;
 use spect::SpectRenderableSubpage;
 use std::time::Instant;
 
-struct ZcfgSpectDataFetcherParams {}
+pub struct ZcfgSpectDataRendererParams {}
 
-struct ZcfgSpectDataFetcher {
-  params: ZcfgSpectDataFetcherParams,
-}
-
-struct ZcfgSpectDataRendererParams {}
-
-struct ZcfgSpectDataRenderer {
+pub struct ZcfgSpectDataRenderer {
   params: ZcfgSpectDataRendererParams,
+  data_fetcher: ZcfgSpectDataFetcher,
   last_updated: Option<Instant>,
   data: ZcfgData,
 }
 
-struct ZcfgDetailRow {
+pub struct ZcfgSpectDataFetcherParams {}
+
+pub struct ZcfgSpectDataFetcher {
+  params: ZcfgSpectDataFetcherParams,
+}
+
+pub struct ZcfgDetailRow {
   pub config_name: String,
   pub location: String,
   pub description: String,
   // TODO(acmcarther): Value
 }
 
-struct ZcfgData {
+pub struct ZcfgData {
   pub detail_rows: Vec<ZcfgDetailRow>,
 }
 
-impl ZcfgSpectDataFetcher {
-  pub fn new(params: ZcfgSpectDataFetcherParams) -> ZcfgSpectDataFetcher {
-    ZcfgSpectDataFetcher { params: params }
+impl Default for ZcfgSpectDataRendererParams {
+  fn default() -> ZcfgSpectDataRendererParams {
+    ZcfgSpectDataRendererParams {}
   }
+}
 
-  pub fn fetch(&mut self) -> ZcfgData {
-    // UNWRAP: If this fails, the application is blown.
-    let initializers = zcfg::STATIC_CONFIG_INITIALIZERS.read().unwrap();
-
-    let detail_rows = initializers
-      .iter()
-      .map(|initr| ZcfgDetailRow {
-        config_name: initr.config_name().to_owned(),
-        location: format!("{}:{}", initr.file().to_owned(), initr.line()),
-        description: initr.description().to_owned(),
-      })
-      .collect::<Vec<_>>();
-    ZcfgData {
-      detail_rows: detail_rows,
-    }
+impl Default for ZcfgSpectDataRenderer {
+  fn default() -> ZcfgSpectDataRenderer {
+    ZcfgSpectDataRenderer::new(
+      ZcfgSpectDataRendererParams::default(),
+      ZcfgSpectDataFetcher::default(),
+    )
   }
 }
 
 impl ZcfgSpectDataRenderer {
-  pub fn new(params: ZcfgSpectDataRendererParams) -> ZcfgSpectDataRenderer {
+  pub fn new(
+    params: ZcfgSpectDataRendererParams,
+    data_fetcher: ZcfgSpectDataFetcher,
+  ) -> ZcfgSpectDataRenderer {
     ZcfgSpectDataRenderer {
       params: params,
+      data_fetcher: data_fetcher,
       last_updated: None,
       data: ZcfgData::empty(),
     }
   }
 
-  pub fn set_data(&mut self, data: ZcfgData) {
-    self.data = data;
+  pub fn update_data(&mut self) {
     self.last_updated = Some(Instant::now());
+    self.data = self.data_fetcher.fetch();
   }
 
   pub fn render(&self) -> String {
@@ -129,6 +126,41 @@ impl ZcfgSpectDataRenderer {
 
   fn render_subfooter(&self) -> String {
     "".to_owned()
+  }
+}
+
+impl Default for ZcfgSpectDataFetcherParams {
+  fn default() -> ZcfgSpectDataFetcherParams {
+    ZcfgSpectDataFetcherParams {}
+  }
+}
+
+impl Default for ZcfgSpectDataFetcher {
+  fn default() -> ZcfgSpectDataFetcher {
+    ZcfgSpectDataFetcher::new(ZcfgSpectDataFetcherParams::default())
+  }
+}
+
+impl ZcfgSpectDataFetcher {
+  pub fn new(params: ZcfgSpectDataFetcherParams) -> ZcfgSpectDataFetcher {
+    ZcfgSpectDataFetcher { params: params }
+  }
+
+  pub fn fetch(&mut self) -> ZcfgData {
+    // UNWRAP: If this fails, the application is blown.
+    let initializers = zcfg::STATIC_CONFIG_INITIALIZERS.read().unwrap();
+
+    let detail_rows = initializers
+      .iter()
+      .map(|initr| ZcfgDetailRow {
+        config_name: initr.config_name().to_owned(),
+        location: format!("{}:{}", initr.file().to_owned(), initr.line()),
+        description: initr.description().to_owned(),
+      })
+      .collect::<Vec<_>>();
+    ZcfgData {
+      detail_rows: detail_rows,
+    }
   }
 }
 
