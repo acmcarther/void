@@ -10,8 +10,8 @@ extern crate spect;
 extern crate zcfg;
 
 use spect::SpectRenderableSubpage;
-use spect::SpectPageModule;
-use spect::SpectPageModuleParams;
+use spect::SpectSubpageModule;
+use spect::SpectSubpageModuleParams;
 use std::time::Instant;
 
 define_pub_cfg!(
@@ -195,10 +195,13 @@ impl ZcfgData {
   }
 }
 
-pub fn get_zcfg_page_module() -> SpectPageModule {
-  SpectPageModule {
+pub fn get_zcfg_subpage_module() -> SpectSubpageModule {
+  SpectSubpageModule {
     address_subpath: "/zcfg".to_owned(),
-    params: SpectPageModuleParams::default(),
+    params: SpectSubpageModuleParams {
+      description: Some("Zcfg flag configuration details".to_owned()),
+      ..SpectSubpageModuleParams::default()
+    },
     renderable_subpage_boxed: Box::new(ZcfgSpectRenderableSubpage::default()),
   }
 }

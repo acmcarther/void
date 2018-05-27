@@ -18,6 +18,7 @@ use hyper::server::NewService;
 use hyper::server::Request;
 use hyper::server::Response;
 use hyper::server::Service;
+use std::collections::HashSet;
 use std::collections::HashMap;
 use std::io;
 use std::sync::Arc;
@@ -37,39 +38,54 @@ define_pub_cfg!(
   "Port to run the spect server on"
 );
 
-const PHRASE: &'static str = "Hello, World!";
-
-#[derive(Debug)]
-pub struct SpectGenericIssue {
-  message: String,
+lazy_static! {
+  static ref FORBIDDEN_ADDRESS_SUBPATHS: HashSet<String> = {
+    let mut set = HashSet::new();
+    // Root has index bound
+    set.insert("/".to_owned());
+    set
+  };
 }
 
+/** A Spect subpage that can be rendered and updated. */
 pub trait SpectRenderableSubpage {
   fn update_data(&mut self);
   fn render(&self, query_opt: Option<&str>) -> String;
 }
 
+/** Any kind of message-bearing issue */
+#[derive(Debug)]
+pub struct SpectGenericIssue {
+  pub message: String,
+}
+
+/** A specification for how to update the data for a subpage. */
 #[derive(Debug, PartialEq, Eq)]
-pub enum SpectPageModuleRefreshPolicy {
+pub enum SpectSubpageModuleRefreshPolicy {
   OnEveryLoad,
   _NonExhaustive,
 }
 
-pub struct SpectPageModuleParams {
-  pub refresh_policy: SpectPageModuleRefreshPolicy,
+/** Arguments for handling of a subpage module. */
+pub struct SpectSubpageModuleParams {
+  pub description: Option<String>,
+  pub refresh_policy: SpectSubpageModuleRefreshPolicy,
 }
 
-pub struct SpectPageModule {
+/** A ready-to-use subpage with configuration options. */
+pub struct SpectSubpageModule {
   pub address_subpath: String,
-  pub params: SpectPageModuleParams,
+  pub params: SpectSubpageModuleParams,
   pub renderable_subpage_boxed: Box<SpectRenderableSubpage>,
 }
 
-pub struct SpectPageModuleManager {
-  page_modules: Vec<SpectPageModule>,
+/** A subpage processor that manages all subpages. */
+pub struct SpectSubpageModuleManager {
+  subpage_modules: Vec<SpectSubpageModule>,
   page_mappings: HashMap<String, usize>,
 }
 
+/** A generic description of an invalid argument. */
 #[derive(Debug)]
 pub struct InvalidParamDetailsEntry {
   pub path: String,
@@ -78,51 +94,57 @@ pub struct InvalidParamDetailsEntry {
   _nonexhaustive: (),
 }
 
+/** A listing of invalid arguments and details. */
 #[derive(Debug)]
 pub struct InvalidParamDetails {
   pub entries: Vec<InvalidParamDetailsEntry>,
   _nonexhaustive: (),
 }
 
+/** An error on initialization of a subpage module manager. */
 #[derive(Debug)]
-pub struct SpectPageModuleManagerInitErr {
+pub struct SpectSubpageModuleManagerInitErr {
   overlapping_mappings_opt: Option<HashMap<String, Vec<usize>>>,
-  invalid_params_details_list_opt: Option<Vec<InvalidParamDetails>>,
+  invalid_params_details_entries_opt: Option<Vec<InvalidParamDetailsEntry>>,
   _nonexhaustive: (),
 }
 
+/** Arguments for configuring Spect server. */
 #[derive(Clone)]
 pub struct SpectServerParams {
   pub addr_ipv4: String,
   pub port: u32,
 }
 
+/** A runable spect server instance. */
 pub struct SpectServer {
   params: SpectServerParams,
-  page_module_manager_rwarc: Arc<RwLock<SpectPageModuleManager>>,
+  subpage_module_manager_rwarc: Arc<RwLock<SpectSubpageModuleManager>>,
 }
 
+/** A request-handler spun off of a SpectServer. */
 // PUBLIC_FOR_TRAIT(NewService::<SpectServer>)
 pub struct SpectHandler {
-  server_params: SpectServerParams,
-  page_module_manager_rwarc: Arc<RwLock<SpectPageModuleManager>>,
+  #[allow(unused)] server_params: SpectServerParams,
+  subpage_module_manager_rwarc: Arc<RwLock<SpectSubpageModuleManager>>,
 }
 
+/** An error on rendering using a SpectHandler. */
 #[derive(Debug)]
 pub enum SpectHandlerRenderError {
   UnknownSubpath(String),
   _NonExhaustive,
 }
 
-impl Default for SpectPageModuleRefreshPolicy {
-  fn default() -> SpectPageModuleRefreshPolicy {
-    SpectPageModuleRefreshPolicy::OnEveryLoad
+impl Default for SpectSubpageModuleRefreshPolicy {
+  fn default() -> SpectSubpageModuleRefreshPolicy {
+    SpectSubpageModuleRefreshPolicy::OnEveryLoad
   }
 }
 
-impl SpectPageModuleRefreshPolicy {
+impl SpectSubpageModuleRefreshPolicy {
   pub fn validate(&self) -> Option<SpectGenericIssue> {
-    if self == &SpectPageModuleRefreshPolicy::_NonExhaustive {
+    if self == &SpectSubpageModuleRefreshPolicy::_NonExhaustive {
       Some(SpectGenericIssue {
         message: "`_NonExhaustive` variant used".to_owned(),
       })
@@ -132,62 +154,103 @@ impl SpectPageModuleRefreshPolicy {
   }
 }
 
-impl Default for SpectPageModuleParams {
-  fn default() -> SpectPageModuleParams {
-    SpectPageModuleParams {
-      refresh_policy: SpectPageModuleRefreshPolicy::default(),
+impl Default for SpectSubpageModuleParams {
+  fn default() -> SpectSubpageModuleParams {
+    SpectSubpageModuleParams {
+      description: None,
+      refresh_policy: SpectSubpageModuleRefreshPolicy::default(),
     }
   }
 }
 
-impl SpectPageModuleParams {
+impl SpectSubpageModuleParams {
   pub fn validate(&self) -> Option<InvalidParamDetails> {
+    let mut invalid_param_details_entries = Vec::new();
     if let Some(SpectGenericIssue { message, .. }) = self.refresh_policy.validate() {
+      invalid_param_details_entries.push(InvalidParamDetailsEntry {
+        path: "refresh_policy".to_owned(),
+        message: message,
+        details: None,
+        _nonexhaustive: (),
+      });
+    }
+
+    if invalid_param_details_entries.is_empty() {
+      None
+    } else {
       Some(InvalidParamDetails {
-        entries: vec![
-          InvalidParamDetailsEntry {
-            path: "refresh_policy".to_owned(),
-            message: message,
-            details: None,
-            _nonexhaustive: (),
-          },
-        ],
+        entries: invalid_param_details_entries,
         _nonexhaustive: (),
       })
-    } else {
-      None
     }
   }
 }
 
-impl SpectPageModuleManager {
+impl SpectSubpageModule {
+  pub fn validate(&self) -> Option<InvalidParamDetails> {
+    let mut invalid_param_details_entries = Vec::new();
+    if FORBIDDEN_ADDRESS_SUBPATHS.contains(&self.address_subpath) {
+      invalid_param_details_entries.push(InvalidParamDetailsEntry {
+        path: "address_subpath".to_owned(),
+        message: format!("[{}] is a banned address subpath", self.address_subpath),
+        details: None,
+        _nonexhaustive: (),
+      });
+    }
+
+    if let Some(invalid_param_details) = self.params.validate() {
+      invalid_param_details_entries.push(InvalidParamDetailsEntry {
+        path: "params".to_owned(),
+        message: "invalid param, see details.".to_owned(),
+        details: Some(Box::new(invalid_param_details)),
+        _nonexhaustive: (),
+      });
+    }
+
+    if invalid_param_details_entries.is_empty() {
+      None
+    } else {
+      Some(InvalidParamDetails {
+        entries: invalid_param_details_entries,
+        _nonexhaustive: (),
+      })
+    }
+  }
+}
+
+impl SpectSubpageModuleManager {
   pub fn new(
-    page_modules: Vec<SpectPageModule>,
-  ) -> Result<SpectPageModuleManager, SpectPageModuleManagerInitErr> {
+    subpage_modules: Vec<SpectSubpageModule>,
+  ) -> Result<SpectSubpageModuleManager, SpectSubpageModuleManagerInitErr> {
     let mut page_mappings = HashMap::new();
 
     let mut err_overlapping_mappings: HashMap<String, Vec<usize>> = HashMap::new();
-    let mut err_invalid_params_details_list = Vec::new();
+    let mut err_invalid_param_details_entries = Vec::new();
 
-    for (idx, page_module) in page_modules.iter().enumerate() {
+    for (idx, subpage_module) in subpage_modules.iter().enumerate() {
       // Exit if params are bad
-      if let Some(invalid_param_details) = page_module.params.validate() {
-        err_invalid_params_details_list.push(invalid_param_details);
+      if let Some(invalid_param_details) = subpage_module.validate() {
+        err_invalid_param_details_entries.push(InvalidParamDetailsEntry {
+          path: format!("subpage_modules[{}]", idx),
+          message: "invalid param, see details.".to_owned(),
+          details: Some(Box::new(invalid_param_details)),
+          _nonexhaustive: (),
+        });
         continue;
       }
 
       // Try insert, and exit if we didn't overwrite something
-      let overlapping_idx_opt = page_mappings.insert(page_module.address_subpath.clone(), idx);
+      let overlapping_idx_opt = page_mappings.insert(subpage_module.address_subpath.clone(), idx);
       if overlapping_idx_opt.is_none() {
         continue;
       }
 
       // If overwrite already happened before, add this instance as well
       let overlapping_idx = overlapping_idx_opt.unwrap();
-      if err_overlapping_mappings.contains_key(&page_module.address_subpath) {
+      if err_overlapping_mappings.contains_key(&subpage_module.address_subpath) {
         // UNWRAP: guaranteed to be present from above guard
         let current_overlapping_idxs = err_overlapping_mappings
-          .get_mut(&page_module.address_subpath)
+          .get_mut(&subpage_module.address_subpath)
           .unwrap();
 
         current_overlapping_idxs.push(idx);
@@ -198,35 +261,39 @@ impl SpectPageModuleManager {
       // If overwrite is new, add this index and prior to a new list
       let current_overlapping_idxs = vec![overlapping_idx, idx];
       err_overlapping_mappings.insert(
-        page_module.address_subpath.clone(),
+        subpage_module.address_subpath.clone(),
         current_overlapping_idxs,
       );
     }
 
-    if !err_overlapping_mappings.is_empty() || !err_invalid_params_details_list.is_empty() {
+    if !err_overlapping_mappings.is_empty() || !err_invalid_param_details_entries.is_empty() {
       let overlapping_mappings_opt = if !err_overlapping_mappings.is_empty() {
         Some(err_overlapping_mappings)
       } else {
         None
       };
 
-      let invalid_params_details_list_opt = if !err_invalid_params_details_list.is_empty() {
-        Some(err_invalid_params_details_list)
+      let invalid_params_details_entries_opt = if !err_invalid_param_details_entries.is_empty() {
+        Some(err_invalid_param_details_entries)
       } else {
         None
       };
 
-      return Err(SpectPageModuleManagerInitErr {
+      return Err(SpectSubpageModuleManagerInitErr {
         overlapping_mappings_opt: overlapping_mappings_opt,
-        invalid_params_details_list_opt: invalid_params_details_list_opt,
+        invalid_params_details_entries_opt: invalid_params_details_entries_opt,
         _nonexhaustive: (),
       });
     }
 
-    Ok(SpectPageModuleManager {
+    Ok(SpectSubpageModuleManager {
       page_mappings: page_mappings,
-      page_modules: page_modules,
+      subpage_modules: subpage_modules,
     })
+  }
+
+  pub fn modules(&self) -> &Vec<SpectSubpageModule> {
+    &self.subpage_modules
   }
 
   pub fn has_module_for_subpath(&self, path: &String) -> bool {
@@ -234,15 +301,15 @@ impl SpectPageModuleManager {
   }
 
   pub fn maybe_update(&mut self, path: &String) {
-    if let Some(page_module_idx) = self.page_mappings.get(path) {
+    if let Some(subpage_module_idx) = self.page_mappings.get(path) {
       // UNWRAP: Guaranteed to be present by construction
-      let page_module = self.page_modules.get_mut(*page_module_idx).unwrap();
-      match &page_module.params.refresh_policy {
-        &SpectPageModuleRefreshPolicy::OnEveryLoad => {
-          page_module.renderable_subpage_boxed.update_data()
+      let subpage_module = self.subpage_modules.get_mut(*subpage_module_idx).unwrap();
+      match &subpage_module.params.refresh_policy {
+        &SpectSubpageModuleRefreshPolicy::OnEveryLoad => {
+          subpage_module.renderable_subpage_boxed.update_data()
         }
         // UNREACHABLE: Not constructable (verified in this struct)
-        &SpectPageModuleRefreshPolicy::_NonExhaustive => unreachable!(),
+        &SpectSubpageModuleRefreshPolicy::_NonExhaustive => unreachable!(),
       }
     } else {
       warn!("Tried to update for non-existent path [{}]", path);
@@ -250,9 +317,9 @@ impl SpectPageModuleManager {
   }
 
   pub fn render_opt(&self, path: &String, query_opt: Option<&str>) -> Option<String> {
-    self.page_mappings.get(path).map(|page_module_idx| {
-      let page_module = self.page_modules.get(*page_module_idx).unwrap();
-      page_module.renderable_subpage_boxed.render(query_opt)
+    self.page_mappings.get(path).map(|subpage_module_idx| {
+      let subpage_module = self.subpage_modules.get(*subpage_module_idx).unwrap();
+      subpage_module.renderable_subpage_boxed.render(query_opt)
     })
   }
 }
@@ -275,7 +342,7 @@ impl NewService for SpectServer {
   fn new_service(&self) -> io::Result<SpectHandler> {
     Ok(SpectHandler::new(
       self.params.clone(),
-      self.page_module_manager_rwarc.clone(),
+      self.subpage_module_manager_rwarc.clone(),
     ))
   }
 }
@@ -283,11 +350,11 @@ impl NewService for SpectServer {
 impl SpectServer {
   pub fn new(
     params: SpectServerParams,
-    page_module_manager: SpectPageModuleManager,
+    subpage_module_manager: SpectSubpageModuleManager,
   ) -> SpectServer {
     SpectServer {
       params: params,
-      page_module_manager_rwarc: Arc::new(RwLock::new(page_module_manager)),
+      subpage_module_manager_rwarc: Arc::new(RwLock::new(subpage_module_manager)),
     }
   }
 
@@ -304,11 +371,11 @@ impl SpectServer {
 impl SpectHandler {
   pub fn new(
     server_params: SpectServerParams,
-    page_module_manager_rwarc: Arc<RwLock<SpectPageModuleManager>>,
+    subpage_module_manager_rwarc: Arc<RwLock<SpectSubpageModuleManager>>,
   ) -> SpectHandler {
     SpectHandler {
       server_params: server_params,
-      page_module_manager_rwarc: page_module_manager_rwarc,
+      subpage_module_manager_rwarc: subpage_module_manager_rwarc,
     }
   }
 
@@ -324,7 +391,7 @@ impl SpectHandler {
     let rendered_subpage = module_content_opt.unwrap();
     let rendered_page = format!(
       "{}\n{}\n{}",
-      self.render_header(),
+      self.render_header(uri.path()),
       rendered_subpage,
       self.render_footer()
     );
@@ -334,9 +401,15 @@ impl SpectHandler {
 
   fn render_content_for(&self, uri: &Uri) -> Option<String> {
     let path = uri.path().to_owned();
+
+    // Special case for root -- Render nothing (but let header render)
+    if path == "/" {
+      return Some("".to_owned());
+    }
+
     // UNWRAP: Not handling poisoned RWLock
     let has_module = self
-      .page_module_manager_rwarc
+      .subpage_module_manager_rwarc
       .read()
       .unwrap()
       .has_module_for_subpath(&path);
@@ -346,19 +419,59 @@ impl SpectHandler {
     }
 
     // UNWRAP: Not handling poisoned RWLock
-    let mut page_module_manager = self.page_module_manager_rwarc.write().unwrap();
-    page_module_manager.maybe_update(&path);
+    let mut subpage_module_manager = self.subpage_module_manager_rwarc.write().unwrap();
+    subpage_module_manager.maybe_update(&path);
 
     // UNWRAP: known to exist by `has_module` check above
     // N.B: This could just yield the possibly wrapped value, but that makes the semantics less
     // clear
-    let rendered_subpage = page_module_manager.render_opt(&path, uri.query()).unwrap();
+    let rendered_subpage = subpage_module_manager
+      .render_opt(&path, uri.query())
+      .unwrap();
 
     Some(rendered_subpage)
   }
 
-  fn render_header(&self) -> String {
-    "<html><body>".to_owned()
+  fn render_header(&self, path: &str) -> String {
+    format!(
+      "<html>\n{}\n{}\n<body>",
+      self.render_title(path),
+      self.render_index(),
+    )
+  }
+
+  fn render_title(&self, path: &str) -> String {
+    format!("<h1>Spect @ \"{}\"</h1>", path)
+  }
+
+  fn render_index(&self) -> String {
+    // UNWRAP: Not handling poisoned RWLock
+    let subpage_module_manager = self.subpage_module_manager_rwarc.read().unwrap();
+    let modules = subpage_module_manager.modules();
+
+    let mut rendered_index_items = Vec::new();
+
+    // Special case for root
+    rendered_index_items.push(format!("<li><a href=\"/\">[root]</a>: Index</li>"));
+
+    for module in modules {
+      rendered_index_items.push(format!(
+        "<li><a href=\"{}\">{}</a>: {}</li>",
+        module.address_subpath,
+        module.address_subpath,
+        module
+          .params
+          .description
+          .as_ref()
+          .map(|s| s.clone())
+          .unwrap_or_else(|| "No Description".to_owned())
+      ));
+    }
+
+    format!(
+      "<h3>Spect Index</h3><ul>\n{}\n</ul>",
+      rendered_index_items.join("\n")
+    )
   }
 
   fn render_footer(&self) -> String {

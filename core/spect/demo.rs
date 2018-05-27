@@ -3,7 +3,7 @@ extern crate spect;
 extern crate spect_zcfg;
 
 use spect::SpectServer;
-use spect::SpectPageModuleManager;
+use spect::SpectSubpageModuleManager;
 use spect::SpectServerParams;
 
 fn main() {
@@ -11,7 +11,7 @@ fn main() {
 
   let spect_server = SpectServer::new(
     SpectServerParams::default(),
-    SpectPageModuleManager::new(vec![spect_zcfg::get_zcfg_page_module()]).unwrap(),
+    SpectSubpageModuleManager::new(vec![spect_zcfg::get_zcfg_subpage_module()]).unwrap(),
   );
 
   spect_server.run().unwrap()
