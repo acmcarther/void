@@ -18,6 +18,11 @@ define_pub_cfg!(
   "Port to run the spect server on"
 );
 
+pub trait SpectRenderableSubpage {
+  fn try_update_data(&mut self, force_update: bool);
+  fn render(&self) -> String;
+}
+
 struct SpectServerParams {
   port: u32,
 }
@@ -27,8 +32,6 @@ struct SpectPageModule {
 }
 
 struct SpectServer {}
-
-pub struct SpectRenderableSubpage {}
 
 impl Default for SpectServerParams {
   fn default() -> SpectServerParams {

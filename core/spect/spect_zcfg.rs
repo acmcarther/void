@@ -14,20 +14,16 @@ use hyper::Result as HyperResult;
 use spect::SpectRenderableSubpage;
 use std::time::Instant;
 
-pub struct ZcfgSpectDataRendererParams {}
-
-pub struct ZcfgSpectDataRenderer {
-  params: ZcfgSpectDataRendererParams,
+pub struct ZcfgSpectRenderableSubpage {
   data_fetcher: ZcfgSpectDataFetcher,
+  data_renderer: ZcfgSpectDataRenderer,
   last_updated: Option<Instant>,
   data: ZcfgData,
 }
 
-pub struct ZcfgSpectDataFetcherParams {}
+pub struct ZcfgSpectDataRenderer {}
 
-pub struct ZcfgSpectDataFetcher {
-  params: ZcfgSpectDataFetcherParams,
-}
+pub struct ZcfgSpectDataFetcher {}
 
 pub struct ZcfgDetailRow {
   pub config_name: String,
@@ -40,45 +36,58 @@ pub struct ZcfgData {
   pub detail_rows: Vec<ZcfgDetailRow>,
 }
 
-impl Default for ZcfgSpectDataRendererParams {
-  fn default() -> ZcfgSpectDataRendererParams {
-    ZcfgSpectDataRendererParams {}
+impl Default for ZcfgSpectRenderableSubpage {
+  fn default() -> ZcfgSpectRenderableSubpage {
+    ZcfgSpectRenderableSubpage::new(
+      ZcfgSpectDataFetcher::default(),
+      ZcfgSpectDataRenderer::default(),
+    )
+  }
+}
+
+impl SpectRenderableSubpage for ZcfgSpectRenderableSubpage {
+  fn try_update_data(&mut self, _force_update: bool) {
+    // TODO(acmcarther): Use internal params to configure max update frequency
+    self.last_updated = Some(Instant::now());
+    self.data = self.data_fetcher.fetch();
+  }
+
+  fn render(&self) -> String {
+    self.data_renderer.render(&self.data)
+  }
+}
+
+impl ZcfgSpectRenderableSubpage {
+  pub fn new(
+    data_fetcher: ZcfgSpectDataFetcher,
+    data_renderer: ZcfgSpectDataRenderer,
+  ) -> ZcfgSpectRenderableSubpage {
+    ZcfgSpectRenderableSubpage {
+      data_fetcher: data_fetcher,
+      data_renderer: data_renderer,
+      last_updated: None,
+      data: ZcfgData::empty(),
+    }
   }
 }
 
 impl Default for ZcfgSpectDataRenderer {
   fn default() -> ZcfgSpectDataRenderer {
-    ZcfgSpectDataRenderer::new(
-      ZcfgSpectDataRendererParams::default(),
-      ZcfgSpectDataFetcher::default(),
-    )
+    ZcfgSpectDataRenderer::new()
   }
 }
 
 impl ZcfgSpectDataRenderer {
-  pub fn new(
-    params: ZcfgSpectDataRendererParams,
-    data_fetcher: ZcfgSpectDataFetcher,
-  ) -> ZcfgSpectDataRenderer {
-    ZcfgSpectDataRenderer {
-      params: params,
-      data_fetcher: data_fetcher,
-      last_updated: None,
-      data: ZcfgData::empty(),
-    }
+  pub fn new() -> ZcfgSpectDataRenderer {
+    ZcfgSpectDataRenderer {}
   }
 
-  pub fn update_data(&mut self) {
-    self.last_updated = Some(Instant::now());
-    self.data = self.data_fetcher.fetch();
-  }
-
-  pub fn render(&self) -> String {
+  pub fn render(&self, data: &ZcfgData) -> String {
     // TODO(acmcarther): Use a templating engine or something more robust
     format!(
       "{}\n{}\n{}\n",
       self.render_subheader(),
-      self.render_content(),
+      self.render_content(&data),
       self.render_subfooter()
     )
   }
@@ -87,11 +96,11 @@ impl ZcfgSpectDataRenderer {
     "<h3>ZCFG Application Data</h3>".to_owned()
   }
 
-  fn render_content(&self) -> String {
+  fn render_content(&self, data: &ZcfgData) -> String {
     format!(
       "<table>\n{}\n{}\n</table>",
       self.render_table_header(),
-      self.render_table_contents()
+      self.render_table_contents(&data)
     )
   }
 
@@ -104,10 +113,10 @@ impl ZcfgSpectDataRenderer {
     </tr>"#.to_owned()
   }
 
-  fn render_table_contents(&self) -> String {
+  fn render_table_contents(&self, data: &ZcfgData) -> String {
     let mut contents = String::new();
 
-    for detail_row in self.data.detail_rows.iter() {
+    for detail_row in data.detail_rows.iter() {
       contents.push_str("    <tr>\n");
       contents.push_str("      <td>");
       contents.push_str(&detail_row.config_name);
@@ -129,21 +138,15 @@ impl ZcfgSpectDataRenderer {
   }
 }
 
-impl Default for ZcfgSpectDataFetcherParams {
-  fn default() -> ZcfgSpectDataFetcherParams {
-    ZcfgSpectDataFetcherParams {}
-  }
-}
-
 impl Default for ZcfgSpectDataFetcher {
   fn default() -> ZcfgSpectDataFetcher {
-    ZcfgSpectDataFetcher::new(ZcfgSpectDataFetcherParams::default())
+    ZcfgSpectDataFetcher::new()
   }
 }
 
 impl ZcfgSpectDataFetcher {
-  pub fn new(params: ZcfgSpectDataFetcherParams) -> ZcfgSpectDataFetcher {
-    ZcfgSpectDataFetcher { params: params }
+  pub fn new() -> ZcfgSpectDataFetcher {
+    ZcfgSpectDataFetcher {}
   }
 
   pub fn fetch(&mut self) -> ZcfgData {
