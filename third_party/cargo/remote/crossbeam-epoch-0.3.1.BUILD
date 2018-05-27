@@ -25,7 +25,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__arrayvec__0_4_7//:arrayvec",
-        "@raze__cfg_if__0_1_2//:cfg_if",
+        "@raze__cfg_if__0_1_3//:cfg_if",
         "@raze__crossbeam_utils__0_2_2//:crossbeam_utils",
         "@raze__lazy_static__1_0_0//:lazy_static",
         "@raze__memoffset__0_2_1//:memoffset",

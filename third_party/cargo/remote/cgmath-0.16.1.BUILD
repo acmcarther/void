@@ -36,11 +36,9 @@ genrule(
     name = "cgmath_build_script_executor",
     srcs = glob(["*", "**/*.rs"]),
     outs = ["cgmath_out_dir_outputs.tar.gz"],
-    tools = [
-      ":cgmath_build_script",
-    ],
+    tools = [":cgmath_build_script"],
     local = 1,
-    cmd = "mkdir -p cgmath_out_dir_outputs/;"
+    cmd = "mkdir cgmath_out_dir_outputs/;"
         + " (export CARGO_MANIFEST_DIR=\"$$PWD/$$(dirname $(location :Cargo.toml))\";"
         + " export TARGET='x86_64-unknown-linux-gnu';"
         + " export RUST_BACKTRACE=1;"

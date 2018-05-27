@@ -27,7 +27,7 @@ rust_library(
     deps = [
         "@raze__iovec__0_1_2//:iovec",
         "@raze__lazycell__0_6_0//:lazycell",
-        "@raze__libc__0_2_40//:libc",
+        "@raze__libc__0_2_41//:libc",
         "@raze__log__0_4_1//:log",
         "@raze__net2__0_2_32//:net2",
         "@raze__slab__0_4_0//:slab",

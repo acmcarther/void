@@ -24,11 +24,11 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__futures__0_1_20//:futures",
+        "@raze__futures__0_1_21//:futures",
         "@raze__log__0_4_1//:log",
         "@raze__mio__0_6_14//:mio",
         "@raze__slab__0_4_0//:slab",
-        "@raze__tokio_executor__0_1_1//:tokio_executor",
+        "@raze__tokio_executor__0_1_2//:tokio_executor",
         "@raze__tokio_io__0_1_6//:tokio_io",
     ],
     rustc_flags = [

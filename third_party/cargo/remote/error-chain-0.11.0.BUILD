@@ -27,7 +27,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__backtrace__0_3_5//:backtrace",
+        "@raze__backtrace__0_3_8//:backtrace",
     ],
     rustc_flags = [
         "--cap-lints allow",
@@ -49,7 +49,7 @@ rust_binary(
     deps = [
         # Binaries get an implicit dependency on their lib
         ":error_chain",
-        "@raze__backtrace__0_3_5//:backtrace",
+        "@raze__backtrace__0_3_8//:backtrace",
     ],
     rustc_flags = [
         "--cap-lints allow",

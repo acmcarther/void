@@ -31,7 +31,7 @@ rust_library(
         "@raze__rustc_ap_rustc_data_structures__29_0_0//:rustc_ap_rustc_data_structures",
         "@raze__rustc_ap_serialize__29_0_0//:rustc_ap_serialize",
         "@raze__term__0_4_6//:term",
-        "@raze__unicode_width__0_1_4//:unicode_width",
+        "@raze__unicode_width__0_1_5//:unicode_width",
     ],
     rustc_flags = [
         "--cap-lints allow",

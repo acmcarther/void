@@ -26,7 +26,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__adler32__1_0_2//:adler32",
-        "@raze__byteorder__1_2_1//:byteorder",
+        "@raze__byteorder__1_2_3//:byteorder",
     ],
     rustc_flags = [
         "--cap-lints allow",

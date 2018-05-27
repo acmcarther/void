@@ -24,13 +24,14 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__cfg_if__0_1_2//:cfg_if",
+        "@raze__cfg_if__0_1_3//:cfg_if",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
     crate_features = [
+        "default",
         "use_std",
     ],
 )

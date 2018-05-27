@@ -24,7 +24,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__redox_syscall__0_1_37//:redox_syscall",
+        "@raze__redox_syscall__0_1_38//:redox_syscall",
     ],
     rustc_flags = [
         "--cap-lints allow",

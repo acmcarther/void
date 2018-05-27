@@ -24,8 +24,8 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__histogram__0_6_8//:histogram",
-        "@raze__time__0_1_39//:time",
+        "@raze__histogram__0_6_9//:histogram",
+        "@raze__time__0_1_40//:time",
     ],
     rustc_flags = [
         "--cap-lints allow",

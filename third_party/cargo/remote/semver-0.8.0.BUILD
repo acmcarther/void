@@ -27,7 +27,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__semver_parser__0_7_0//:semver_parser",
-        "@raze__serde__1_0_36//:serde",
+        "@raze__serde__1_0_62//:serde",
     ],
     rustc_flags = [
         "--cap-lints allow",

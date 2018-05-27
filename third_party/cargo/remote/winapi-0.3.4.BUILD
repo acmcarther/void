@@ -44,7 +44,6 @@ rust_library(
         "processthreadsapi",
         "profileapi",
         "std",
-        "synchapi",
         "sysinfoapi",
         "timezoneapi",
         "winbase",

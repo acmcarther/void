@@ -24,7 +24,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__bitflags__1_0_1//:bitflags",
+        "@raze__bitflags__1_0_3//:bitflags",
         "@raze__fuchsia_zircon_sys__0_3_3//:fuchsia_zircon_sys",
     ],
     rustc_flags = [

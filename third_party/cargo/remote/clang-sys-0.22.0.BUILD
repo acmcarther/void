@@ -25,7 +25,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__glob__0_2_11//:glob",
-        "@raze__libc__0_2_40//:libc",
+        "@raze__libc__0_2_41//:libc",
         "@//third_party/cargo/overrides/libloading-0.5.0:libloading",
     ],
     rustc_flags = [

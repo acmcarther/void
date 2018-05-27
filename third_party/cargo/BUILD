@@ -26,7 +26,7 @@ alias(
 )
 alias(
     name = "chrono",
-    actual = "@raze__chrono__0_4_1//:chrono",
+    actual = "@raze__chrono__0_4_2//:chrono",
 )
 alias(
     name = "derive_builder",
@@ -42,7 +42,7 @@ alias(
 )
 alias(
     name = "futures",
-    actual = "@raze__futures__0_1_20//:futures",
+    actual = "@raze__futures__0_1_21//:futures",
 )
 alias(
     name = "gnuplot",
@@ -50,7 +50,7 @@ alias(
 )
 alias(
     name = "hyper",
-    actual = "@raze__hyper__0_11_24//:hyper",
+    actual = "@raze__hyper__0_11_27//:hyper",
 )
 alias(
     name = "itertools",
@@ -62,7 +62,7 @@ alias(
 )
 alias(
     name = "libc",
-    actual = "@raze__libc__0_2_40//:libc",
+    actual = "@raze__libc__0_2_41//:libc",
 )
 alias(
     name = "log",
@@ -78,13 +78,7 @@ alias(
 )
 alias(
     name = "protobuf",
-    actual = "@raze__protobuf__1_5_0//:protobuf",
-)
-alias(
-    # Extra aliased target, from raze configuration
-    # N.B.: The exact form of this is subject to change.
-    name = "cargo_bin_protoc_gen_rust",
-    actual = "@raze__protobuf__1_5_0//:cargo_bin_protoc_gen_rust",
+    actual = "@raze__protobuf__1_7_1//:protobuf",
 )
 alias(
     name = "rand",
@@ -114,7 +108,7 @@ alias(
 )
 alias(
     name = "time",
-    actual = "@raze__time__0_1_39//:time",
+    actual = "@raze__time__0_1_40//:time",
 )
 alias(
     name = "vk_sys",
@@ -122,7 +116,7 @@ alias(
 )
 alias(
     name = "x11_dl",
-    actual = "@raze__x11_dl__2_17_3//:x11_dl",
+    actual = "@raze__x11_dl__2_17_5//:x11_dl",
 )
 alias(
     name = "zcfg",

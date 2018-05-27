@@ -24,8 +24,8 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__bytes__0_4_6//:bytes",
-        "@raze__futures__0_1_20//:futures",
+        "@raze__bytes__0_4_8//:bytes",
+        "@raze__futures__0_1_21//:futures",
         "@raze__log__0_4_1//:log",
         "@raze__mio__0_6_14//:mio",
         "@raze__tokio_io__0_1_6//:tokio_io",

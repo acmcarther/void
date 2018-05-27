@@ -24,7 +24,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__num_traits__0_2_2//:num_traits",
+        "@raze__num_traits__0_2_4//:num_traits",
     ],
     rustc_flags = [
         "--cap-lints allow",

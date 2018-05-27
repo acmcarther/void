@@ -40,11 +40,9 @@ genrule(
     name = "bindgen_build_script_executor",
     srcs = glob(["*", "**/*.rs"]),
     outs = ["bindgen_out_dir_outputs.tar.gz"],
-    tools = [
-      ":bindgen_build_script",
-    ],
+    tools = [":bindgen_build_script"],
     local = 1,
-    cmd = "mkdir -p bindgen_out_dir_outputs/;"
+    cmd = "mkdir bindgen_out_dir_outputs/;"
         + " (export CARGO_MANIFEST_DIR=\"$$PWD/$$(dirname $(location :Cargo.toml))\";"
         + " export TARGET='x86_64-unknown-linux-gnu';"
         + " export RUST_BACKTRACE=1;"
@@ -68,15 +66,15 @@ rust_binary(
         # Binaries get an implicit dependency on their lib
         ":bindgen",
         "@raze__cexpr__0_2_3//:cexpr",
-        "@raze__cfg_if__0_1_2//:cfg_if",
+        "@raze__cfg_if__0_1_3//:cfg_if",
         "@raze__clang_sys__0_22_0//:clang_sys",
         "@raze__clap__2_31_2//:clap",
-        "@raze__env_logger__0_5_6//:env_logger",
+        "@raze__env_logger__0_5_10//:env_logger",
         "@raze__lazy_static__1_0_0//:lazy_static",
         "@raze__log__0_4_1//:log",
         "@raze__peeking_take_while__0_1_2//:peeking_take_while",
         "@raze__quote__0_3_15//:quote",
-        "@raze__regex__0_2_10//:regex",
+        "@raze__regex__0_2_11//:regex",
         "@raze__which__1_0_5//:which",
     ],
     rustc_flags = [
@@ -100,15 +98,15 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__cexpr__0_2_3//:cexpr",
-        "@raze__cfg_if__0_1_2//:cfg_if",
+        "@raze__cfg_if__0_1_3//:cfg_if",
         "@raze__clang_sys__0_22_0//:clang_sys",
         "@raze__clap__2_31_2//:clap",
-        "@raze__env_logger__0_5_6//:env_logger",
+        "@raze__env_logger__0_5_10//:env_logger",
         "@raze__lazy_static__1_0_0//:lazy_static",
         "@raze__log__0_4_1//:log",
         "@raze__peeking_take_while__0_1_2//:peeking_take_while",
         "@raze__quote__0_3_15//:quote",
-        "@raze__regex__0_2_10//:regex",
+        "@raze__regex__0_2_11//:regex",
         "@raze__which__1_0_5//:which",
     ],
     rustc_flags = [

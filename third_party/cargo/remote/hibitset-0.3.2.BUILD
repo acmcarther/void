@@ -25,7 +25,7 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__atom__0_3_4//:atom",
+        "@raze__atom__0_3_5//:atom",
         "@raze__rayon__0_8_2//:rayon",
     ],
     rustc_flags = [

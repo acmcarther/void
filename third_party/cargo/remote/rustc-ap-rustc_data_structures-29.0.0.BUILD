@@ -28,10 +28,10 @@ rust_library(
     crate_type = "lib",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__cfg_if__0_1_2//:cfg_if",
+        "@raze__cfg_if__0_1_3//:cfg_if",
         "@raze__log__0_4_1//:log",
-        "@raze__parking_lot__0_5_4//:parking_lot",
-        "@raze__parking_lot_core__0_2_13//:parking_lot_core",
+        "@raze__parking_lot__0_5_5//:parking_lot",
+        "@raze__parking_lot_core__0_2_14//:parking_lot_core",
         "@raze__rustc_ap_serialize__29_0_0//:rustc_ap_serialize",
         "@raze__stable_deref_trait__1_0_0//:stable_deref_trait",
         "@raze__term__0_4_6//:term",

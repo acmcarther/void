@@ -26,9 +26,9 @@ rust_library(
     deps = [
         "@raze__error_chain__0_11_0//:error_chain",
         "@raze__semver__0_8_0//:semver",
-        "@raze__serde__1_0_36//:serde",
-        "@raze__serde_derive__1_0_36//:serde_derive",
-        "@raze__serde_json__1_0_13//:serde_json",
+        "@raze__serde__1_0_62//:serde",
+        "@raze__serde_derive__1_0_62//:serde_derive",
+        "@raze__serde_json__1_0_18//:serde_json",
     ],
     rustc_flags = [
         "--cap-lints allow",

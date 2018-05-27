@@ -26,7 +26,7 @@ rust_library(
     deps = [
         "@raze__crossbeam_deque__0_2_0//:crossbeam_deque",
         "@raze__lazy_static__1_0_0//:lazy_static",
-        "@raze__libc__0_2_40//:libc",
+        "@raze__libc__0_2_41//:libc",
         "@raze__num_cpus__1_8_0//:num_cpus",
         "@raze__rand__0_4_2//:rand",
     ],

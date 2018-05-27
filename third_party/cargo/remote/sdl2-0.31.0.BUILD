@@ -52,7 +52,7 @@ rust_library(
     deps = [
         "@raze__bitflags__0_7_0//:bitflags",
         "@raze__lazy_static__0_2_11//:lazy_static",
-        "@raze__libc__0_2_40//:libc",
+        "@raze__libc__0_2_41//:libc",
         "@raze__num__0_1_42//:num",
         "@raze__rand__0_3_22//:rand",
         "@//third_party/cargo/overrides/sdl2-sys:sdl2_sys",
