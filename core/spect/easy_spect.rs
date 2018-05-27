@@ -29,7 +29,7 @@ pub fn start(extra_modules: Vec<SpectSubpageModule>) {
 
     let spect_server = SpectServer::new(
       SpectServerParams::default(),
-      SpectSubpageModuleManager::new(vec![spect_zcfg::get_zcfg_subpage_module()]).unwrap(),
+      SpectSubpageModuleManager::new(modules).unwrap(),
     );
 
     spect_server.run().unwrap();

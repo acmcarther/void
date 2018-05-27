@@ -61,6 +61,7 @@ rust_binary(
     srcs = ["demo_easy.rs"],
     deps = [
         ":easy_spect",
+        "//core:init",
         "//third_party/cargo:lazy_static",
         "//third_party/cargo:zcfg",
     ],
