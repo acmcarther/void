@@ -38,5 +38,7 @@ rust_binary(
         ":spect",
         ":spect_zcfg",
         "//core:init",
+        "//third_party/cargo:futures",
+        "//third_party/cargo:hyper",
     ],
 )

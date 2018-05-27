@@ -4,15 +4,22 @@ extern crate futures;
 extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
 extern crate log;
 extern crate spect;
 #[macro_use]
 extern crate zcfg;
 
-use hyper::Result as HyperResult;
 use spect::SpectRenderableSubpage;
+use spect::SpectPageModule;
+use spect::SpectPageModuleParams;
 use std::time::Instant;
+
+define_pub_cfg!(
+  spect_zcfg_config_name_hide_prefix,
+  String,
+  "__".to_owned(),
+  "Configs named with this leading prefix will be hidden from listing."
+);
 
 pub struct ZcfgSpectRenderableSubpage {
   data_fetcher: ZcfgSpectDataFetcher,
@@ -23,7 +30,9 @@ pub struct ZcfgSpectRenderableSubpage {
 
 pub struct ZcfgSpectDataRenderer {}
 
-pub struct ZcfgSpectDataFetcher {}
+pub struct ZcfgSpectDataFetcher {
+  config_name_hide_prefix: String,
+}
 
 pub struct ZcfgDetailRow {
   pub config_name: String,
@@ -34,6 +43,7 @@ pub struct ZcfgDetailRow {
 
 pub struct ZcfgData {
   pub detail_rows: Vec<ZcfgDetailRow>,
+  pub hidden_detail_rows: Vec<ZcfgDetailRow>,
 }
 
 impl Default for ZcfgSpectRenderableSubpage {
@@ -46,13 +56,12 @@ impl Default for ZcfgSpectRenderableSubpage {
 }
 
 impl SpectRenderableSubpage for ZcfgSpectRenderableSubpage {
-  fn try_update_data(&mut self, _force_update: bool) {
-    // TODO(acmcarther): Use internal params to configure max update frequency
+  fn update_data(&mut self) {
     self.last_updated = Some(Instant::now());
     self.data = self.data_fetcher.fetch();
   }
 
-  fn render(&self) -> String {
+  fn render(&self, _query_opt: Option<&str>) -> String {
     self.data_renderer.render(&self.data)
   }
 }
@@ -88,7 +97,7 @@ impl ZcfgSpectDataRenderer {
       "{}\n{}\n{}\n",
       self.render_subheader(),
       self.render_content(&data),
-      self.render_subfooter()
+      self.render_subfooter(&data)
     )
   }
 
@@ -115,7 +124,6 @@ impl ZcfgSpectDataRenderer {
 
   fn render_table_contents(&self, data: &ZcfgData) -> String {
     let mut contents = String::new();
-
     for detail_row in data.detail_rows.iter() {
       contents.push_str("    <tr>\n");
       contents.push_str("      <td>");
@@ -133,36 +141,47 @@ impl ZcfgSpectDataRenderer {
     contents
   }
 
-  fn render_subfooter(&self) -> String {
-    "".to_owned()
+  fn render_subfooter(&self, data: &ZcfgData) -> String {
+    format!("<p>And {} hidden</p>", data.hidden_detail_rows.len())
   }
 }
 
 impl Default for ZcfgSpectDataFetcher {
   fn default() -> ZcfgSpectDataFetcher {
-    ZcfgSpectDataFetcher::new()
+    ZcfgSpectDataFetcher::new(spect_zcfg_config_name_hide_prefix::CONFIG.get_value())
   }
 }
 
 impl ZcfgSpectDataFetcher {
-  pub fn new() -> ZcfgSpectDataFetcher {
-    ZcfgSpectDataFetcher {}
+  pub fn new(config_name_hide_prefix: String) -> ZcfgSpectDataFetcher {
+    ZcfgSpectDataFetcher {
+      config_name_hide_prefix: config_name_hide_prefix,
+    }
   }
 
   pub fn fetch(&mut self) -> ZcfgData {
     // UNWRAP: If this fails, the application is blown.
     let initializers = zcfg::STATIC_CONFIG_INITIALIZERS.read().unwrap();
 
-    let detail_rows = initializers
-      .iter()
-      .map(|initr| ZcfgDetailRow {
+    let mut detail_rows = Vec::new();
+    let mut hidden_detail_rows = Vec::new();
+
+    for initr in initializers.iter() {
+      let row = ZcfgDetailRow {
         config_name: initr.config_name().to_owned(),
         location: format!("{}:{}", initr.file().to_owned(), initr.line()),
         description: initr.description().to_owned(),
-      })
-      .collect::<Vec<_>>();
+      };
+      if !row.config_name.starts_with(&self.config_name_hide_prefix) {
+        detail_rows.push(row);
+      } else {
+        hidden_detail_rows.push(row);
+      }
+    }
+
     ZcfgData {
       detail_rows: detail_rows,
+      hidden_detail_rows: hidden_detail_rows,
     }
   }
 }
@@ -171,6 +190,15 @@ impl ZcfgData {
   pub fn empty() -> ZcfgData {
     ZcfgData {
       detail_rows: Vec::new(),
+      hidden_detail_rows: Vec::new(),
     }
+  }
+}
+
+pub fn get_zcfg_page_module() -> SpectPageModule {
+  SpectPageModule {
+    address_subpath: "/zcfg".to_owned(),
+    params: SpectPageModuleParams::default(),
+    renderable_subpage_boxed: Box::new(ZcfgSpectRenderableSubpage::default()),
   }
 }
