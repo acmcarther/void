@@ -43,6 +43,8 @@ lazy_static! {
     let mut set = HashSet::new();
     // Root has index bound
     set.insert("/".to_owned());
+    // Spect monitors itself on spect
+    set.insert("/spect".to_owned());
     set
   };
 }
@@ -60,13 +62,14 @@ pub struct SpectGenericIssue {
 }
 
 /** A specification for how to update the data for a subpage. */
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SpectSubpageModuleRefreshPolicy {
   OnEveryLoad,
   _NonExhaustive,
 }
 
 /** Arguments for handling of a subpage module. */
+#[derive(Clone, Debug)]
 pub struct SpectSubpageModuleParams {
   pub description: Option<String>,
   pub refresh_policy: SpectSubpageModuleRefreshPolicy,
@@ -110,7 +113,7 @@ pub struct SpectSubpageModuleManagerInitErr {
 }
 
 /** Arguments for configuring Spect server. */
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SpectServerParams {
   pub addr_ipv4: String,
   pub port: u32,
@@ -125,7 +128,7 @@ pub struct SpectServer {
 /** A request-handler spun off of a SpectServer. */
 // PUBLIC_FOR_TRAIT(NewService::<SpectServer>)
 pub struct SpectHandler {
-  #[allow(unused)] server_params: SpectServerParams,
+  server_params: SpectServerParams,
   subpage_module_manager_rwarc: Arc<RwLock<SpectSubpageModuleManager>>,
 }
 
@@ -407,6 +410,11 @@ impl SpectHandler {
       return Some("".to_owned());
     }
 
+    // Special case for self -- Render without a submodule
+    if path == "/spect" {
+      return Some(self.render_self_content());
+    }
+
     // UNWRAP: Not handling poisoned RWLock
     let has_module = self
       .subpage_module_manager_rwarc
@@ -440,6 +448,37 @@ impl SpectHandler {
     )
   }
 
+  fn render_self_content(&self) -> String {
+    format!(
+      "<h3>Spect self</h3>\n{}\n{}",
+      self.render_self_server_params(),
+      self.render_self_submodule_details()
+    )
+  }
+
+  fn render_self_server_params(&self) -> String {
+    format!("<h4>Server Params</h4>\n<p>{:#?}</p>", self.server_params)
+  }
+
+  fn render_self_submodule_details(&self) -> String {
+    let subpage_module_manager = self.subpage_module_manager_rwarc.read().unwrap();
+    let submodule_details_list = subpage_module_manager
+      .modules()
+      .iter()
+      .map(|module| {
+        format!(
+          "<li><b>{}.params</b>: {:#?}",
+          module.address_subpath, module.params
+        )
+      })
+      .collect::<Vec<_>>();
+
+    format!(
+      "<h4>Submodule Details</h4>\n<ul>{}</ul>",
+      submodule_details_list.join("\n")
+    )
+  }
+
   fn render_title(&self, path: &str) -> String {
     format!("<h1>Spect @ \"{}\"</h1>", path)
   }
@@ -453,6 +492,11 @@ impl SpectHandler {
 
     // Special case for root
     rendered_index_items.push(format!("<li><a href=\"/\">[root]</a>: Index</li>"));
+
+    // Special case for spect itself
+    rendered_index_items.push(format!(
+      "<li><a href=\"/spect\">/spect</a>: Spect's own monitoring</li>"
+    ));
 
     for module in modules {
       rendered_index_items.push(format!(
