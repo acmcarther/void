@@ -23,6 +23,7 @@ rust_binary(
         "//core/rend/vk:sdl2_vulkan_interop",
         "//core/rend/vk:vk_base_renderer",
         "//core/rend/vk:vk_lite",
+        "//core/spect:easy_spect",
         "//experimental/physics:fast_cosmic_physics",
         "//third_party/cargo:cgmath",
         "//third_party/cargo:chrono",

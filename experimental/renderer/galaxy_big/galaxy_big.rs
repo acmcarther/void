@@ -1,5 +1,6 @@
 #![feature(used)]
 extern crate cgmath;
+extern crate easy_spect;
 extern crate fast_cosmic_physics;
 extern crate galaxy_big_renderer;
 extern crate geom;
@@ -149,6 +150,7 @@ lazy_static! {
 
 fn main() {
   init::init();
+  easy_spect::start(Vec::new() /* extra_modules */);
 
   let mut game_window = GameWindow::new();
   let mut galaxy_big_renderer = {
