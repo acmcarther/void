@@ -31,14 +31,37 @@ rust_library(
     ],
 )
 
+rust_library(
+    name = "easy_spect",
+    srcs = ["easy_spect.rs"],
+    deps = [
+        ":spect",
+        ":spect_zcfg",
+        "//third_party/cargo:lazy_static",
+        "//third_party/cargo:log",
+        "//third_party/cargo:zcfg",
+    ],
+)
+
 rust_binary(
     name = "demo",
     srcs = ["demo.rs"],
     deps = [
         ":spect",
         ":spect_zcfg",
-        "//core:init",
         "//third_party/cargo:futures",
         "//third_party/cargo:hyper",
+        "//third_party/cargo:lazy_static",
+        "//third_party/cargo:zcfg",
+    ],
+)
+
+rust_binary(
+    name = "demo_easy",
+    srcs = ["demo_easy.rs"],
+    deps = [
+        ":easy_spect",
+        "//third_party/cargo:lazy_static",
+        "//third_party/cargo:zcfg",
     ],
 )

@@ -76,7 +76,7 @@ pub struct SpectSubpageModuleParams {
 pub struct SpectSubpageModule {
   pub address_subpath: String,
   pub params: SpectSubpageModuleParams,
-  pub renderable_subpage_boxed: Box<SpectRenderableSubpage>,
+  pub renderable_subpage_boxed: Box<SpectRenderableSubpage + Send>,
 }
 
 /** A subpage processor that manages all subpages. */
