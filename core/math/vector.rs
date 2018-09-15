@@ -14,8 +14,6 @@ use std::ops::DivAssign;
 use std::ops::Mul;
 use std::ops::MulAssign;
 
-// N.B. These collections are intentionally non-generic
-//
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 #[repr(C)]
 pub struct Vector2<T> {
