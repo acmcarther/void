@@ -16,7 +16,7 @@ rust_binary(
         ":game_client",
         ":game_server",
         "//core:init",
-        "//core:task",
+        "//core/util:task",
         "//third_party/cargo:lazy_static",
         "//third_party/cargo:zcfg",
     ],
@@ -29,7 +29,7 @@ rust_library(
         "-C opt-level=2",
     ],
     deps = [
-        "//core:task",
+        "//core/util:task",
         "//third_party/cargo:log",
     ],
 )
@@ -41,7 +41,7 @@ rust_library(
         "-C opt-level=2",
     ],
     deps = [
-        "//core:task",
+        "//core/util:task",
         "//third_party/cargo:log",
     ],
 )

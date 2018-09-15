@@ -10,7 +10,8 @@ rust_library(
     name = "icosphere",
     srcs = ["icosphere.rs"],
     deps = [
-        "//core/geom",
+        "//core/gfx:gfx_basics",
+        "//core/math:vector",
         "//third_party/cargo:itertools",
     ],
 )

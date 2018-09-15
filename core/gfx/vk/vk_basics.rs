@@ -1,4 +1,4 @@
-extern crate geom;
+extern crate gfx_basics;
 #[macro_use]
 extern crate memoffset;
 extern crate vk_buffer_cache;
@@ -7,8 +7,8 @@ extern crate vk_buffer_support as vkbs;
 extern crate vk_lite as vkl;
 extern crate vk_sys as vk;
 
-use geom::Mesh;
-use geom::Vertex;
+use gfx_basics::Mesh;
+use gfx_basics::Vertex;
 use std::mem;
 use vk_buffer_cache::VertexBufferDescriptor;
 use vk_buffer_cache::VertexBufferDescriptorId;

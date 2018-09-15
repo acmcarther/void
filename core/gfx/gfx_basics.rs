@@ -1,8 +1,12 @@
+extern crate vector;
+
+use vector::Vector3;
+
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub struct Vertex {
-  pub pos: [f32; 3],
-  pub norm: [f32; 3],
+  pub pos: Vector3<f32>,
+  pub norm: Vector3<f32>,
 }
 
 #[derive(Debug, Clone)]

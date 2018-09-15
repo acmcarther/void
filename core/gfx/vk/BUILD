@@ -8,6 +8,24 @@ load(
 )
 
 rust_library(
+    name = "vk_basics",
+    srcs = ["vk_basics.rs"],
+    data = [
+    ],
+    rustc_flags = [
+        "-C opt-level=2",
+    ],
+    deps = [
+        "//core/gfx:gfx_basics",
+        "//core/gfx/vk:vk_buffer_cache",
+        "//core/gfx/vk:vk_buffer_support",
+        "//core/gfx/vk:vk_lite",
+        "//third_party/cargo:memoffset",
+        "//third_party/cargo:vk_sys",
+    ],
+)
+
+rust_library(
     name = "vk_lite",
     srcs = ["vk_lite.rs"],
     rustc_flags = [

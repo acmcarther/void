@@ -3,7 +3,7 @@ extern crate cgmath;
 extern crate easy_spect;
 extern crate fast_cosmic_physics;
 extern crate galaxy_big_renderer;
-extern crate geom;
+extern crate gfx_basics;
 extern crate icosphere;
 extern crate init;
 #[macro_use]
@@ -27,7 +27,7 @@ use fast_cosmic_physics::SystemId;
 use fast_cosmic_physics::SystemParams;
 use galaxy_big_renderer::GalaxyBigRenderer;
 use galaxy_big_renderer::MeshToRender;
-use geom::Mesh;
+use gfx_basics::Mesh;
 use rand::Rng;
 use vk_base_renderer::BaseRenderer;
 use vk_base_renderer::BaseRendererConfig;

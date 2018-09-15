@@ -6,15 +6,13 @@ load(
     "rust_binary",
 )
 
-rust_library(
-    name = "init",
-    srcs = ["init.rs"],
+rust_binary(
+    name = "x11",
+    srcs = ["x11.rs"],
     deps = [
-        "//third_party/cargo:chrono",
-        "//third_party/cargo:fern",
+        "//core:init",
         "//third_party/cargo:lazy_static",
-        "//third_party/cargo:log",
+        "//third_party/cargo:x11_dl",
         "//third_party/cargo:zcfg",
-        "//third_party/cargo:zcfg_flag_parser",
     ],
 )

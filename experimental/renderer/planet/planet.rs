@@ -1,5 +1,5 @@
 extern crate chrono;
-extern crate geom;
+extern crate gfx_basics;
 extern crate icosphere;
 extern crate log;
 extern crate rand;

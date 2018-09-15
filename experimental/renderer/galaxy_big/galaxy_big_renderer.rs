@@ -1,5 +1,5 @@
 extern crate cgmath;
-extern crate geom;
+extern crate gfx_basics;
 extern crate icosphere;
 #[macro_use]
 extern crate log;
@@ -18,8 +18,8 @@ extern crate vk_swapchain_support as vkss;
 extern crate vk_sys as vk;
 
 use cgmath::Angle;
-use geom::Mesh;
-use geom::Vertex;
+use gfx_basics::Mesh;
+use gfx_basics::Vertex;
 use vk_base_renderer::BaseRenderer;
 use std::collections::HashMap;
 use std::os::raw::c_void;

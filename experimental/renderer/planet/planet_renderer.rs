@@ -1,6 +1,5 @@
 extern crate cgmath;
-extern crate geom;
-extern crate geom_vk_support;
+extern crate gfx_basics;
 extern crate icosphere;
 #[macro_use]
 extern crate log;
@@ -8,6 +7,7 @@ extern crate log;
 extern crate memoffset;
 extern crate vk_application;
 extern crate vk_base_renderer;
+extern crate vk_basics;
 extern crate vk_buffer_cache;
 extern crate vk_buffer_support as vkbs;
 extern crate vk_descriptor_support as vkdrs;
@@ -20,8 +20,8 @@ extern crate vk_swapchain_support as vkss;
 extern crate vk_sys as vk;
 
 use cgmath::Matrix4;
-use geom::Mesh;
-use geom::Vertex;
+use gfx_basics::Mesh;
+use gfx_basics::Vertex;
 use std::mem;
 use vk_application::Application as VkApplication;
 use vk_application::ApplicationRendererInitializer;
@@ -82,7 +82,7 @@ impl ApplicationRendererInitializer for PlanetARI {
     {
       let mesh = icosphere::icosphere(0u32 /* iterations */);
       // UNRAP: pop guaranteed to be present (by make_mesh_buffers api)
-      let mesh_buffer_set = do_or_die!(geom_vk_support::make_mesh_buffers(
+      let mesh_buffer_set = do_or_die!(vk_basics::make_mesh_buffers(
         &base_renderer.device,
         &copy_command_pool,
         &queue,
@@ -99,7 +99,7 @@ impl ApplicationRendererInitializer for PlanetARI {
   fn init_vbd_cache(&mut self, vbd_cache: &mut VertexBufferDescriptorCache) {
     vbd_cache.insert(
       STANDARD_VERTEX_BUFFER_DESCRIPTOR_ID,
-      geom_vk_support::vbd_for_vertex(),
+      vk_basics::vbd_for_vertex(),
     );
   }
 

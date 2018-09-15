@@ -49,6 +49,7 @@ rust_binary(
     deps = [
         ":spect",
         ":spect_zcfg",
+        "//core:init",
         "//third_party/cargo:futures",
         "//third_party/cargo:hyper",
         "//third_party/cargo:lazy_static",

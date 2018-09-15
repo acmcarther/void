@@ -22,7 +22,7 @@ gnuplot = "0.0.24"
 sdl2 = "0.31.0"
 bindgen = "0.35.0"
 dylib = "0.0.3"
-x11-dl = "2.17.2"
+x11-dl = "2.17.5"
 rustfmt-nightly = "0.3.8"
 memoffset = "0.2.1"
 derive_builder = "0.5.1"
@@ -38,7 +38,7 @@ workspace_path = "//third_party/cargo"
 target = "x86_64-unknown-linux-gnu"
 genmode = "Remote"
 
-[raze.crates.x11-dl.'2.17.3']
+[raze.crates.x11-dl.'2.17.5']
 gen_buildrs = true
 
 [raze.crates.rustfmt-nightly.'0.3.8']
