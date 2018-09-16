@@ -2,8 +2,11 @@ package(default_visibility = ["//visibility:public"])
 
 load("//tools/rust:bindgen.bzl", "bindgen")
 
+# A hack around lack of link_opts propagation from cc_library to rust_binary
+load("//third_party/SDL2:opts.bzl", "SDL_LINK_OPTS")
+
 licenses([
-    "notice" # not actually third party
+    "notice",  # not actually third party
 ])
 
 bindgen(
@@ -43,7 +46,8 @@ rust_library(
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
-    ],
+        "-lpulse",
+    ] + SDL_LINK_OPTS,
     deps = [
         "//third_party/SDL2",
     ],

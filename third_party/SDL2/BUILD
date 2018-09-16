@@ -1,5 +1,7 @@
 package(default_visibility = ["//visibility:public"])
 
+load(":opts.bzl", "SDL_LINK_OPTS")
+
 licenses(["notice"])
 
 filegroup(
@@ -99,8 +101,6 @@ cc_library(
         "-Wno-string-conversion",
     ],
     includes = ["include"],
-    linkopts = [
-        "-ldl",
-    ],
+    linkopts = SDL_LINK_OPTS,
     linkstatic = 1,
 )
