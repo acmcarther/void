@@ -55,5 +55,6 @@ rust_library(
         "--target=x86_64-unknown-linux-gnu",
     ],
     deps = [
+        "//third_party/sqlite3",
     ],
 )

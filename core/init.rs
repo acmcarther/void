@@ -12,17 +12,17 @@ extern crate zcfg_flag_parser;
 use std::env;
 
 #[derive(Clone, Debug)]
-pub struct LogLevelParsable(pub log::LogLevelFilter);
+pub struct LogLevelParsable(pub log::LevelFilter);
 
 impl zcfg::ConfigParseable for LogLevelParsable {
   type Output = LogLevelParsable;
   fn parse_from_str(s: &str) -> Result<Self::Output, zcfg::ParseErr> {
     match s {
-      "trace" | "Trace" => Ok(LogLevelParsable(log::LogLevelFilter::Trace)),
-      "debug" | "Debug" => Ok(LogLevelParsable(log::LogLevelFilter::Debug)),
-      "info" | "Info" => Ok(LogLevelParsable(log::LogLevelFilter::Info)),
-      "warn" | "Warn" => Ok(LogLevelParsable(log::LogLevelFilter::Warn)),
-      "error" | "Error" => Ok(LogLevelParsable(log::LogLevelFilter::Error)),
+      "trace" | "Trace" => Ok(LogLevelParsable(log::LevelFilter::Trace)),
+      "debug" | "Debug" => Ok(LogLevelParsable(log::LevelFilter::Debug)),
+      "info" | "Info" => Ok(LogLevelParsable(log::LevelFilter::Info)),
+      "warn" | "Warn" => Ok(LogLevelParsable(log::LevelFilter::Warn)),
+      "error" | "Error" => Ok(LogLevelParsable(log::LevelFilter::Error)),
       _ => Err("Unknown LogLevel value".to_owned()),
     }
   }
@@ -31,7 +31,7 @@ impl zcfg::ConfigParseable for LogLevelParsable {
 define_pub_cfg!(
   log_level,
   ::LogLevelParsable,
-  ::LogLevelParsable(::log::LogLevelFilter::Info),
+  ::LogLevelParsable(::log::LevelFilter::Info),
   "What log level to emit logs to"
 );
 
