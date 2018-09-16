@@ -3,7 +3,13 @@ cargo-raze crate build file.
 
 DO NOT EDIT! Replaced on runs of cargo-raze
 """
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+  # Public for visibility by "@raze__crate__version//" targets.
+  #
+  # Prefer access through "//third_party/cargo", which limits external
+  # visibility to explicit Cargo.toml dependencies.
+  "//visibility:public",
+])
 
 licenses([
   "notice", # "MIT,Apache-2.0"
@@ -14,8 +20,8 @@ load(
     "rust_library",
     "rust_binary",
     "rust_test",
-    "rust_bench_test",
 )
+
 
 
 rust_library(
@@ -25,7 +31,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__kernel32_sys__0_2_2//:kernel32_sys",
-        "@raze__net2__0_2_32//:net2",
+        "@raze__net2__0_2_33//:net2",
         "@raze__winapi__0_2_8//:winapi",
         "@raze__ws2_32_sys__0_2_1//:ws2_32_sys",
     ],
@@ -33,6 +39,7 @@ rust_library(
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
+    version = "0.2.1",
     crate_features = [
     ],
 )

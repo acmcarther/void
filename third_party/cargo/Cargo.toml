@@ -3,18 +3,18 @@ name = "compile_with_bazel"
 version = "0.0.0"
 
 [dependencies]
-chrono = "0.4.0"
-fern = "0.4.3"
-futures = "0.1.17"
-hyper = "0.11.7"
-itertools = "0.7.4"
-lazy_static = "0.2.11"
-libc = "0.2.40"
-log = "0.3.8"
-rand = "0.3.18"
-specs = "0.10.0"
-tic = "0.3.0"
-time = "0.1.38"
+chrono = "0.4.6"
+fern = "0.5.6"
+futures = "0.1.24"
+hyper = "0.12.10"
+itertools = "0.7.8"
+lazy_static = "1.1.0"
+libc = "0.2.43"
+log = "0.4.5"
+rand = "0.5.5"
+specs = "0.12.2"
+tic = "0.6.0"
+time = "0.1.40"
 vk-sys = "0.3.2"
 zcfg = "0.2.0"
 zcfg_flag_parser = "0.2.0"
@@ -23,12 +23,14 @@ sdl2 = "0.31.0"
 bindgen = "0.35.0"
 dylib = "0.0.3"
 x11-dl = "2.17.5"
-rustfmt-nightly = "0.3.8"
+rustfmt-nightly = "0.99.4"
 memoffset = "0.2.1"
-derive_builder = "0.5.1"
+derive_builder = "0.6.0"
 cgmath = "0.16.0"
 png = "0.11.0"
 protobuf = "1.4.3"
+rusqlite = "0.14.0"
+libsqlite3-sys = "0.9.3"
 
 [lib]
 path = "fake_lib.rs"
@@ -38,10 +40,24 @@ workspace_path = "//third_party/cargo"
 target = "x86_64-unknown-linux-gnu"
 genmode = "Remote"
 
-[raze.crates.x11-dl.'2.17.5']
+[raze.crates.rusqlite.'0.14.0']
+skipped_deps = [
+  "libsqlite3-sys-0.9.3"
+]
+additional_deps = [
+  "@//third_party/cargo/overrides/libsqlite3-sys:libsqlite3_sys"
+]
+
+[raze.crates.lazy_static.'1.1.0']
+additional_flags = [
+  # Options include "inline" "spin" "heap"
+  "--cfg=lazy_static_inline_impl"
+]
+
+[raze.crates.x11-dl.'2.18.3']
 gen_buildrs = true
 
-[raze.crates.rustfmt-nightly.'0.3.8']
+[raze.crates.rustfmt-nightly.'0.99.4']
 extra_aliased_targets = [
   "cargo_bin_rustfmt"
 ]
@@ -70,14 +86,14 @@ additional_deps = [
   "@//third_party/cargo/overrides/libloading-0.5.0:libloading",
 ]
 
-[raze.crates.derive_builder.'0.5.1']
+[raze.crates.derive_builder.'0.6.0']
 data_attr = "glob([\"src/doc_tpl/*\"])"
 
 [raze.crates.cgmath.'0.16.1']
 # Generates some functions or something
 gen_buildrs = true
 
-[raze.crates.protobuf.'1.5.0']
+[raze.crates.protobuf.'1.7.4']
 extra_aliased_targets = [
     "cargo_bin_protoc_gen_rust"
 ]

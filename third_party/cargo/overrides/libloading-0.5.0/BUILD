@@ -15,8 +15,6 @@ load(
     "@io_bazel_rules_rust//rust:rust.bzl",
     "rust_library",
     "rust_binary",
-    "rust_test",
-    "rust_bench_test",
 )
 
 cc_library(

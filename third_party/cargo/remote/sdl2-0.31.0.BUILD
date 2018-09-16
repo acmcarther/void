@@ -3,7 +3,13 @@ cargo-raze crate build file.
 
 DO NOT EDIT! Replaced on runs of cargo-raze
 """
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+  # Public for visibility by "@raze__crate__version//" targets.
+  #
+  # Prefer access through "//third_party/cargo", which limits external
+  # visibility to explicit Cargo.toml dependencies.
+  "//visibility:public",
+])
 
 licenses([
   "notice", # "MIT"
@@ -14,8 +20,8 @@ load(
     "rust_library",
     "rust_binary",
     "rust_test",
-    "rust_bench_test",
 )
+
 
 # Unsupported target "animation" with type "example" omitted
 # Unsupported target "audio" with type "test" omitted
@@ -52,7 +58,7 @@ rust_library(
     deps = [
         "@raze__bitflags__0_7_0//:bitflags",
         "@raze__lazy_static__0_2_11//:lazy_static",
-        "@raze__libc__0_2_41//:libc",
+        "@raze__libc__0_2_43//:libc",
         "@raze__num__0_1_42//:num",
         "@raze__rand__0_3_22//:rand",
         "@//third_party/cargo/overrides/sdl2-sys:sdl2_sys",
@@ -61,6 +67,7 @@ rust_library(
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
+    version = "0.31.0",
     crate_features = [
         "default",
     ],

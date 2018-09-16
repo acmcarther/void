@@ -3,7 +3,13 @@ cargo-raze crate build file.
 
 DO NOT EDIT! Replaced on runs of cargo-raze
 """
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+  # Public for visibility by "@raze__crate__version//" targets.
+  #
+  # Prefer access through "//third_party/cargo", which limits external
+  # visibility to explicit Cargo.toml dependencies.
+  "//visibility:public",
+])
 
 licenses([
   "notice", # "Apache-2.0"
@@ -14,8 +20,8 @@ load(
     "rust_library",
     "rust_binary",
     "rust_test",
-    "rust_bench_test",
 )
+
 rust_binary(
     name = "cgmath_build_script",
     srcs = glob(["**/*.rs"]),
@@ -29,6 +35,7 @@ rust_binary(
     crate_features = [
     ],
     data = glob(["*"]),
+    version = "0.16.1",
     visibility = ["//visibility:private"],
 )
 
@@ -36,9 +43,11 @@ genrule(
     name = "cgmath_build_script_executor",
     srcs = glob(["*", "**/*.rs"]),
     outs = ["cgmath_out_dir_outputs.tar.gz"],
-    tools = [":cgmath_build_script"],
+    tools = [
+      ":cgmath_build_script",
+    ],
     local = 1,
-    cmd = "mkdir cgmath_out_dir_outputs/;"
+    cmd = "mkdir -p cgmath_out_dir_outputs/;"
         + " (export CARGO_MANIFEST_DIR=\"$$PWD/$$(dirname $(location :Cargo.toml))\";"
         + " export TARGET='x86_64-unknown-linux-gnu';"
         + " export RUST_BACKTRACE=1;"
@@ -58,13 +67,14 @@ rust_library(
     deps = [
         "@raze__approx__0_1_1//:approx",
         "@raze__num_traits__0_1_43//:num_traits",
-        "@raze__rand__0_4_2//:rand",
+        "@raze__rand__0_4_3//:rand",
     ],
     rustc_flags = [
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
     out_dir_tar = ":cgmath_build_script_executor",
+    version = "0.16.1",
     crate_features = [
     ],
 )

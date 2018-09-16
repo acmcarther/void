@@ -3,7 +3,13 @@ cargo-raze crate build file.
 
 DO NOT EDIT! Replaced on runs of cargo-raze
 """
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+  # Public for visibility by "@raze__crate__version//" targets.
+  #
+  # Prefer access through "//third_party/cargo", which limits external
+  # visibility to explicit Cargo.toml dependencies.
+  "//visibility:public",
+])
 
 licenses([
   "notice", # "BSD-3-Clause"
@@ -14,8 +20,8 @@ load(
     "rust_library",
     "rust_binary",
     "rust_test",
-    "rust_bench_test",
 )
+
 rust_binary(
     name = "bindgen_build_script",
     srcs = glob(["**/*.rs"]),
@@ -33,6 +39,7 @@ rust_binary(
       "logging",
     ],
     data = glob(["*"]),
+    version = "0.35.0",
     visibility = ["//visibility:private"],
 )
 
@@ -40,9 +47,11 @@ genrule(
     name = "bindgen_build_script_executor",
     srcs = glob(["*", "**/*.rs"]),
     outs = ["bindgen_out_dir_outputs.tar.gz"],
-    tools = [":bindgen_build_script"],
+    tools = [
+      ":bindgen_build_script",
+    ],
     local = 1,
-    cmd = "mkdir bindgen_out_dir_outputs/;"
+    cmd = "mkdir -p bindgen_out_dir_outputs/;"
         + " (export CARGO_MANIFEST_DIR=\"$$PWD/$$(dirname $(location :Cargo.toml))\";"
         + " export TARGET='x86_64-unknown-linux-gnu';"
         + " export RUST_BACKTRACE=1;"
@@ -66,12 +75,12 @@ rust_binary(
         # Binaries get an implicit dependency on their lib
         ":bindgen",
         "@raze__cexpr__0_2_3//:cexpr",
-        "@raze__cfg_if__0_1_3//:cfg_if",
+        "@raze__cfg_if__0_1_5//:cfg_if",
         "@raze__clang_sys__0_22_0//:clang_sys",
-        "@raze__clap__2_31_2//:clap",
-        "@raze__env_logger__0_5_10//:env_logger",
-        "@raze__lazy_static__1_0_0//:lazy_static",
-        "@raze__log__0_4_1//:log",
+        "@raze__clap__2_32_0//:clap",
+        "@raze__env_logger__0_5_13//:env_logger",
+        "@raze__lazy_static__1_1_0//:lazy_static",
+        "@raze__log__0_4_5//:log",
         "@raze__peeking_take_while__0_1_2//:peeking_take_while",
         "@raze__quote__0_3_15//:quote",
         "@raze__regex__0_2_11//:regex",
@@ -82,6 +91,7 @@ rust_binary(
         "--target=x86_64-unknown-linux-gnu",
     ],
     out_dir_tar = ":bindgen_build_script_executor",
+    version = "0.35.0",
     crate_features = [
         "default",
         "env_logger",
@@ -98,12 +108,12 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__cexpr__0_2_3//:cexpr",
-        "@raze__cfg_if__0_1_3//:cfg_if",
+        "@raze__cfg_if__0_1_5//:cfg_if",
         "@raze__clang_sys__0_22_0//:clang_sys",
-        "@raze__clap__2_31_2//:clap",
-        "@raze__env_logger__0_5_10//:env_logger",
-        "@raze__lazy_static__1_0_0//:lazy_static",
-        "@raze__log__0_4_1//:log",
+        "@raze__clap__2_32_0//:clap",
+        "@raze__env_logger__0_5_13//:env_logger",
+        "@raze__lazy_static__1_1_0//:lazy_static",
+        "@raze__log__0_4_5//:log",
         "@raze__peeking_take_while__0_1_2//:peeking_take_while",
         "@raze__quote__0_3_15//:quote",
         "@raze__regex__0_2_11//:regex",
@@ -114,6 +124,7 @@ rust_library(
         "--target=x86_64-unknown-linux-gnu",
     ],
     out_dir_tar = ":bindgen_build_script_executor",
+    version = "0.35.0",
     crate_features = [
         "default",
         "env_logger",

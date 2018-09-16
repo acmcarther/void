@@ -3,7 +3,13 @@ cargo-raze crate build file.
 
 DO NOT EDIT! Replaced on runs of cargo-raze
 """
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+  # Public for visibility by "@raze__crate__version//" targets.
+  #
+  # Prefer access through "//third_party/cargo", which limits external
+  # visibility to explicit Cargo.toml dependencies.
+  "//visibility:public",
+])
 
 licenses([
   "notice", # "MIT,Apache-2.0"
@@ -14,8 +20,8 @@ load(
     "rust_library",
     "rust_binary",
     "rust_test",
-    "rust_bench_test",
 )
+
 
 
 rust_library(
@@ -25,9 +31,9 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__arrayvec__0_4_7//:arrayvec",
-        "@raze__cfg_if__0_1_3//:cfg_if",
+        "@raze__cfg_if__0_1_5//:cfg_if",
         "@raze__crossbeam_utils__0_2_2//:crossbeam_utils",
-        "@raze__lazy_static__1_0_0//:lazy_static",
+        "@raze__lazy_static__1_1_0//:lazy_static",
         "@raze__memoffset__0_2_1//:memoffset",
         "@raze__nodrop__0_1_12//:nodrop",
         "@raze__scopeguard__0_3_3//:scopeguard",
@@ -36,6 +42,7 @@ rust_library(
         "--cap-lints allow",
         "--target=x86_64-unknown-linux-gnu",
     ],
+    version = "0.3.1",
     crate_features = [
         "crossbeam-utils",
         "default",
