@@ -10,14 +10,15 @@ extern crate log;
 extern crate zcfg;
 
 use futures::future::Future;
+use hyper::Body;
 use hyper::Result as HyperResult;
 use hyper::Uri;
-use hyper::header::ContentLength;
-use hyper::server::Http;
-use hyper::server::NewService;
-use hyper::server::Request;
-use hyper::server::Response;
-use hyper::server::Service;
+use hyper::Server;
+use hyper::service::NewService;
+use hyper::Request;
+use hyper::Response;
+use hyper::rt;
+use hyper::service::Service;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::io;
@@ -50,7 +51,7 @@ lazy_static! {
 }
 
 /** A Spect subpage that can be rendered and updated. */
-pub trait SpectRenderableSubpage {
+pub trait SpectRenderableSubpage : Sync + Send {
   fn update_data(&mut self);
   fn render(&self, query_opt: Option<&str>) -> String;
 }
@@ -337,16 +338,18 @@ impl Default for SpectServerParams {
 }
 
 impl NewService for SpectServer {
-  type Request = Request;
-  type Response = Response;
+  type ReqBody = hyper::Body;
+  type ResBody = hyper::Body;
   type Error = hyper::Error;
-  type Instance = SpectHandler;
+  type Service = SpectHandler;
+  type Future = Box<Future<Item = SpectHandler, Error = Self::InitError> + Send>;
+  type InitError = io::Error;
 
-  fn new_service(&self) -> io::Result<SpectHandler> {
-    Ok(SpectHandler::new(
+  fn new_service(&self) -> Self::Future {
+    Box::new(futures::future::ok(SpectHandler::new(
       self.params.clone(),
       self.subpage_module_manager_rwarc.clone(),
-    ))
+    )))
   }
 }
 
@@ -361,13 +364,13 @@ impl SpectServer {
     }
   }
 
-  pub fn run(self) -> HyperResult<()> {
+  pub fn run(self) {
     let addr = format!("{}:{}", self.params.addr_ipv4, self.params.port)
       .parse()
       .unwrap();
     info!("Running SpectServer on [{}]", addr);
-    let server = Http::new().bind(&addr, self).unwrap();
-    server.run()
+    let server = Server::bind(&addr).serve(self).map_err(|e| eprintln!("error: {}", e));
+    rt::run(server);
   }
 }
 
@@ -524,26 +527,27 @@ impl SpectHandler {
 }
 
 impl Service for SpectHandler {
-  type Request = Request;
-  type Response = Response;
+  type ReqBody = hyper::Body;
+  type ResBody = hyper::Body;
   type Error = hyper::Error;
+  type Future = Box<Future<Item = Response<Self::ResBody>, Error = Self::Error> + Send>;
 
-  type Future = Box<Future<Item = Self::Response, Error = Self::Error>>;
-
-  fn call(&self, req: Request) -> Self::Future {
+  fn call(&mut self, req: Request<hyper::Body>) -> Self::Future {
     let rendered_page_res = self.try_render_page(req.uri());
     match rendered_page_res {
       Ok(rendered_page) => Box::new(futures::future::ok(
-        Response::new()
-          .with_header(ContentLength(rendered_page.len() as u64))
-          .with_body(rendered_page),
+        Response::builder()
+          .header(hyper::header::CONTENT_LENGTH, rendered_page.len() as u64)
+          .body(rendered_page.into())
+          .unwrap()
       )),
       Err(err) => {
         let err_str = format!("{:?}", err);
         Box::new(futures::future::ok(
-          Response::new()
-            .with_header(ContentLength(err_str.len() as u64))
-            .with_body(err_str),
+          Response::builder()
+            .header(hyper::header::CONTENT_LENGTH, err_str.len() as u64)
+            .body(err_str.into())
+            .unwrap()
         ))
       }
     }

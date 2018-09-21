@@ -1,6 +1,7 @@
 extern crate bindgen;
 
 use std::env;
+use std::path::PathBuf;
 
 #[derive(Debug)]
 struct SqliteTypeChooser;

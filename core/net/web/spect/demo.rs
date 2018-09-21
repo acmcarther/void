@@ -14,5 +14,5 @@ fn main() {
     SpectSubpageModuleManager::new(vec![spect_zcfg::get_zcfg_subpage_module()]).unwrap(),
   );
 
-  spect_server.run().unwrap()
+  spect_server.run()
 }

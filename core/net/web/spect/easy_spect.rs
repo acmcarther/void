@@ -32,6 +32,6 @@ pub fn start(extra_modules: Vec<SpectSubpageModule>) {
       SpectSubpageModuleManager::new(modules).unwrap(),
     );
 
-    spect_server.run().unwrap();
+    spect_server.run();
   });
 }

@@ -55,3 +55,37 @@ cc_binary(
         ":sqlite3",
     ],
 )
+
+load(
+    "@io_bazel_rules_rust//rust:rust.bzl",
+    "rust_library",
+    "rust_binary",
+)
+
+rust_binary(
+    name = "bindgen_runner",
+    srcs = ["bindgen_runner.rs"],
+    deps = [
+        "//third_party/cargo:bindgen",
+    ],
+)
+
+genrule(
+    name = "bindgen",  # Dictated by libsqlite-sys
+    srcs = [
+        ":sqlite3.h",
+    ],
+    outs = ["bindgen.rs"],
+    cmd = "RUST_BACKTRACE=1 $(location :bindgen_runner) $(location :sqlite3.h) > $(location :bindgen.rs)",
+    tools = [
+        ":bindgen_runner",
+    ],
+)
+
+load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
+pkg_tar(
+    name = "bindgen_tar",
+    srcs = [":bindgen"],
+    extension = "tar.gz",
+)
+
