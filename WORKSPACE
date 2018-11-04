@@ -75,7 +75,8 @@ new_local_repository(
 new_local_repository(
     name = "libsodium",
     build_file = "//third_party:libsodium.BUILD",
-    path = "/usr/lib",
+    #path = "/usr/lib",
+    path = "/usr/lib/x86_64-linux-gnu",
 )
 
 new_http_archive(
