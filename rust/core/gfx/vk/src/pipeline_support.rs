@@ -2,6 +2,7 @@ use std::ffi::CString;
 use std::ptr;
 use std::mem;
 use swapchain_support;
+#[macro_use]
 use lite;
 use vk_sys;
 

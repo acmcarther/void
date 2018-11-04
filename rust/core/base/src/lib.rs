@@ -10,6 +10,11 @@ extern crate zcfg;
 extern crate zcfg_flag_parser;
 
 use std::env;
+use std::sync::Mutex;
+
+lazy_static! {
+  static ref DID_INIT: Mutex<bool> = Mutex::new(false);
+}
 
 #[derive(Clone, Debug)]
 pub struct LogLevelParsable(pub log::LevelFilter);
@@ -35,7 +40,18 @@ define_pub_cfg!(
   "What log level to emit logs to"
 );
 
+
 pub fn init() {
+  // Check for double init and early exit
+  {
+    let mut did_init = DID_INIT.lock().unwrap();
+    if *did_init {
+      return
+    }
+
+    *did_init = true;
+  }
+
   zcfg_flag_parser::FlagParser::new()
     .parse_from_args(env::args().skip(1))
     .unwrap();

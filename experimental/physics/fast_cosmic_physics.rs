@@ -1,13 +1,14 @@
 extern crate chrono;
 #[macro_use]
 extern crate log;
-extern crate octree;
+extern crate alg;
 extern crate rand;
 
-use octree::ForwardTraversalResult;
-use octree::NodeTraversalData;
-use octree::OctreeInitParams;
-use octree::OctreeRootNode;
+use alg::octree;
+use alg::octree::ForwardTraversalResult;
+use alg::octree::NodeTraversalData;
+use alg::octree::OctreeInitParams;
+use alg::octree::OctreeRootNode;
 use std::collections::BTreeMap;
 
 const X_INDEX: usize = 0;

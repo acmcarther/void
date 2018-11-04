@@ -9,7 +9,7 @@ load(
 
 rust_library(
     name = "sdl2_vk",
-    srcs = glob(["src/**/*.rs"],
+    srcs = glob(["src/**/*.rs"]),
     deps = [
         "//rust/core/gfx/vk",
         "//third_party/cargo:sdl2",

@@ -1,5 +1,6 @@
 use std::ffi::CString;
 use std::ptr;
+#[macro_use]
 use lite;
 use vk_sys;
 

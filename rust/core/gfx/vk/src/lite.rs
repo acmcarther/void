@@ -12,7 +12,7 @@ use dylib;
 macro_rules! do_or_die {
   ($res:expr) => {
     match $res {
-      Err(vkl::RawReturnCode(code, ctx_string)) => panic!("Low level Vulkan error {} with context: {}", $crate::util::vk_result_to_human(code), ctx_string),
+      Err($crate::lite::RawReturnCode(code, ctx_string)) => panic!("Low level Vulkan error {} with context: {}", $crate::lite::util::vk_result_to_human(code), ctx_string),
       v => v.unwrap(),
     }
   };
@@ -25,9 +25,8 @@ pub struct FeatureSpec {
 }
 
 pub mod util {
-  use RawResult;
-  use RawReturnCode;
-  use std;
+  use lite::RawResult;
+  use lite::RawReturnCode;
   use std::ptr;
   use std::mem;
   use vk_sys;
@@ -114,9 +113,9 @@ pub mod util {
 }
 
 pub mod builtins {
-  use LDevice;
-  use LInstance;
-  use RawResult;
+  use lite::LDevice;
+  use lite::LInstance;
+  use lite::RawResult;
   use std::ffi::CStr;
   use std::os::raw::c_char;
   use std::os::raw::c_void;
@@ -222,6 +221,13 @@ pub struct Vulkan {
   _dylib: dylib::DynamicLibrary,
   entry_points: vk_sys::EntryPoints,
   static_points: vk_sys::Static,
+}
+
+impl Default for Vulkan {
+  fn default() -> Vulkan {
+    // This probably needs to be made platform-dependent...
+    Vulkan::new("libvulkan.so.1")
+  }
 }
 
 impl Vulkan {

@@ -1,3 +1,4 @@
+#[macro_use]
 use lite;
 use std::ptr;
 use std::mem;
@@ -22,7 +23,7 @@ impl BufferInfoGenerator {
     &'selff mut self,
     buffer: &vk_sys::Buffer,
   ) -> &'selff mut BufferInfoGenerator {
-    let size = std::mem::size_of::<T>() as u64;
+    let size = mem::size_of::<T>() as u64;
     self.buffer_infos.push(vk_sys::DescriptorBufferInfo {
       buffer: *buffer,
       offset: self.existing_byte_size,

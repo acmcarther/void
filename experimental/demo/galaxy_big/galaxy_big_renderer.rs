@@ -1,59 +1,56 @@
 extern crate cgmath;
 extern crate gfx_basics;
-extern crate icosphere;
+extern crate procedural;
 #[macro_use]
 extern crate log;
 #[macro_use]
 extern crate memoffset;
-extern crate vk_base_renderer;
-extern crate vk_buffer_cache;
-extern crate vk_buffer_support as vkbs;
-extern crate vk_descriptor_support as vkdrs;
-extern crate vk_device_support as vkds;
-extern crate vk_instance_support as vkis;
-#[macro_use(do_or_die)]
-extern crate vk_lite as vkl;
-extern crate vk_pipeline_support as vkps;
-extern crate vk_swapchain_support as vkss;
-extern crate vk_sys as vk;
+extern crate vk_sys;
+#[macro_use]
+extern crate vk;
 
 use cgmath::Angle;
 use gfx_basics::Mesh;
 use gfx_basics::Vertex;
-use vk_base_renderer::BaseRenderer;
+use vk::base_renderer::BaseRenderer;
 use std::collections::HashMap;
 use std::os::raw::c_void;
 use std::ptr;
-use vkps::PushConstantRangeGenerator;
-use vkdrs::BufferInfoGenerator;
-use vk_buffer_cache::VertexBufferDescriptorId;
-use vk_buffer_cache::MeshId;
-use vk_buffer_cache::MeshCache;
-use vk_buffer_cache::VertexBufferDescriptorCache;
-use vk_buffer_cache::VertexBufferDescriptor;
-use vk_buffer_cache::VertexBuffer;
-use vk_buffer_cache::IndexBuffer;
-use vk_buffer_cache::MeshBufferSet;
+use vk::lite as lite;
+use vk::buffer_support as vkbs;
+use vk::descriptor_support as vkdrs;
+use vk::pipeline_support as vkps;
+use vk::swapchain_support as vkss;
+use vk::pipeline_support::PushConstantRangeGenerator;
+use vk::descriptor_support::BufferInfoGenerator;
+use vk::buffer_cache::VertexBufferDescriptorId;
+use vk::buffer_cache::MeshId;
+use vk::buffer_cache::MeshCache;
+use vk::buffer_cache::VertexBufferDescriptorCache;
+use vk::buffer_cache::VertexBufferDescriptor;
+use vk::buffer_cache::VertexBuffer;
+use vk::buffer_cache::IndexBuffer;
+use vk::buffer_cache::MeshBufferSet;
 
 /** A GalaxyBig-demo specific renderer. */
 pub struct GalaxyBigRenderer<'window> {
   base_renderer: BaseRenderer<'window>,
-  vert_shader_module: vk::ShaderModule,
-  frag_shader_module: vk::ShaderModule,
+  vert_shader_module: vk_sys::ShaderModule,
+  frag_shader_module: vk_sys::ShaderModule,
   mesh_cache: MeshCache,
   vertex_buffer_descriptor_cache: VertexBufferDescriptorCache,
   depth_image: DepthImage,
   uniform_buffer: UniformBuffer,
-  descriptor_pool: vk::DescriptorPool,
-  descriptor_set_layouts: Vec<vk::DescriptorSetLayout>,
-  descriptor_sets: Vec<vk::DescriptorSet>,
-  pipeline_layout: vk::PipelineLayout,
-  graphics_pipeline: vk::Pipeline,
-  framebuffers: Vec<vk::Framebuffer>,
-  command_buffer_fences: Vec<vk::Fence>,
-  command_buffers: Vec<vk::CommandBuffer>,
-  image_available_semaphore: vk::Semaphore,
-  render_finished_semaphore: vk::Semaphore,
+  descriptor_pool: vk_sys::DescriptorPool,
+  descriptor_set_layouts: Vec<vk_sys::DescriptorSetLayout>,
+  descriptor_sets: Vec<vk_sys::DescriptorSet>,
+  pipeline_layout: vk_sys::PipelineLayout,
+  graphics_pipeline: vk_sys::Pipeline,
+  framebuffers: Vec<vk_sys::Framebuffer>,
+  command_buffer_fences: Vec<vk_sys::Fence>,
+  command_buffers: Vec<vk_sys::CommandBuffer>,
+  image_available_semaphore: vk_sys::Semaphore,
+  render_finished_semaphore: vk_sys::Semaphore,
   first_frame_for_idxs: Vec<bool>,
 }
 
@@ -88,7 +85,7 @@ struct UniformBuffer {
  */
 struct DepthImage {
   image: vkbs::PreparedImage,
-  image_view: vk::ImageView,
+  image_view: vk_sys::ImageView,
 }
 
 /** A uniform describing the "view" and "projection": characteristics of the camera/viewer. */
@@ -122,7 +119,7 @@ impl<'window> GalaxyBigRenderer<'window> {
       &base_renderer.device,
       &descriptor_set_layouts,
       &PushConstantRangeGenerator::new()
-        .push::<ModelPushConstant>(vk::SHADER_STAGE_VERTEX_BIT)
+        .push::<ModelPushConstant>(vk_sys::SHADER_STAGE_VERTEX_BIT)
         .take_ranges()
     ));
 
@@ -165,7 +162,7 @@ impl<'window> GalaxyBigRenderer<'window> {
       ];
 
       for (mesh_id, num_iterations) in icospheres.into_iter() {
-        let mesh = icosphere::icosphere(num_iterations);
+        let mesh = procedural::icosphere(num_iterations);
         let mesh_buffers = do_or_die!(make_mesh_buffers(
           &base_renderer.device,
           &copy_command_pool,
@@ -195,17 +192,17 @@ impl<'window> GalaxyBigRenderer<'window> {
       );
     };
 
-    let vert_shader_module = do_or_die!(vkl::builtins::make_shader_module(
+    let vert_shader_module = do_or_die!(lite::builtins::make_shader_module(
       &base_renderer.device,
       include_bytes!(
-        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/galaxy_big/galaxy_big_vert_shader.\
+        "../../../bazel-out/k8-fastbuild/genfiles/experimental/demo/galaxy_big/galaxy_big_vert_shader.\
          spv"
       ),
     ));
-    let frag_shader_module = do_or_die!(vkl::builtins::make_shader_module(
+    let frag_shader_module = do_or_die!(lite::builtins::make_shader_module(
       &base_renderer.device,
       include_bytes!(
-        "../../../bazel-out/k8-fastbuild/genfiles/experimental/renderer/galaxy_big/galaxy_big_frag_shader.\
+        "../../../bazel-out/k8-fastbuild/genfiles/experimental/demo/galaxy_big/galaxy_big_frag_shader.\
          spv"
       ),
     ));
@@ -258,15 +255,15 @@ impl<'window> GalaxyBigRenderer<'window> {
     ));
 
     let image_available_semaphore =
-      do_or_die!(vkl::builtins::make_semaphore(&base_renderer.device));
+      do_or_die!(lite::builtins::make_semaphore(&base_renderer.device));
     let render_finished_semaphore =
-      do_or_die!(vkl::builtins::make_semaphore(&base_renderer.device));
+      do_or_die!(lite::builtins::make_semaphore(&base_renderer.device));
 
     let swapchain_image_count = base_renderer.swapchain.swapchain_image_count;
     let mut command_buffer_fences = Vec::new();
     let mut first_frame_for_idxs = Vec::new();
     for _ in 0..swapchain_image_count {
-      command_buffer_fences.push(do_or_die!(vkl::builtins::make_fence(&base_renderer.device)));
+      command_buffer_fences.push(do_or_die!(lite::builtins::make_fence(&base_renderer.device)));
       first_frame_for_idxs.push(true);
     }
 
@@ -300,9 +297,9 @@ impl<'window> GalaxyBigRenderer<'window> {
       cgmath::Vector3::<f32>::new(0.0f32, 0.0f32, 1.0f32),
     );
     let mut proj = cgmath::perspective(
-      (cgmath::Rad::<f32>::turn_div_4() / 2.0f32),
-      ((self.base_renderer.swapchain.surface_extent.width as f32)
-        / (self.base_renderer.swapchain.surface_extent.height as f32)),
+      cgmath::Rad::<f32>::turn_div_4() / 2.0f32,
+      (self.base_renderer.swapchain.surface_extent.width as f32)
+        / (self.base_renderer.swapchain.surface_extent.height as f32),
       0.1f32,     /* near clip plane */
       10000.0f32, /* far clip plane */
     );
@@ -322,7 +319,7 @@ impl<'window> GalaxyBigRenderer<'window> {
   }
 
   pub fn draw_demo_frame(&mut self, meshes_to_render: &Vec<MeshToRender>) {
-    let image_index = do_or_die!(vkl::util::loady("next image", &|a| unsafe {
+    let image_index = do_or_die!(lite::util::loady("next image", &|a| unsafe {
       self.base_renderer.device.ptrs().AcquireNextImageKHR(
         self.base_renderer.device.logical_device,
         self.base_renderer.swapchain.swapchain,
@@ -345,16 +342,16 @@ impl<'window> GalaxyBigRenderer<'window> {
       if !first_frame_for_idx {
         unsafe {
           let all_fences = [*command_buffer_fence];
-          do_or_die!(vkl::util::dooy("wait for fences", &|| {
+          do_or_die!(lite::util::dooy("wait for fences", &|| {
             self.base_renderer.device.ptrs().WaitForFences(
               self.base_renderer.device.logical_device,
               1,
               all_fences.as_ptr(),
-              vk::TRUE,    /* wait all */
+              vk_sys::TRUE,    /* wait all */
               10000000000, /* ns */
             )
           }));
-          do_or_die!(vkl::util::dooy("reset fences", &|| self
+          do_or_die!(lite::util::dooy("reset fences", &|| self
             .base_renderer
             .device
             .ptrs()
@@ -391,14 +388,14 @@ impl<'window> GalaxyBigRenderer<'window> {
       .base_renderer
       .device
       .reset_command_buffer(command_buffer);
-    let command_buffer_begin_info = vk::CommandBufferBeginInfo {
-      sType: vk::STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    let command_buffer_begin_info = vk_sys::CommandBufferBeginInfo {
+      sType: vk_sys::STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
       pNext: ptr::null(),
-      flags: vk::COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
+      flags: vk_sys::COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
       pInheritanceInfo: ptr::null(),
     };
 
-    do_or_die!(vkl::util::dooy("start command buffer", &|| unsafe {
+    do_or_die!(lite::util::dooy("start command buffer", &|| unsafe {
       self
         .base_renderer
         .device
@@ -406,26 +403,26 @@ impl<'window> GalaxyBigRenderer<'window> {
         .BeginCommandBuffer(*command_buffer, &command_buffer_begin_info)
     }));
 
-    let clear_color = vk::ClearValue {
-      color: vk::ClearColorValue {
+    let clear_color = vk_sys::ClearValue {
+      color: vk_sys::ClearColorValue {
         float32: [0.0f32, 0.0f32, 0.0f32, 1.0f32],
       },
     };
-    let clear_depth = vk::ClearValue {
-      depthStencil: vk::ClearDepthStencilValue {
+    let clear_depth = vk_sys::ClearValue {
+      depthStencil: vk_sys::ClearDepthStencilValue {
         depth: 1.0f32,
         stencil: 0u32,
       },
     };
     let all_clears = [clear_color, clear_depth];
-    let render_pass_begin_info = vk::RenderPassBeginInfo {
-      sType: vk::STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+    let render_pass_begin_info = vk_sys::RenderPassBeginInfo {
+      sType: vk_sys::STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
       pNext: ptr::null(),
       renderPass: self.base_renderer.render_pass,
       framebuffer: *framebuffer,
-      renderArea: vk::Rect2D {
-        offset: vk::Offset2D { x: 0, y: 0 },
-        extent: vk::Extent2D {
+      renderArea: vk_sys::Rect2D {
+        offset: vk_sys::Offset2D { x: 0, y: 0 },
+        extent: vk_sys::Extent2D {
           width: self.base_renderer.swapchain.surface_extent.width,
           height: self.base_renderer.swapchain.surface_extent.height,
         },
@@ -441,17 +438,17 @@ impl<'window> GalaxyBigRenderer<'window> {
       self.base_renderer.device.ptrs().CmdBeginRenderPass(
         *command_buffer,
         &render_pass_begin_info,
-        vk::SUBPASS_CONTENTS_INLINE,
+        vk_sys::SUBPASS_CONTENTS_INLINE,
       );
       self.base_renderer.device.ptrs().CmdBindPipeline(
         *command_buffer,
-        vk::PIPELINE_BIND_POINT_GRAPHICS,
+        vk_sys::PIPELINE_BIND_POINT_GRAPHICS,
         self.graphics_pipeline,
       );
 
       self.base_renderer.device.ptrs().CmdBindDescriptorSets(
         *command_buffer,
-        vk::PIPELINE_BIND_POINT_GRAPHICS,
+        vk_sys::PIPELINE_BIND_POINT_GRAPHICS,
         self.pipeline_layout,
         0,                                 /* firstSet */
         self.descriptor_sets.len() as u32, /* descriptorSetCount */
@@ -476,7 +473,7 @@ impl<'window> GalaxyBigRenderer<'window> {
           *command_buffer,
           mesh.index_buffer.buffer.0,
           0,
-          vk::INDEX_TYPE_UINT16,
+          vk_sys::INDEX_TYPE_UINT16,
         );
 
         for mesh_to_render in meshes_to_render_by_mesh_id {
@@ -490,7 +487,7 @@ impl<'window> GalaxyBigRenderer<'window> {
           self.base_renderer.device.ptrs().CmdPushConstants(
             *command_buffer,
             self.pipeline_layout,
-            vk::SHADER_STAGE_VERTEX_BIT,
+            vk_sys::SHADER_STAGE_VERTEX_BIT,
             0, /* offset */
             push_constant_size as u32,
             &push_constant as *const ModelPushConstant as *const c_void,
@@ -511,7 +508,7 @@ impl<'window> GalaxyBigRenderer<'window> {
         .device
         .ptrs()
         .CmdEndRenderPass(*command_buffer);
-      do_or_die!(vkl::util::dooy("end command buffer", &|| unsafe {
+      do_or_die!(lite::util::dooy("end command buffer", &|| unsafe {
         self
           .base_renderer
           .device
@@ -521,10 +518,10 @@ impl<'window> GalaxyBigRenderer<'window> {
     }
 
     let wait_semaphores = [self.image_available_semaphore];
-    let wait_stages = [vk::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
+    let wait_stages = [vk_sys::PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT];
     let signal_semaphores = [self.render_finished_semaphore];
-    let submit_info = vk::SubmitInfo {
-      sType: vk::STRUCTURE_TYPE_SUBMIT_INFO,
+    let submit_info = vk_sys::SubmitInfo {
+      sType: vk_sys::STRUCTURE_TYPE_SUBMIT_INFO,
       pNext: ptr::null(),
       waitSemaphoreCount: 1,
       pWaitSemaphores: wait_semaphores.as_ptr(),
@@ -540,7 +537,7 @@ impl<'window> GalaxyBigRenderer<'window> {
       0, /* queue_index */
     );
 
-    do_or_die!(vkl::util::dooy("queue submit", &|| unsafe {
+    do_or_die!(lite::util::dooy("queue submit", &|| unsafe {
       self
         .base_renderer
         .device
@@ -549,8 +546,8 @@ impl<'window> GalaxyBigRenderer<'window> {
     }));
 
     let swapchains = [self.base_renderer.swapchain.swapchain];
-    let present_info_khr = vk::PresentInfoKHR {
-      sType: vk::STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    let present_info_khr = vk_sys::PresentInfoKHR {
+      sType: vk_sys::STRUCTURE_TYPE_PRESENT_INFO_KHR,
       pNext: ptr::null(),
       waitSemaphoreCount: 1,
       pWaitSemaphores: signal_semaphores.as_ptr(),
@@ -560,7 +557,7 @@ impl<'window> GalaxyBigRenderer<'window> {
       pResults: ptr::null_mut(),
     };
 
-    do_or_die!(vkl::util::dooy("queue present", &|| unsafe {
+    do_or_die!(lite::util::dooy("queue present", &|| unsafe {
       self
         .base_renderer
         .device
@@ -592,7 +589,7 @@ impl<'window> Drop for GalaxyBigRenderer<'window> {
     device.free_memory(self.uniform_buffer.buffer.1 /* deviceMemory */);
     device.free_memory(self.depth_image.image.1 /* deviceMemory */);
 
-    vk_buffer_cache::deallocate_mesh_cache(&device, &mut self.mesh_cache);
+    vk::buffer_cache::deallocate_mesh_cache(&device, &mut self.mesh_cache);
 
     device.destroy_descriptor_pool(self.descriptor_pool);
     for descriptor_set_layout in self.descriptor_set_layouts.drain(..) {
@@ -608,24 +605,24 @@ impl<'window> Drop for GalaxyBigRenderer<'window> {
 }
 
 fn make_standard_vertex_buffer_descriptor() -> VertexBufferDescriptor {
-  let pos_attr_desc = vk::VertexInputAttributeDescription {
+  let pos_attr_desc = vk_sys::VertexInputAttributeDescription {
     binding: 0,
     location: 0,
-    format: vk::FORMAT_R32G32B32_SFLOAT,
+    format: vk_sys::FORMAT_R32G32B32_SFLOAT,
     offset: offset_of!(Vertex, pos) as u32,
   };
 
-  let norm_attr_desc = vk::VertexInputAttributeDescription {
+  let norm_attr_desc = vk_sys::VertexInputAttributeDescription {
     binding: 0,
     location: 1,
-    format: vk::FORMAT_R32G32B32_SFLOAT,
+    format: vk_sys::FORMAT_R32G32B32_SFLOAT,
     offset: offset_of!(Vertex, norm) as u32,
   };
 
-  let binding_description = vk::VertexInputBindingDescription {
+  let binding_description = vk_sys::VertexInputBindingDescription {
     binding: 0,
     stride: std::mem::size_of::<Vertex>() as u32,
-    inputRate: vk::VERTEX_INPUT_RATE_VERTEX, /* advance per vertex (instead of per instance) */
+    inputRate: vk_sys::VERTEX_INPUT_RATE_VERTEX, /* advance per vertex (instead of per instance) */
   };
 
   VertexBufferDescriptor {
@@ -635,12 +632,12 @@ fn make_standard_vertex_buffer_descriptor() -> VertexBufferDescriptor {
 }
 
 fn make_mesh_buffers(
-  device: &vkl::LDevice,
-  command_pool: &vk::CommandPool,
-  queue: &vk::Queue,
-  memory_properties: &vk::PhysicalDeviceMemoryProperties,
+  device: &lite::LDevice,
+  command_pool: &vk_sys::CommandPool,
+  queue: &vk_sys::Queue,
+  memory_properties: &vk_sys::PhysicalDeviceMemoryProperties,
   mesh: &Mesh,
-) -> vkl::RawResult<MeshBufferSet> {
+) -> lite::RawResult<MeshBufferSet> {
   let vertex_buffer = {
     let vertices = &mesh.vertices;
     let buffer_size = (std::mem::size_of::<Vertex>() * vertices.len()) as u64;
@@ -649,8 +646,8 @@ fn make_mesh_buffers(
       try!(vkbs::make_bound_buffer(
         device,
         buffer_size,
-        vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
-        vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        vk_sys::BUFFER_USAGE_TRANSFER_SRC_BIT,
+        vk_sys::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk_sys::MEMORY_PROPERTY_HOST_COHERENT_BIT,
         memory_properties
       ));
 
@@ -661,8 +658,8 @@ fn make_mesh_buffers(
     let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_bound_buffer(
       device,
       buffer_size,
-      vk::BUFFER_USAGE_TRANSFER_DST_BIT | vk::BUFFER_USAGE_VERTEX_BUFFER_BIT,
-      vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+      vk_sys::BUFFER_USAGE_TRANSFER_DST_BIT | vk_sys::BUFFER_USAGE_VERTEX_BUFFER_BIT,
+      vk_sys::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       memory_properties
     ));
 
@@ -698,8 +695,8 @@ fn make_mesh_buffers(
       try!(vkbs::make_bound_buffer(
         device,
         buffer_size,
-        vk::BUFFER_USAGE_TRANSFER_SRC_BIT,
-        vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        vk_sys::BUFFER_USAGE_TRANSFER_SRC_BIT,
+        vk_sys::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk_sys::MEMORY_PROPERTY_HOST_COHERENT_BIT,
         memory_properties
       ));
 
@@ -710,8 +707,8 @@ fn make_mesh_buffers(
     let vkbs::PreparedBuffer(buffer, device_memory) = try!(vkbs::make_bound_buffer(
       device,
       buffer_size,
-      vk::BUFFER_USAGE_TRANSFER_DST_BIT | vk::BUFFER_USAGE_INDEX_BUFFER_BIT,
-      vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+      vk_sys::BUFFER_USAGE_TRANSFER_DST_BIT | vk_sys::BUFFER_USAGE_INDEX_BUFFER_BIT,
+      vk_sys::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       memory_properties
     ));
 
@@ -743,15 +740,15 @@ fn make_mesh_buffers(
 }
 
 fn make_uniform_buffer(
-  device: &vkl::LDevice,
-  memory_properties: &vk::PhysicalDeviceMemoryProperties,
-) -> vkl::RawResult<UniformBuffer> {
+  device: &lite::LDevice,
+  memory_properties: &vk_sys::PhysicalDeviceMemoryProperties,
+) -> lite::RawResult<UniformBuffer> {
   let buffer_size = std::mem::size_of::<MVPUniform>();
   let prepared_buffer = try!(vkbs::make_bound_buffer(
     device,
     buffer_size as u64,
-    vk::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    vk::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk::MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    vk_sys::BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    vk_sys::MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk_sys::MEMORY_PROPERTY_HOST_COHERENT_BIT,
     memory_properties,
   ));
   Ok(UniformBuffer {
@@ -760,24 +757,24 @@ fn make_uniform_buffer(
 }
 
 fn make_depth_image(
-  device: &vkl::LDevice,
+  device: &lite::LDevice,
   swapchain: &vkss::LoadedSwapchain,
-  depth_format: vk::Format,
-  command_pool: &vk::CommandPool,
-  queue: &vk::Queue,
-  memory_properties: &vk::PhysicalDeviceMemoryProperties,
-) -> vkl::RawResult<DepthImage> {
+  depth_format: vk_sys::Format,
+  command_pool: &vk_sys::CommandPool,
+  queue: &vk_sys::Queue,
+  memory_properties: &vk_sys::PhysicalDeviceMemoryProperties,
+) -> lite::RawResult<DepthImage> {
   let prepared_image = try!(vkbs::make_image(
     device,
-    vk::Extent3D {
+    vk_sys::Extent3D {
       width: swapchain.surface_extent.width,
       height: swapchain.surface_extent.height,
       depth: 1,
     },
     depth_format,
-    vk::IMAGE_TILING_OPTIMAL,
-    vk::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-    vk::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    vk_sys::IMAGE_TILING_OPTIMAL,
+    vk_sys::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+    vk_sys::MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     memory_properties
   ));
   unsafe {
@@ -792,7 +789,7 @@ fn make_depth_image(
     device,
     &prepared_image.0, /* image */
     depth_format,
-    vk::IMAGE_ASPECT_DEPTH_BIT,
+    vk_sys::IMAGE_ASPECT_DEPTH_BIT,
   ));
 
   try!(vkbs::transition_image_layout(
@@ -801,8 +798,8 @@ fn make_depth_image(
     &queue,
     &prepared_image.0, /* image */
     depth_format,
-    vk::IMAGE_LAYOUT_UNDEFINED,
-    vk::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    vk_sys::IMAGE_LAYOUT_UNDEFINED,
+    vk_sys::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
   ));
 
   Ok(DepthImage {

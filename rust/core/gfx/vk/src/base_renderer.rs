@@ -2,7 +2,7 @@
 use lite;
 use device_support as ds;
 use instance_support as is;
-use pipeline_support as vkps;
+use pipeline_support;
 use swapchain_support;
 use vk_sys;
 use std::marker::PhantomData;

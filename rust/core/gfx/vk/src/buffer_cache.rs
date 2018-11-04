@@ -1,3 +1,4 @@
+#[macro_use]
 use lite;
 use vk_sys;
 use buffer_support;

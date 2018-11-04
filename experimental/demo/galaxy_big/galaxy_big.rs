@@ -1,24 +1,23 @@
 #![feature(used)]
 extern crate cgmath;
-extern crate easy_spect;
+extern crate spect_easy;
 extern crate fast_cosmic_physics;
 extern crate galaxy_big_renderer;
 extern crate gfx_basics;
-extern crate icosphere;
-extern crate init;
+extern crate base;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
 extern crate rand;
 extern crate sdl2;
-extern crate sdl2_vulkan_interop;
-extern crate vk_base_renderer;
-extern crate vk_lite as vkl;
+extern crate sdl2_vk;
+extern crate vk;
 #[macro_use]
 extern crate zcfg;
 
 use cgmath::Matrix4;
+use vk::lite;
 use fast_cosmic_physics::Cosmos;
 use fast_cosmic_physics::CosmosParams;
 use fast_cosmic_physics::PointMass;
@@ -29,11 +28,11 @@ use galaxy_big_renderer::GalaxyBigRenderer;
 use galaxy_big_renderer::MeshToRender;
 use gfx_basics::Mesh;
 use rand::Rng;
-use vk_base_renderer::BaseRenderer;
-use vk_base_renderer::BaseRendererConfig;
+use vk::base_renderer::BaseRenderer;
+use vk::base_renderer::BaseRendererConfig;
 use sdl2::Sdl;
 use sdl2::video::Window;
-use sdl2_vulkan_interop::SdlWindowSystemPlugin;
+use sdl2_vk::SdlWindowSystemPlugin;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -149,12 +148,12 @@ lazy_static! {
 }
 
 fn main() {
-  init::init();
-  easy_spect::start(Vec::new() /* extra_modules */);
+  base::init();
+  spect_easy::start(Vec::new() /* extra_modules */);
 
   let mut game_window = GameWindow::new();
   let mut galaxy_big_renderer = {
-    let vulkan = vkl::Vulkan::new("libvulkan.so.1");
+    let vulkan = lite::Vulkan::new("libvulkan.so.1");
     let base_renderer = BaseRenderer::new(
       vulkan,
       &mut SdlWindowSystemPlugin::new(&mut game_window.window),
@@ -499,8 +498,8 @@ impl GalaxySim {
 }
 
 /** Dumps hardcoded x11-related extensions into a FeatureSpec */
-fn x11_extension_spec() -> vkl::FeatureSpec {
-  vkl::FeatureSpec {
+fn x11_extension_spec() -> lite::FeatureSpec {
+  lite::FeatureSpec {
     wanted: vec![
       "VK_EXT_acquire_xlib_display",
       //"VK_EXT_display_surface_counter",
@@ -517,8 +516,8 @@ fn x11_extension_spec() -> vkl::FeatureSpec {
 }
 
 /** Dumps hardcoded x11-related layers into a FeatureSpec */
-fn x11_layer_spec() -> vkl::FeatureSpec {
-  vkl::FeatureSpec {
+fn x11_layer_spec() -> lite::FeatureSpec {
+  lite::FeatureSpec {
     wanted: vec![
       "VK_LAYER_LUNARG_core_validation",
       "VK_LAYER_LUNARG_parameter_validation",
