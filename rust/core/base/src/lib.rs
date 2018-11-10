@@ -17,12 +17,13 @@ pub struct LogLevelParsable(pub log::LevelFilter);
 impl zcfg::ConfigParseable for LogLevelParsable {
   type Output = LogLevelParsable;
   fn parse_from_str(s: &str) -> Result<Self::Output, zcfg::ParseErr> {
-    match s {
-      "trace" | "Trace" => Ok(LogLevelParsable(log::LevelFilter::Trace)),
-      "debug" | "Debug" => Ok(LogLevelParsable(log::LevelFilter::Debug)),
-      "info" | "Info" => Ok(LogLevelParsable(log::LevelFilter::Info)),
-      "warn" | "Warn" => Ok(LogLevelParsable(log::LevelFilter::Warn)),
-      "error" | "Error" => Ok(LogLevelParsable(log::LevelFilter::Error)),
+    let lower_cased_val = s.to_lowercase();
+    match lower_cased_val.as_ref() {
+      "trace" => Ok(LogLevelParsable(log::LevelFilter::Trace)),
+      "debug" => Ok(LogLevelParsable(log::LevelFilter::Debug)),
+      "info" => Ok(LogLevelParsable(log::LevelFilter::Info)),
+      "warn" => Ok(LogLevelParsable(log::LevelFilter::Warn)),
+      "error" => Ok(LogLevelParsable(log::LevelFilter::Error)),
       _ => Err("Unknown LogLevel value".to_owned()),
     }
   }
