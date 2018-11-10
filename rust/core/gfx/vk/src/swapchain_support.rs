@@ -1,5 +1,6 @@
 use device_support;
 use std::ptr;
+#[macro_use]
 use lite;
 use vk_sys;
 

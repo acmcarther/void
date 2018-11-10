@@ -7,10 +7,12 @@
  * does not require compute, so a graphics-only queue family is also considered acceptable.
  */
 
+use std::ffi;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::ptr;
-use mem;
+use std::mem;
+#[macro_use]
 use lite;
 use vk_sys;
 
@@ -315,7 +317,7 @@ fn dump_device_details(physical_device_properties: &vk_sys::PhysicalDeviceProper
     "  Vulkan Device Details: {{\"name\": \"{}\", \"apiVersion\": {}, \
      \"driverVersion\": {}}}",
     unsafe {
-      std::ffi::CStr::from_ptr(physical_device_properties.deviceName.as_ptr())
+      ffi::CStr::from_ptr(physical_device_properties.deviceName.as_ptr())
         .to_str()
         .unwrap()
     },

@@ -29,7 +29,7 @@ rust_library(
         "-C opt-level=2",
     ],
     deps = [
-        "//core/alg:octree",
+        "//rust/core/alg",
         "//third_party/cargo:chrono",
         "//third_party/cargo:log",
         "//third_party/cargo:rand",

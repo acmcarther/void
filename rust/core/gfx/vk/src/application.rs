@@ -1,3 +1,4 @@
+#[macro_use]
 use lite;
 use buffer_support as bs;
 use buffer_cache;
